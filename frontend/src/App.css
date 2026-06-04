@@ -1496,9 +1496,10 @@ body {
 
 /* Tables inline — single row per entry */
 .tables-deck-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
+  align-items: start;
 }
 
 .table-card {
@@ -1510,7 +1511,7 @@ body {
 }
 
 .table-card.expanded {
-  border-color: var(--color-primary);
+  border-color: var(--color-primary) !important;
 }
 
 .table-card-header {
@@ -1959,13 +1960,7 @@ body {
   background: var(--color-primary-hover);
 }
 
-/* ----------------------------------------------------
-   Active Green Table Highlight
-   ---------------------------------------------------- */
-.table-card.active-green-table {
-  border-color: #10b981 !important;
-  background: rgba(16, 185, 129, 0.05);
-}
+
 
 /* ----------------------------------------------------
    Topic Accuracy Progress Indicator Dots

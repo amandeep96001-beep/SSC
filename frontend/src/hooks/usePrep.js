@@ -13,8 +13,7 @@ export function usePrep() {
   const getStatusApi = useApi(useCallback(() => apiService.get('/prep/status'), []));
 
   // Load all notes
-  const fetchNotes = useCallback(async (subject = '') => {
-    const endpoint = subject ? `/prep/notes?subject=${encodeURIComponent(subject)}` : '/prep/notes';
+  const fetchNotes = useCallback(async () => {
     const result = await getNotesApi.execute();
     if (result.success && result.data.data) {
       setNotes(result.data.data);
@@ -59,11 +58,15 @@ export function usePrep() {
 
   // Setup initial hooks & polling for network connection check
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStatus();
+     
     fetchNotes();
 
+     
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

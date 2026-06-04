@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Flame, 
   Zap, 
@@ -78,6 +77,20 @@ export function DrillWorkspace({
             <span>% to Fraction</span>
           </button>
           <button
+            className={`drill-tab ${drillType === 'square' ? 'active' : ''}`}
+            onClick={() => changeDrillType('square')}
+          >
+            <Zap size={14} />
+            <span>Square Speed</span>
+          </button>
+          <button
+            className={`drill-tab ${drillType === 'cube' ? 'active' : ''}`}
+            onClick={() => changeDrillType('cube')}
+          >
+            <Zap size={14} />
+            <span>Cube Speed</span>
+          </button>
+          <button
             className={`drill-tab ${drillType === 'vocab' ? 'active' : ''}`}
             onClick={() => changeDrillType('vocab')}
           >
@@ -87,22 +100,27 @@ export function DrillWorkspace({
         </div>
       </div>
 
-      {drillType === 'table' && (
+      {['table', 'square', 'cube'].includes(drillType) && (
         <div className="drill-config-card">
           <div className="config-label">
             <TrendingUp size={16} className="config-icon" />
-            <span>Max Multiplication Base (Bases: 12 to 50, Multipliers: 2-9):</span>
+            <span>
+              {drillType === 'table' && 'Max Multiplication Base (Bases: 12 to 50, Multipliers: 2-9):'}
+              {drillType === 'square' && 'Max Square Base (2 to 50):'}
+              {drillType === 'cube' && 'Max Cube Base (2 to 50):'}
+            </span>
           </div>
           <input
             type="number"
-            min="12"
+            min={drillType === 'table' ? 12 : 2}
             max="50"
             className="config-input"
             value={maxTableBase}
             onChange={(e) => {
-              const val = Math.min(50, Math.max(12, parseInt(e.target.value, 10) || 12));
+              const minVal = drillType === 'table' ? 12 : 2;
+              const val = Math.min(50, Math.max(minVal, parseInt(e.target.value, 10) || minVal));
               setMaxTableBase(val);
-              loadNextDrill('table', val);
+              loadNextDrill(drillType, val);
             }}
           />
         </div>
@@ -122,6 +140,7 @@ export function DrillWorkspace({
                 {drillType === 'table' && <><Zap size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Jumping Tables Drill</>}
                 {drillType === 'vocab' && <><BookOpen size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Vocab Drill</>}
                 {['fraction', 'percentage'].includes(drillType) && <><Percent size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Value Conversion</>}
+                {['square', 'cube'].includes(drillType) && <><Zap size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Roots & Powers</>}
               </h3>
               <p>Enter correct answer or select options.</p>
             </div>

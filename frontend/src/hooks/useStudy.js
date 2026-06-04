@@ -360,7 +360,9 @@ export function useStudy() {
 
   // Fetch subjects initially
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSubjects();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

@@ -100,7 +100,9 @@ export function useDrills() {
 
   // Initial question load on boot
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadNextDrill(drillType);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

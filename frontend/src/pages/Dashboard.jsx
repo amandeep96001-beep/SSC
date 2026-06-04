@@ -114,6 +114,7 @@ export function Dashboard() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => { loadVocabList(); }, []);
 
   const filteredVocabDB = vocabList.filter(item => {

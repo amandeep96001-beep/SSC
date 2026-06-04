@@ -1,4 +1,3 @@
-import React from 'react';
 
 export function PerformanceWorkspace({ user }) {
   const progressCount = user.progress?.length || 0;

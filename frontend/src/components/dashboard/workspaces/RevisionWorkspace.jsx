@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Zap, 
   Book, 
@@ -15,7 +14,7 @@ const FRACTION_CONVERSIONS = [
   { fraction: '1/3', percentage: '33.33%' },
   { fraction: '1/4', percentage: '25%' },
   { fraction: '1/5', percentage: '20%' },
-  { fraction: '1/6', percentage: '16.67%' },
+  { fraction: '1/6', percentage: '16.66%' },
   { fraction: '1/7', percentage: '14.28%' },
   { fraction: '1/8', percentage: '12.5%' },
   { fraction: '1/9', percentage: '11.11%' },
@@ -24,24 +23,47 @@ const FRACTION_CONVERSIONS = [
   { fraction: '1/12', percentage: '8.33%' },
   { fraction: '1/13', percentage: '7.69%' },
   { fraction: '1/14', percentage: '7.14%' },
-  { fraction: '1/15', percentage: '6.67%' },
+  { fraction: '1/15', percentage: '6.66%' },
   { fraction: '1/16', percentage: '6.25%' },
   { fraction: '1/17', percentage: '5.88%' },
-  { fraction: '1/18', percentage: '5.56%' },
+  { fraction: '1/18', percentage: '5.55%' },
   { fraction: '1/19', percentage: '5.26%' },
   { fraction: '1/20', percentage: '5%' },
+  { fraction: '1/24', percentage: '4.16%' },
   { fraction: '1/25', percentage: '4%' },
-  { fraction: '2/3', percentage: '66.67%' },
+  { fraction: '1/30', percentage: '3.33%' },
+  { fraction: '1/40', percentage: '2.5%' },
+  { fraction: '1/50', percentage: '2%' },
+  { fraction: '2/3', percentage: '66.66%' },
   { fraction: '3/4', percentage: '75%' },
   { fraction: '2/5', percentage: '40%' },
   { fraction: '3/5', percentage: '60%' },
   { fraction: '4/5', percentage: '80%' },
+  { fraction: '5/6', percentage: '83.33%' },
+  { fraction: '2/7', percentage: '28.56%' },
+  { fraction: '3/7', percentage: '42.84%' },
+  { fraction: '4/7', percentage: '57.14%' },
+  { fraction: '5/7', percentage: '71.42%' },
+  { fraction: '6/7', percentage: '85.71%' },
   { fraction: '3/8', percentage: '37.5%' },
   { fraction: '5/8', percentage: '62.5%' },
   { fraction: '7/8', percentage: '87.5%' },
-  { fraction: '5/6', percentage: '83.33%' },
-  { fraction: '4/7', percentage: '57.14%' },
-  { fraction: '5/7', percentage: '71.43%' },
+  { fraction: '2/9', percentage: '22.22%' },
+  { fraction: '4/9', percentage: '44.44%' },
+  { fraction: '5/9', percentage: '55.55%' },
+  { fraction: '7/9', percentage: '77.77%' },
+  { fraction: '8/9', percentage: '88.88%' },
+  { fraction: '2/11', percentage: '18.18%' },
+  { fraction: '3/11', percentage: '27.27%' },
+  { fraction: '4/11', percentage: '36.36%' },
+  { fraction: '5/11', percentage: '45.45%' },
+  { fraction: '5/12', percentage: '41.66%' },
+  { fraction: '7/12', percentage: '58.33%' },
+  { fraction: '11/12', percentage: '91.66%' },
+  { fraction: '3/16', percentage: '18.75%' },
+  { fraction: '5/16', percentage: '31.25%' },
+  { fraction: '7/16', percentage: '43.75%' },
+  { fraction: '9/16', percentage: '56.25%' }
 ];
 
 export function RevisionWorkspace({
@@ -103,13 +125,15 @@ export function RevisionWorkspace({
           <div>
             {/* Sub-tabs */}
             <div className="revision-sub-tabs">
-              {['tables','fractions','percentages'].map(st => (
+              {['tables','squares','cubes','fractions','percentages'].map(st => (
                 <button
                   key={st}
                   className={`revision-sub-tab ${tableSubTab === st ? 'active' : ''}`}
                   onClick={() => setTableSubTab(st)}
                 >
                   { st === 'tables' ? '× Multiplication Tables (1–50)'
+                    : st === 'squares' ? 'x² Squares (1–50)'
+                    : st === 'cubes' ? 'x³ Cubes (1–50)'
                     : st === 'fractions' ? '½ Fraction → %'
                     : '% Percentage → Fraction' }
                 </button>
@@ -123,7 +147,7 @@ export function RevisionWorkspace({
                   const num = idx + 1;
                   const isExpanded = expandedTable === num;
                   return (
-                    <div key={num} className={`table-card ${isExpanded ? 'active-green-table expanded' : ''}`}>
+                    <div key={num} className={`table-card ${isExpanded ? 'expanded' : ''}`}>
                       <div className="table-card-header" onClick={() => setExpandedTable(isExpanded ? null : num)}>
                         <h3>Table of {num}</h3>
                         <ChevronRight className={`arrow-icon ${isExpanded ? 'rotate-90' : ''}`} size={16} />
@@ -131,7 +155,7 @@ export function RevisionWorkspace({
                       {isExpanded && (
                         <div className="table-card-body">
                           <div className="multipliers-grid">
-                            {Array(20).fill(null).map((_, mIdx) => {
+                            {Array(10).fill(null).map((_, mIdx) => {
                               const m = mIdx + 1;
                               return (
                                 <div key={m} className="multiplier-row">
@@ -144,6 +168,64 @@ export function RevisionWorkspace({
                           </div>
                         </div>
                       )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Squares */}
+            {tableSubTab === 'squares' && (
+              <div className="tables-deck-grid">
+                {Array(50).fill(null).map((_, idx) => {
+                  const num = idx + 1;
+                  const isImportant = num <= 30;
+                  return (
+                    <div key={num} className="table-card">
+                      <div className="table-card-header" style={{ cursor: 'default' }}>
+                        <h3>
+                          {num}² = {num * num}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ SSC</span>}
+                        </h3>
+                      </div>
+                      <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
+                        <div className="multipliers-grid">
+                          <div className="multiplier-row">
+                            <span>√{num * num}</span>
+                            <span>=</span>
+                            <strong>{num}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Cubes */}
+            {tableSubTab === 'cubes' && (
+              <div className="tables-deck-grid">
+                {Array(50).fill(null).map((_, idx) => {
+                  const num = idx + 1;
+                  const isImportant = num <= 20;
+                  return (
+                    <div key={num} className="table-card">
+                      <div className="table-card-header" style={{ cursor: 'default' }}>
+                        <h3>
+                          {num}³ = {num * num * num}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ SSC</span>}
+                        </h3>
+                      </div>
+                      <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
+                        <div className="multipliers-grid">
+                          <div className="multiplier-row">
+                            <span>∛{num * num * num}</span>
+                            <span>=</span>
+                            <strong>{num}</strong>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

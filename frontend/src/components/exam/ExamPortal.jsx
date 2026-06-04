@@ -1,4 +1,3 @@
-import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
 import '../../pages/Dashboard.css';

@@ -57,6 +57,30 @@ export const getNextDrill = async (req, res, next) => {
         break;
       }
 
+      case 'square': {
+        const maxBase = Math.max(2, parseInt(req.query.maxBase, 10) || 30);
+        const num = Math.floor(Math.random() * maxBase) + 1;
+        drillData = {
+          type,
+          question: `What is the square of ${num}? (${num}²)`,
+          correctAnswer: (num * num).toString(),
+          placeholder: 'Enter square...'
+        };
+        break;
+      }
+
+      case 'cube': {
+        const maxBase = Math.max(2, parseInt(req.query.maxBase, 10) || 20);
+        const num = Math.floor(Math.random() * maxBase) + 1;
+        drillData = {
+          type,
+          question: `What is the cube of ${num}? (${num}³)`,
+          correctAnswer: (num * num * num).toString(),
+          placeholder: 'Enter cube...'
+        };
+        break;
+      }
+
       case 'vocab': {
         const wordData = await vocabRepository.getRandomWord();
         const isIdiom = wordData.category === 'Idioms & Phrases';
