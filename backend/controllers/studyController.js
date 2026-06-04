@@ -1,5 +1,6 @@
 import Subject from '../models/subjectModel.js';
 import { Vocab } from '../models/vocabModel.js';
+import Question from '../models/questionModel.js';
 
 /**
  * Helper to shuffle an array
@@ -75,13 +76,14 @@ export const getTopicNotes = async (req, res, next) => {
     }
 
     const topic = subject.topics.find(t => t.id === topicId);
+    const questions = await Question.find({ topicId }).lean();
     res.json({
       status: 'success',
       data: {
         id: topic.id,
         name: topic.name,
         notes: topic.notes,
-        questions: topic.questions
+        questions: questions
       }
     });
   } catch (error) {
@@ -105,9 +107,10 @@ export const getTopicTest = async (req, res, next) => {
     }
 
     const topic = subject.topics.find(t => t.id === topicId);
+    const questions = await Question.find({ topicId }).lean();
     
     // Map questions to simple JS objects and shuffle
-    let testQuestions = topic.questions.map(q => ({
+    let testQuestions = questions.map(q => ({
       q: q.q,
       o: q.o,
       a: q.a,
@@ -163,19 +166,20 @@ export const addTopic = async (req, res, next) => {
       id: finalId,
       name,
       syllabus: syllabus || 'Custom added user revision topic.',
-      notes,
-      questions: [
-        {
-          q: `Syllabus Check: Have you reviewed all the study notes for '${name}'?`,
-          o: ["Yes, completely", "No, need review", "Will study again", "Passed"],
-          a: 0,
-          e: "This is a custom-seeded question to verify study progress for custom notes."
-        }
-      ]
+      notes
     };
 
     subject.topics.push(newTopic);
     await subject.save();
+
+    const initialQuestion = new Question({
+      topicId: finalId,
+      q: `Syllabus Check: Have you reviewed all the study notes for '${name}'?`,
+      o: ["Yes, completely", "No, need review", "Will study again", "Passed"],
+      a: 0,
+      e: "This is a custom-seeded question to verify study progress for custom notes."
+    });
+    await initialQuestion.save();
 
     res.status(201).json({
       status: 'success',
@@ -220,7 +224,8 @@ export const updateTopic = async (req, res, next) => {
     topic.notes = notes;
 
     if (questions && Array.isArray(questions) && questions.length > 0) {
-      topic.questions.push(...questions);
+      const qsToInsert = questions.map(q => ({ ...q, topicId }));
+      await Question.insertMany(qsToInsert);
     }
 
     subject.markModified('topics');
@@ -256,6 +261,8 @@ export const deleteTopic = async (req, res, next) => {
 
     subject.topics = subject.topics.filter(t => t.id !== topicId);
     await subject.save();
+
+    await Question.deleteMany({ topicId });
 
     res.json({
       status: 'success',

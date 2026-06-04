@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDrills } from '../hooks/useDrills';
 import { useStudy } from '../hooks/useStudy';
 import { 
@@ -6,7 +6,6 @@ import {
   Percent, 
   TrendingUp, 
   BookOpen, 
-  Award, 
   Flame, 
   Trophy, 
   CheckCircle, 
@@ -92,7 +91,6 @@ export function Dashboard() {
     subjects,
     selectedSubject,
     topicsList,
-    selectedTopicId,
     activeNotes,
     testQuestions,
     currentQuestionIdx,

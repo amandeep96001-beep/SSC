@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Subject from '../models/subjectModel.js';
+import Question from '../models/questionModel.js';
 
 // Load config
 dotenv.config();
@@ -647,11 +648,34 @@ const seedDB = async () => {
 
     // Delete existing
     await Subject.deleteMany({});
-    console.log('🗑️ Cleared existing Subjects collection.');
+    await Question.deleteMany({});
+    console.log('🗑️ Cleared existing Subjects and Questions collections.');
+
+    // Prepare separate data for subjects and questions
+    const subjectsToInsert = [];
+    const questionsToInsert = [];
+
+    for (const subjectData of studyData) {
+      const topicsToInsert = [];
+      for (const topicData of subjectData.topics) {
+        const { questions, ...topicInfo } = topicData;
+        topicsToInsert.push(topicInfo);
+        
+        if (questions && questions.length > 0) {
+          questions.forEach(q => {
+            questionsToInsert.push({ ...q, topicId: topicInfo.id });
+          });
+        }
+      }
+      subjectsToInsert.push({ ...subjectData, topics: topicsToInsert });
+    }
 
     // Insert
-    await Subject.insertMany(studyData);
-    console.log('✅ Seeded subjects (Quant, English, GA, Reasoning) successfully!');
+    await Subject.insertMany(subjectsToInsert);
+    if (questionsToInsert.length > 0) {
+      await Question.insertMany(questionsToInsert);
+    }
+    console.log(`✅ Seeded subjects and ${questionsToInsert.length} questions successfully!`);
     
     mongoose.connection.close();
     console.log('🔌 Connection closed.');
