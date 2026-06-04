@@ -69,10 +69,12 @@ export function useDrills() {
         streak: isCorrect ? prev.streak + 1 : 0
       }));
 
-      // Automatically load next drill after a 1.8 second delay
-      setTimeout(() => {
-        loadNextDrill(drillType);
-      }, 1800);
+      if (isCorrect) {
+        // Automatically load next drill after a short delay for correct answers
+        setTimeout(() => {
+          loadNextDrill(drillType);
+        }, 1200);
+      }
     }
   }, [currentDrill, userAnswer, verifyApi, loadNextDrill, drillType]);
 

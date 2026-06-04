@@ -959,9 +959,9 @@ export function Dashboard() {
                   }`}>
                     <div className="card-heading">
                       <h3>
-                        {drillType === 'table' && '⚡ Jumping Tables Drill'}
-                        {drillType === 'vocab' && '✍️ Synonym Match'}
-                        {['fraction', 'percentage'].includes(drillType) && '📊 Value Conversion'}
+                        {drillType === 'table' && <><Zap size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Jumping Tables Drill</>}
+                        {drillType === 'vocab' && <><BookOpen size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Vocab Drill</>}
+                        {['fraction', 'percentage'].includes(drillType) && <><Percent size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Value Conversion</>}
                       </h3>
                       <p>Enter correct answer or select options.</p>
                     </div>
@@ -984,12 +984,32 @@ export function Dashboard() {
                             <span>Correct answer registered! Streak increased.</span>
                           </div>
                         ) : (
-                          <div className="alert-message error">
-                            <XCircle size={18} />
-                            <span>Incorrect choice. Correct Key: <strong>{currentDrill.correctAnswer}</strong></span>
+                          <div className="alert-message error" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <XCircle size={18} />
+                              <span>Incorrect choice. Correct Key: <strong>{currentDrill.correctAnswer}</strong></span>
+                            </div>
+                            {drillType === 'vocab' && (
+                              <div style={{ padding: '10px', background: 'rgba(255, 255, 255, 0.9)', borderRadius: '6px', width: '100%', color: '#333', fontSize: '13px', borderLeft: '3px solid #e74c3c' }}>
+                                <div style={{ marginBottom: '4px', lineHeight: '1.4' }}><strong>Meaning:</strong> {currentDrill.revealDefinition}</div>
+                                {currentDrill.revealSynonyms?.length > 0 && (
+                                  <div style={{ marginBottom: '4px', lineHeight: '1.4' }}><strong>Synonyms:</strong> {currentDrill.revealSynonyms.join(', ')}</div>
+                                )}
+                                {currentDrill.revealAntonyms?.length > 0 && (
+                                  <div style={{ lineHeight: '1.4' }}><strong>Antonyms:</strong> {currentDrill.revealAntonyms.join(', ')}</div>
+                                )}
+                              </div>
+                            )}
+                            <button 
+                              className="btn btn-save" 
+                              onClick={() => loadNextDrill(drillType)}
+                              style={{ alignSelf: 'flex-end', padding: '8px 16px', fontSize: '13px', marginTop: '5px' }}
+                            >
+                              Next Question ➔
+                            </button>
                           </div>
                         )}
-                        <span className="loader-next-text">Sourcing next question...</span>
+                        {drillFeedback.isCorrect && <span className="loader-next-text">Sourcing next question...</span>}
                       </div>
                     ) : (
                       <form onSubmit={submitDrillAnswer} className="submit-form">

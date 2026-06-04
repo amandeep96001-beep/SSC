@@ -64,25 +64,58 @@ export const getNextDrill = async (req, res, next) => {
         let question, correctAnswer, wrongPool;
 
         if (isIdiom) {
-          question = `What does this expression mean?\n"${wordData.word}"`;
+          question = `What is the meaning of the idiom: "${wordData.word}"?`;
           correctAnswer = wordData.definition;
           wrongPool = [
             ...(wordData.synonyms || []).slice(0, 2),
             ...(wordData.antonyms || []).slice(0, 2),
           ];
         } else {
-          question = `"${wordData.word}" means:`;
-          correctAnswer = (wordData.synonyms || [])[0] || wordData.definition;
-          wrongPool = [
-            ...(wordData.antonyms || []),
-            ...(wordData.synonyms || []).slice(1),
-          ];
+          const hasSynonyms = wordData.synonyms && wordData.synonyms.length > 0;
+          const hasAntonyms = wordData.antonyms && wordData.antonyms.length > 0;
+          
+          const types = ['meaning'];
+          if (hasSynonyms) types.push('synonym');
+          if (hasAntonyms) types.push('antonym');
+          
+          const qType = types[Math.floor(Math.random() * types.length)];
+          
+          if (qType === 'synonym') {
+            question = `What is the SYNONYM of "${wordData.word}"?`;
+            correctAnswer = wordData.synonyms[Math.floor(Math.random() * wordData.synonyms.length)];
+            wrongPool = [
+              ...(wordData.antonyms || []),
+              wordData.definition,
+              // fallback distractors from the model's random options
+              ...(wordData.options || [])
+            ];
+          } else if (qType === 'antonym') {
+            question = `What is the ANTONYM of "${wordData.word}"?`;
+            correctAnswer = wordData.antonyms[Math.floor(Math.random() * wordData.antonyms.length)];
+            wrongPool = [
+              ...(wordData.synonyms || []),
+              wordData.definition,
+              ...(wordData.options || [])
+            ];
+          } else {
+            question = `What is the meaning of "${wordData.word}"?`;
+            correctAnswer = (wordData.synonyms || [])[0] || wordData.definition;
+            wrongPool = [
+              ...(wordData.antonyms || []),
+              ...(wordData.synonyms || []).slice(1),
+              ...(wordData.options || [])
+            ];
+          }
         }
 
+        // Filter out correct answer from wrongPool just in case
+        wrongPool = wrongPool.filter(w => w !== correctAnswer);
         const shuffledWrong = shuffleArray(wrongPool).slice(0, 3);
+        
         while (shuffledWrong.length < 3) {
           shuffledWrong.push(`None of these ${shuffledWrong.length + 1}`);
         }
+        
         const optionsList = shuffleArray([correctAnswer, ...shuffledWrong]);
 
         drillData = {
@@ -90,6 +123,8 @@ export const getNextDrill = async (req, res, next) => {
           question,
           isIdiom,
           revealDefinition: wordData.definition,
+          revealSynonyms: wordData.synonyms,
+          revealAntonyms: wordData.antonyms,
           pos: wordData.pos,
           category: wordData.category,
           options: optionsList,
