@@ -5,7 +5,8 @@ import {
   Zap, 
   BookMarked, 
   Book, 
-  Trophy 
+  Trophy,
+  Activity
 } from 'lucide-react';
 
 export function Sidebar({
@@ -70,6 +71,14 @@ export function Sidebar({
         >
           <Book className="nav-icon" size={18} />
           <span>Revision Deck</span>
+        </button>
+
+        <button 
+          className={`nav-item ${activeView === 'mock' ? 'active' : ''}`}
+          onClick={() => setActiveView('mock')}
+        >
+          <Activity className="nav-icon" size={18} />
+          <span>Full Mocks</span>
         </button>
 
         <button 

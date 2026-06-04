@@ -15,6 +15,9 @@ import { DrillWorkspace } from '../components/dashboard/workspaces/DrillWorkspac
 import { SyllabusWorkspace } from '../components/dashboard/workspaces/SyllabusWorkspace';
 import { RevisionWorkspace } from '../components/dashboard/workspaces/RevisionWorkspace';
 import { PerformanceWorkspace } from '../components/dashboard/workspaces/PerformanceWorkspace';
+import { MockWorkspace } from '../components/dashboard/workspaces/MockWorkspace';
+import { FullMockPortal } from '../components/exam/FullMockPortal';
+import { useMockTests } from '../hooks/useMockTests';
 
 export function Dashboard() {
   const {
@@ -68,6 +71,22 @@ export function Dashboard() {
     deleteCustomTopic,
     cancelTest
   } = useStudy();
+
+  const mockTestsHooks = useMockTests();
+  const [activeMockTestId, setActiveMockTestId] = useState(null);
+
+  // Start mock test
+  const startMockExam = (testId) => {
+    setActiveMockTestId(testId);
+    setActiveView('mock_exam_active');
+  };
+
+  // Submit mock test
+  const submitMockExam = (mockData, answers) => {
+    alert('Mock Exam Submitted successfully!');
+    setActiveMockTestId(null);
+    setActiveView('mock');
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
@@ -311,6 +330,34 @@ export function Dashboard() {
     );
   }
 
+  if (activeView === 'mock_exam_active' && activeMockTestId) {
+    return (
+      <FullMockPortal 
+        mockTestId={activeMockTestId}
+        user={user}
+        onCancel={() => {
+          setActiveMockTestId(null);
+          setActiveView('mock');
+        }}
+        onSubmit={submitMockExam}
+      />
+    );
+  }
+
+  if (activeView === 'mock_exam_active' && activeMockTestId) {
+    return (
+      <FullMockPortal 
+        mockTestId={activeMockTestId}
+        user={user}
+        onCancel={() => {
+          setActiveMockTestId(null);
+          setActiveView('mock');
+        }}
+        onSubmit={submitMockExam}
+      />
+    );
+  }
+
   if (activeView === 'results') {
     return (
       <ResultsPortal 
@@ -389,6 +436,13 @@ export function Dashboard() {
 
           {activeView === 'performance' && (
             <PerformanceWorkspace user={user} />
+          )}
+
+          {activeView === 'mock' && (
+            <MockWorkspace 
+              useMockTests={() => mockTestsHooks}
+              startMockExam={startMockExam}
+            />
           )}
 
           {activeView === 'revision' && (
