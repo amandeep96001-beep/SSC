@@ -15,10 +15,22 @@ const TopicProgressSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
+const MockProgressSchema = new mongoose.Schema({
+  mockTestId: { type: String, required: true },
+  title: { type: String, required: true },
+  score: { type: Number, required: true },
+  correct: { type: Number, required: true },
+  wrong: { type: Number, required: true },
+  blank: { type: Number, required: true },
+  accuracy: { type: Number, required: true },
+  timestamp: { type: Date, default: Date.now }
+});
+
 const UserSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, index: true },
   password: { type: String, required: true },
-  progress: [TopicProgressSchema]
+  progress: [TopicProgressSchema],
+  mockProgress: [MockProgressSchema]
 });
 
 const User = mongoose.model('User', UserSchema);

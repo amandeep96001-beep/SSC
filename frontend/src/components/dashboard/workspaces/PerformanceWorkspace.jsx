@@ -1,5 +1,9 @@
+import { useState } from 'react';
 
 export function PerformanceWorkspace({ user }) {
+  const [activeTab, setActiveTab] = useState('syllabus');
+
+  // Syllabus stats
   const progressCount = user.progress?.length || 0;
   const averageScore = progressCount > 0 
     ? Math.round(user.progress.reduce((sum, curr) => sum + curr.score, 0) / progressCount) 
@@ -8,73 +12,182 @@ export function PerformanceWorkspace({ user }) {
   const reviewingCount = user.progress?.filter(p => p.status === 'yellow').length || 0;
   const revisionNeededCount = user.progress?.filter(p => p.status === 'red').length || 0;
 
+  // Mock stats
+  const mockCount = user.mockProgress?.length || 0;
+  const averageMockScore = mockCount > 0 
+    ? (user.mockProgress.reduce((sum, curr) => sum + curr.score, 0) / mockCount).toFixed(1) 
+    : "0.0";
+  const averageMockAccuracy = mockCount > 0 
+    ? Math.round(user.mockProgress.reduce((sum, curr) => sum + curr.accuracy, 0) / mockCount) 
+    : 0;
+  const totalMockCorrect = user.mockProgress?.reduce((sum, curr) => sum + curr.correct, 0) || 0;
+  const totalMockWrong = user.mockProgress?.reduce((sum, curr) => sum + curr.wrong, 0) || 0;
+
   return (
     <div className="study-workspace">
-      <div className="section-header">
-        <h1>Performance Analytics Dashboard</h1>
-        <p>Track your target concepts, average mock scores, and revision statistics.</p>
-      </div>
-
-      <div className="stats-row">
-        <div className="stat-box">
-          <span className="stat-label">Tests Completed</span>
-          <span className="stat-val">{progressCount}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Average Score</span>
-          <span className="stat-val score-blue">{averageScore} / 50</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Mastered (Green)</span>
-          <span className="stat-val score-green">{masteredCount}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Reviewing (Yellow)</span>
-          <span className="stat-val score-yellow">{reviewingCount}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Needs Help (Red)</span>
-          <span className="stat-val score-red">{revisionNeededCount}</span>
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>Performance Analytics Dashboard</h1>
+          <p>Track your target concepts, average mock scores, and revision statistics.</p>
         </div>
       </div>
 
-      <div className="performance-history-card">
-        <h3>Syllabus Test Log History</h3>
-        <div className="table-responsive">
-          {user.progress && user.progress.length > 0 ? (
-            <table className="performance-table">
-              <thead>
-                <tr>
-                  <th>Topic Code</th>
-                  <th>Recorded Score</th>
-                  <th>Accuracy Grade Status</th>
-                  <th>Completion Timestamp</th>
-                </tr>
-              </thead>
-              <tbody>
-                {user.progress.map((record, i) => (
-                  <tr key={i}>
-                    <td><code>{record.topicId}</code></td>
-                    <td><strong>{record.score} / 50</strong></td>
-                    <td>
-                      <span className={`status-badge-pill ${record.status}`}>
-                        {record.status === 'green' && 'Mastered'}
-                        {record.status === 'yellow' && 'Reviewing'}
-                        {record.status === 'red' && 'Action Needed'}
-                      </span>
-                    </td>
-                    <td>{new Date(record.timestamp).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="empty-state">
-              <p>No tests taken yet. Head over to Syllabus & Notes and start a Mock Exam!</p>
+      {/* Tabs */}
+      <div className="revision-sub-tabs" style={{ marginBottom: '24px' }}>
+        <button 
+          className={`revision-sub-tab ${activeTab === 'syllabus' ? 'active' : ''}`}
+          onClick={() => setActiveTab('syllabus')}
+        >
+          Syllabus Practice (25 Qs)
+        </button>
+        <button 
+          className={`revision-sub-tab ${activeTab === 'mock' ? 'active' : ''}`}
+          onClick={() => setActiveTab('mock')}
+        >
+          Full Mock Exams (100 Qs)
+        </button>
+      </div>
+
+      {activeTab === 'syllabus' ? (
+        <>
+          <div className="stats-row">
+            <div className="stat-box">
+              <span className="stat-label">Tests Completed</span>
+              <span className="stat-val">{progressCount}</span>
             </div>
-          )}
-        </div>
-      </div>
+            <div className="stat-box">
+              <span className="stat-label">Average Score</span>
+              <span className="stat-val score-blue">{averageScore} / 50</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Mastered (Green)</span>
+              <span className="stat-val score-green">{masteredCount}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Reviewing (Yellow)</span>
+              <span className="stat-val score-yellow">{reviewingCount}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Needs Help (Red)</span>
+              <span className="stat-val score-red">{revisionNeededCount}</span>
+            </div>
+          </div>
+
+          <div className="performance-history-card">
+            <h3>Syllabus Test Log History</h3>
+            <div className="table-responsive">
+              {user.progress && user.progress.length > 0 ? (
+                <table className="performance-table">
+                  <thead>
+                    <tr>
+                      <th>Topic Code</th>
+                      <th>Recorded Score</th>
+                      <th>Accuracy Grade Status</th>
+                      <th>Completion Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {user.progress.map((record, i) => (
+                      <tr key={i}>
+                        <td><code>{record.topicId}</code></td>
+                        <td><strong>{record.score} / 50</strong></td>
+                        <td>
+                          <span className={`status-badge-pill ${record.status}`}>
+                            {record.status === 'green' && 'Mastered'}
+                            {record.status === 'yellow' && 'Reviewing'}
+                            {record.status === 'red' && 'Action Needed'}
+                          </span>
+                        </td>
+                        <td>{new Date(record.timestamp).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="empty-state">
+                  <p>No tests taken yet. Head over to Syllabus & Notes and start a Mock Exam!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="stats-row">
+            <div className="stat-box">
+              <span className="stat-label">Mocks Completed</span>
+              <span className="stat-val">{mockCount}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Average Mock Score</span>
+              <span className="stat-val score-blue">{averageMockScore} / 200</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Average Accuracy</span>
+              <span className="stat-val score-green">{averageMockAccuracy}%</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Total Correct Answers</span>
+              <span className="stat-val score-yellow">{totalMockCorrect}</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-label">Total Wrong Answers</span>
+              <span className="stat-val score-red">{totalMockWrong}</span>
+            </div>
+          </div>
+
+          <div className="performance-history-card">
+            <h3>Full Mock Exam Log History</h3>
+            <div className="table-responsive">
+              {user.mockProgress && user.mockProgress.length > 0 ? (
+                <table className="performance-table">
+                  <thead>
+                    <tr>
+                      <th>Mock Test Title</th>
+                      <th>Official Score</th>
+                      <th>Section-wise Stats Breakdown</th>
+                      <th>Accuracy %</th>
+                      <th>Completion Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {user.mockProgress.map((record, i) => (
+                      <tr key={i}>
+                        <td><strong>{record.title}</strong></td>
+                        <td><strong>{record.score} / 200</strong></td>
+                        <td>
+                          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            <span style={{ color: '#2ecc71', fontWeight: 'bold' }}>{record.correct} ✔</span> |{' '}
+                            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>{record.wrong} ❌</span> |{' '}
+                            <span style={{ color: '#7f8c8d' }}>{record.blank} ⚪</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`status-badge-pill ${record.accuracy >= 80 ? 'green' : record.accuracy >= 50 ? 'yellow' : 'red'}`}>
+                            {record.accuracy}% Accuracy
+                          </span>
+                        </td>
+                        <td>{new Date(record.timestamp).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan="5" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '10px' }}>
+                        * Mock exam grades are computed on the official SSC scheme: +2 for correct, -0.5 for wrong answers.
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              ) : (
+                <div className="empty-state">
+                  <p>No full mock exams taken yet. Navigate to Full Mock section, upload or select a test, and test your speed!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

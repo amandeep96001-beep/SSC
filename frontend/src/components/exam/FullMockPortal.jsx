@@ -66,7 +66,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
   const handleAutoSubmit = useCallback(() => {
     // Calculate final results
-    onSubmit(mockData, selectedAnswers);
+    onSubmit(mockData, selectedAnswers, 0);
   }, [mockData, selectedAnswers, onSubmit]);
 
   const formatTimer = (seconds) => {
@@ -268,7 +268,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
             </div>
             <button 
               className="btn btn-submit-section" 
-              onClick={() => onSubmit(mockData, selectedAnswers)}
+              onClick={() => onSubmit(mockData, selectedAnswers, timer)}
               style={{ background: '#10b981' }}
             >
               Submit Full Test 🏁

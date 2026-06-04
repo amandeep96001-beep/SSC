@@ -38,7 +38,8 @@ router.post('/register', async (req, res, next) => {
       status: 'success',
       data: {
         username: newUser.username,
-        progress: []
+        progress: [],
+        mockProgress: []
       }
     });
   } catch (error) {
@@ -80,7 +81,8 @@ router.post('/login', async (req, res, next) => {
       status: 'success',
       data: {
         username: user.username,
-        progress: user.progress
+        progress: user.progress,
+        mockProgress: user.mockProgress || []
       }
     });
   } catch (error) {
@@ -139,6 +141,61 @@ router.post('/progress', async (req, res, next) => {
     res.json({
       status: 'success',
       data: user.progress
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @desc    Update progress metrics for a full mock test
+ * @route   POST /api/auth/mock-progress
+ */
+router.post('/mock-progress', async (req, res, next) => {
+  try {
+    const { username, mockTestId, title, score, correct, wrong, blank, accuracy } = req.body;
+    if (!username || !mockTestId || !title || score === undefined || correct === undefined || wrong === undefined || blank === undefined || accuracy === undefined) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'All parameters (username, mockTestId, title, score, correct, wrong, blank, accuracy) are required.'
+      });
+    }
+
+    const user = await User.findOne({ username: username.trim() });
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User profile not found.'
+      });
+    }
+
+    const existingIndex = user.mockProgress.findIndex(p => p.mockTestId === mockTestId);
+    if (existingIndex !== -1) {
+      user.mockProgress[existingIndex].score = score;
+      user.mockProgress[existingIndex].title = title;
+      user.mockProgress[existingIndex].correct = correct;
+      user.mockProgress[existingIndex].wrong = wrong;
+      user.mockProgress[existingIndex].blank = blank;
+      user.mockProgress[existingIndex].accuracy = accuracy;
+      user.mockProgress[existingIndex].timestamp = new Date();
+    } else {
+      user.mockProgress.push({
+        mockTestId,
+        title,
+        score,
+        correct,
+        wrong,
+        blank,
+        accuracy,
+        timestamp: new Date()
+      });
+    }
+
+    await user.save();
+
+    res.json({
+      status: 'success',
+      data: user.mockProgress
     });
   } catch (error) {
     next(error);

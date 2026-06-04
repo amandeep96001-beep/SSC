@@ -43,6 +43,7 @@ export function useStudy() {
   const loginApi = useApi(useCallback((body) => apiService.post('/auth/login', body), []));
   const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
   const updateProgressApi = useApi(useCallback((body) => apiService.post('/auth/progress', body), []));
+  const updateMockProgressApi = useApi(useCallback((body) => apiService.post('/auth/mock-progress', body), []));
   const updateTopicApi = useApi(useCallback(({ topicId, body }) => apiService.put(`/study/topics/${topicId}`, body), []));
   const deleteTopicApi = useApi(useCallback((topicId) => apiService.delete(`/study/topics/${topicId}`), []));
 
@@ -177,6 +178,85 @@ export function useStudy() {
 
     setActiveView('results');
   }, [testQuestions, selectedAnswers, timer, user, selectedTopicId, updateProgressApi]);
+
+  // Submit mock test
+  const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0) => {
+    const elapsedSeconds = 3600 - remainingTimer;
+    const elapsedMins = Math.floor(elapsedSeconds / 60);
+    const elapsedSecs = elapsedSeconds % 60;
+
+    let correctCount = 0;
+    let wrongCount = 0;
+    let unattemptedCount = 0;
+    let errorLog = "=== SSC 100-QUESTION FULL MOCK ERROR LOG ===\n\n";
+
+    mockData.questions.forEach((item, index) => {
+      const userAns = answers[index];
+      const correctAns = item.a;
+
+      if (userAns === undefined || userAns === null) {
+        unattemptedCount++;
+        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n⚪ Unattempted\n✅ Key: ${item.o[correctAns]}\n\n`;
+      } else if (userAns === correctAns) {
+        correctCount++;
+      } else {
+        wrongCount++;
+        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n❌ My Input: ${item.o[userAns]}\n✅ Key: ${item.o[correctAns]}\n\n`;
+      }
+    });
+
+    const totalScore = (correctCount * 2) - (wrongCount * 0.5);
+    const accuracy = correctCount + wrongCount > 0 
+      ? Math.round((correctCount / (correctCount + wrongCount)) * 100) 
+      : 0;
+
+    const summaryText = `Time Taken: ${elapsedMins} Mins ${elapsedSecs} Secs | Correct: ${correctCount} | Wrong: ${wrongCount} | Blank: ${unattemptedCount}`;
+
+    setTestSummary({
+      score: totalScore,
+      maxScore: 200,
+      correct: correctCount,
+      wrong: wrongCount,
+      blank: unattemptedCount,
+      accuracy,
+      elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
+      summaryText,
+      errorLog: totalScore === 200 ? "ABSOLUTE FLAWLESS LEGENDARY SWEEP! Pure 200/200 Marks Koot Diye Tumne Bhai! 🔥" : errorLog,
+      isMock: true
+    });
+
+    setTestQuestions(mockData.questions);
+    
+    const answersArray = Array(100).fill(null);
+    Object.keys(answers).forEach((idx) => {
+      answersArray[Number(idx)] = answers[idx];
+    });
+    setSelectedAnswers(answersArray);
+
+    if (user) {
+      updateMockProgressApi.execute({
+        username: user.username,
+        mockTestId: mockData._id,
+        title: mockData.title,
+        score: totalScore,
+        correct: correctCount,
+        wrong: wrongCount,
+        blank: unattemptedCount,
+        accuracy
+      }).then(res => {
+        if (res.success && res.data?.data) {
+          const updatedMockProgress = res.data.data;
+          setUser(prev => {
+            const next = { ...prev, mockProgress: updatedMockProgress };
+            localStorage.setItem('ssc_user', JSON.stringify(next));
+            return next;
+          });
+        }
+      });
+    }
+
+    setActiveView('results');
+  }, [user, updateMockProgressApi]);
 
   // Start 25-Question Test
   const startTest = useCallback(async () => {
@@ -393,6 +473,7 @@ export function useStudy() {
     markForReview,
     clearResponse,
     submitExam,
+    submitMockExam,
     addCustomTopic,
     loginUser,
     registerUser,

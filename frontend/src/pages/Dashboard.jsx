@@ -63,6 +63,7 @@ export function Dashboard() {
     markForReview,
     clearResponse,
     submitExam,
+    submitMockExam,
     addCustomTopic,
     loginUser,
     registerUser,
@@ -79,13 +80,6 @@ export function Dashboard() {
   const startMockExam = (testId) => {
     setActiveMockTestId(testId);
     setActiveView('mock_exam_active');
-  };
-
-  // Submit mock test
-  const submitMockExam = (mockData, answers) => {
-    alert('Mock Exam Submitted successfully!');
-    setActiveMockTestId(null);
-    setActiveView('mock');
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -326,20 +320,6 @@ export function Dashboard() {
         clearResponse={clearResponse}
         submitExam={submitExam}
         cancelTest={cancelTest}
-      />
-    );
-  }
-
-  if (activeView === 'mock_exam_active' && activeMockTestId) {
-    return (
-      <FullMockPortal 
-        mockTestId={activeMockTestId}
-        user={user}
-        onCancel={() => {
-          setActiveMockTestId(null);
-          setActiveView('mock');
-        }}
-        onSubmit={submitMockExam}
       />
     );
   }
