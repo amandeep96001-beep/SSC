@@ -62,7 +62,10 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
       setDate('');
       setShift('');
       setJsonInput('');
-      setTimeout(() => setShowAddForm(false), 2000);
+      setTimeout(() => {
+        setShowAddForm(false);
+        setFormSuccess('');
+      }, 2000);
     } else {
       setFormError(res.error || 'Failed to add mock test.');
     }
@@ -75,7 +78,11 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
           <h1>Full Mock Exams</h1>
           <p>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
         </div>
-        <button className="btn-create-topic" onClick={() => setShowAddForm(!showAddForm)}>
+        <button className="btn-create-topic" onClick={() => {
+          setShowAddForm(!showAddForm);
+          setFormError('');
+          setFormSuccess('');
+        }}>
           <Plus size={16} />
           {showAddForm ? 'View Mocks' : 'Add New Mock'}
         </button>
