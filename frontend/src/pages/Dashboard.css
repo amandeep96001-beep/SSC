@@ -1,0 +1,275 @@
+/* Dashboard.css - Contains styles migrated from inline jsx */
+
+/* Common Utilities */
+.no-select {
+  user-select: none;
+}
+
+/* Exam Portal Styles */
+.exam-initializing-overlay {
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  color: #64748b;
+}
+
+.exam-initializing-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.spin-icon-blue {
+  color: #38bdf8;
+}
+
+.exam-user-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.exam-user-meta {
+  font-size: 12px;
+  color: #666;
+}
+
+.palette-header {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #444;
+}
+
+.palette-warning {
+  margin-top: 12px;
+  padding: 10px;
+  background: #fff3cd;
+  color: #856404;
+  border-radius: 4px;
+  font-size: 12px;
+  border-left: 3px solid #ffeeba;
+}
+
+/* Dot Legends */
+.dot-white { background: #fff; }
+.dot-red { background: #d9534f; }
+.dot-green { background: #5cb85c; }
+.dot-yellow { background: #8a6d3b; }
+
+.btn-submit-section {
+  width: 100%;
+  margin-top: 15px;
+  background: #1a5276;
+  color: white;
+  border: none;
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-cancel-test {
+  width: 100%;
+  margin-top: 8px;
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  padding: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+/* Modals */
+.modal-content-cancel {
+  max-width: 420px;
+  border-top: 4px solid #f59e0b;
+  background: #1e293b;
+}
+
+.modal-title-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f8fafc;
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-body-cancel {
+  padding: 20px 0;
+  color: #cbd5e1;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.modal-body-bold {
+  margin: 0 0 12px 0;
+  font-weight: bold;
+}
+
+.modal-body-sub {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.modal-actions-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn-cancel-flex {
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-confirm-flex {
+  background-color: #ef4444;
+  flex: 1;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Results Portal Styles */
+.results-portal-visible {
+  display: block;
+}
+
+.results-summary-subtitle {
+  font-weight: bold;
+  color: #555;
+}
+
+.results-error-log-banner {
+  background: #fff8e7;
+  padding: 15px;
+  border-left: 4px solid #f59e0b;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.results-error-log-title {
+  font-weight: bold;
+  color: #b36b00;
+}
+
+.results-error-log-textarea {
+  width: 100%;
+  height: 140px;
+  margin: 15px 0;
+  font-family: monospace;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.btn-copy-log {
+  background: #2c3e50;
+  color: white;
+  font-weight: bold;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+.review-state-link {
+  color: #7f8c8d;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.review-official-key {
+  margin: 4px 0;
+  color: #2ecc71;
+}
+
+.review-core-logic {
+  font-size: 13px;
+  color: #1f618d;
+  background: #ebf5fb;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+  border-left: 3px solid #1a5276;
+}
+
+.results-actions-row {
+  margin-top: 30px;
+  display: flex;
+  gap: 15px;
+}
+
+.btn-outline {
+  border: 1px solid #ccc;
+}
+
+/* Drill Workspace Styles */
+.drill-error-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.drill-error-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drill-error-vocab-details {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  width: 100%;
+  color: #333;
+  font-size: 13px;
+  border-left: 3px solid #e74c3c;
+}
+
+.drill-error-vocab-row {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.drill-error-vocab-last-row {
+  line-height: 1.4;
+}
+
+.btn-drill-next {
+  align-self: flex-end;
+  padding: 8px 16px;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+/* Performance Workspace */
+.score-blue { color: #3b82f6; }
+.score-green { color: #10b981; }
+.score-yellow { color: #f59e0b; }
+.score-red { color: #ef4444; }
+
+/* Topic Workspace */
+.vocab-search-flex { flex: 1; }
+.vocab-filters-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.topic-notes-html {
+  margin-top: 15px;
+  padding: 15px;
+  background: #f9f9fa;
+  border-left: 3px solid #4f46e5;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.6;
+}
