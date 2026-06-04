@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useDrills } from '../hooks/useDrills';
 import { useStudy } from '../hooks/useStudy';
 import { 
@@ -396,6 +397,7 @@ export function Dashboard() {
   if (!user) {
     return (
       <div className="auth-fullscreen-layout">
+        <Helmet><title>Login | SSC Speed Engine</title></Helmet>
         <div className="auth-card">
           <div className="auth-brand">
             <GraduationCap className="brand-logo" size={36} />
@@ -468,6 +470,7 @@ export function Dashboard() {
     const activeQ = testQuestions[currentQuestionIdx];
     return (
       <div id="exam-portal" style={{ userSelect: 'none' }}>
+        <Helmet><title>Mock Test | SSC Speed Engine</title></Helmet>
         <div className="navbar">
           <div>CHSL DYNAMIC EXAM INTERFACE - {selectedSubject?.toUpperCase()}</div>
           <div id="timer-box">{formatTimer(timer)}</div>
@@ -672,6 +675,7 @@ export function Dashboard() {
   if (activeView === 'results') {
     return (
       <div className="results-container" id="results-portal" style={{ display: 'block' }}>
+        <Helmet><title>Test Results | SSC Speed Engine</title></Helmet>
         <div className="score-box">
           <h2>Performance Assessment Summary</h2>
           <p>Bhai, tera final official calculations sheet:</p>
@@ -764,6 +768,7 @@ export function Dashboard() {
   // --- DEFAULT LMS WEB APP WORKSPACE (SIDEBAR LAYOUT) ---
   return (
     <div className="lms-container">
+      <Helmet><title>Dashboard | SSC Speed Engine</title></Helmet>
       {globalLoading && (
         <div className="absolute-loader-strip">
           <RefreshCw className="spin-icon" size={14} />
