@@ -148,6 +148,9 @@ export function Dashboard() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTopicId, setDeletingTopicId] = useState('');
 
+  // Cancel test confirmation state
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
   // Revision Deck states
   const [deckTab, setDeckTab] = useState('tables');
   const [tableSubTab, setTableSubTab] = useState('tables'); // tables | fractions | percentages
@@ -510,8 +513,9 @@ export function Dashboard() {
                   </div>
                 </>
               ) : (
-                <div style={{ padding: '20px', color: '#666' }}>
-                  Loading test session questions...
+                <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '15px', color: '#64748b' }}>
+                  <RefreshCw className="spin-icon" size={32} style={{ color: '#38bdf8' }} />
+                  <span style={{ fontSize: '15px', fontWeight: '500' }}>Initializing secure test environment...</span>
                 </div>
               )}
             </div>
@@ -545,7 +549,7 @@ export function Dashboard() {
               </div>
               
               <div className="palette-grid" id="palette-box">
-                {Array(25).fill(null).map((_, i) => {
+                {testQuestions.map((_, i) => {
                   const status = questionStatuses[i] || 'not-visited';
                   return (
                     <button
@@ -559,6 +563,12 @@ export function Dashboard() {
                   );
                 })}
               </div>
+
+              {testQuestions.length > 0 && testQuestions.length < 25 && (
+                <div style={{ marginTop: '12px', padding: '10px', background: '#fff3cd', color: '#856404', borderRadius: '4px', fontSize: '12px', borderLeft: '3px solid #ffeeba' }}>
+                  <strong>Note:</strong> Only {testQuestions.length} questions available. Add more MCQs to this topic to simulate a full 25-Q mock test.
+                </div>
+              )}
             </div>
 
             <div>
@@ -597,7 +607,7 @@ export function Dashboard() {
                 style={{ 
                   width: '100%', 
                   marginTop: '8px', 
-                  background: 'transparent', 
+                  background: 'transparent',  
                   color: '#e74c3c', 
                   border: '1px solid #e74c3c', 
                   padding: '10px', 
@@ -605,17 +615,57 @@ export function Dashboard() {
                   cursor: 'pointer',
                   borderRadius: '6px'
                 }} 
-                onClick={() => {
-                  if (window.confirm('Test cancel karna chahte ho? Koi progress save nahi hoga.')) {
-                    cancelTest();
-                  }
-                }}
+                onClick={() => setCancelConfirmOpen(true)}
               >
                 ✕ Cancel Test
               </button>
             </div>
           </div>
         </div>
+
+        {/* --- CANCEL TEST CONFIRMATION MODAL --- */}
+        {cancelConfirmOpen && (
+          <div className="modal-overlay">
+            <div className="modal-content-card" style={{ maxWidth: '420px', borderTop: '4px solid #f59e0b', background: '#1e293b' }}>
+              <div className="modal-header">
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc', margin: 0, fontSize: '18px' }}>
+                  <Activity size={20} color="#f59e0b" />
+                  Cancel Current Test?
+                </h3>
+                <button className="btn-close-modal" onClick={() => setCancelConfirmOpen(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div style={{ padding: '20px 0', color: '#cbd5e1', fontSize: '15px', lineHeight: '1.6' }}>
+                <p style={{ margin: '0 0 12px 0', fontWeight: 'bold' }}>Are you sure you want to cancel the mock test?</p>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px' }}>All your current progress and answered questions will be <strong>erased</strong>. This action cannot be undone.</p>
+              </div>
+
+              <div className="modal-footer-actions" style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  className="btn-cancel"
+                  style={{ flex: 1, padding: '10px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                  onClick={() => setCancelConfirmOpen(false)}
+                >
+                  Continue Test
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-save-topic" 
+                  style={{ backgroundColor: '#ef4444', flex: 1, padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  onClick={() => {
+                    setCancelConfirmOpen(false);
+                    cancelTest();
+                  }}
+                >
+                  <XCircle size={16} /> Yes, Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1706,7 +1756,6 @@ export function Dashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
