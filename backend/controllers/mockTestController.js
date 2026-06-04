@@ -49,12 +49,21 @@ export const createMockTest = async (req, res, next) => {
 // @access  Public
 export const getMockTests = async (req, res, next) => {
   try {
-    // Select everything except questions to keep the list payload small
-    const tests = await MockTest.find({}).select('-questions').sort({ createdAt: -1 });
+    const tests = await MockTest.find({}).sort({ createdAt: -1 });
+
+    const formattedTests = tests.map(t => ({
+      _id: t._id,
+      title: t.title,
+      year: t.year,
+      date: t.date,
+      shift: t.shift,
+      createdAt: t.createdAt,
+      questionsCount: t.questions ? t.questions.length : 0
+    }));
 
     res.json({
       success: true,
-      data: tests
+      data: formattedTests
     });
   } catch (error) {
     next(error);
@@ -76,6 +85,27 @@ export const getMockTestById = async (req, res, next) => {
     res.json({
       success: true,
       data: test
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a mock test
+// @route   DELETE /api/mock/:id
+// @access  Public
+export const deleteMockTest = async (req, res, next) => {
+  try {
+    const test = await MockTest.findByIdAndDelete(req.params.id);
+
+    if (!test) {
+      res.status(404);
+      throw new Error('Mock Test not found');
+    }
+
+    res.json({
+      success: true,
+      message: 'Mock test deleted successfully'
     });
   } catch (error) {
     next(error);

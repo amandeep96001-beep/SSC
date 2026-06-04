@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Check, Play, BookOpen, Inbox } from 'lucide-react';
+import { Plus, Check, Play, BookOpen, Inbox, Trash2, XCircle } from 'lucide-react';
 
 export function MockWorkspace({ useMockTests, startMockExam }) {
-  const { mockTests, loading, error, loadMockTests, addMockTest } = useMockTests();
+  const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = useMockTests();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingTestId, setDeletingTestId] = useState(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -173,7 +175,16 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                   <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.2rem' }}>{test.title}</h3>
-                  <span className="mock-badge">100 Qs</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="mock-badge">{test.questionsCount || 0} Qs</span>
+                    <button 
+                      onClick={() => { setDeletingTestId(test._id); setDeleteConfirmOpen(true); }}
+                      style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                      title="Delete Mock Test"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
                 {test.year && <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0' }}>Year: {test.year}</p>}
                 {test.date && <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0' }}>Date: {test.date}</p>}
@@ -193,6 +204,47 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
             </div>
           )}
         </>
+      )}
+
+      {deleteConfirmOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content-card" style={{ maxWidth: '400px', borderTop: '4px solid #ef4444', background: 'var(--bg-card)' }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', margin: 0 }}>
+                <XCircle size={20} />
+                Confirm Deletion
+              </h3>
+            </div>
+            
+            <div style={{ padding: '20px 0', color: '#cbd5e1' }}>
+              Are you completely sure you want to permanently delete this mock test? 
+              <br/><br/>
+              <strong>This cannot be undone!</strong>
+            </div>
+
+            <div className="modal-footer-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button 
+                type="button" 
+                className="btn-cancel" 
+                style={{ flex: 1 }}
+                onClick={() => setDeleteConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-save-topic" 
+                style={{ backgroundColor: '#ef4444', flex: 1 }}
+                onClick={async () => {
+                  setDeleteConfirmOpen(false);
+                  await removeMockTest(deletingTestId);
+                }}
+              >
+                Yes, Delete It
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

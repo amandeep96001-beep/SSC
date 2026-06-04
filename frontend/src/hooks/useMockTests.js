@@ -9,6 +9,7 @@ export function useMockTests() {
   const getMockTestsApi = useApi(useCallback(() => apiService.get('/mock'), []));
   const getMockTestByIdApi = useApi(useCallback((id) => apiService.get(`/mock/${id}`), []));
   const createMockTestApi = useApi(useCallback((body) => apiService.post('/mock', body), []));
+  const deleteMockTestApi = useApi(useCallback((id) => apiService.delete(`/mock/${id}`), []));
 
   const getMockTestsExecute = getMockTestsApi.execute;
 
@@ -40,12 +41,24 @@ export function useMockTests() {
     return null;
   }, [getMockTestByIdExecute]);
 
+  const deleteMockTestExecute = deleteMockTestApi.execute;
+
+  const removeMockTest = useCallback(async (id) => {
+    const result = await deleteMockTestExecute(id);
+    if (result.success) {
+      await loadMockTests();
+      return { success: true };
+    }
+    return { success: false, error: result.error };
+  }, [deleteMockTestExecute, loadMockTests]);
+
   return {
     mockTests,
-    loading: getMockTestsApi.loading || createMockTestApi.loading || getMockTestByIdApi.loading,
-    error: getMockTestsApi.error || createMockTestApi.error || getMockTestByIdApi.error,
+    loading: getMockTestsApi.loading || createMockTestApi.loading || getMockTestByIdApi.loading || deleteMockTestApi.loading,
+    error: getMockTestsApi.error || createMockTestApi.error || getMockTestByIdApi.error || deleteMockTestApi.error,
     loadMockTests,
     addMockTest,
-    getFullTest
+    getFullTest,
+    removeMockTest
   };
 }

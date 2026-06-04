@@ -1,5 +1,5 @@
 import express from 'express';
-import { createMockTest, getMockTests, getMockTestById } from '../controllers/mockTestController.js';
+import { createMockTest, getMockTests, getMockTestById, deleteMockTest } from '../controllers/mockTestController.js';
 
 const router = express.Router();
 
@@ -8,6 +8,7 @@ router.route('/')
   .post(createMockTest);
 
 router.route('/:id')
-  .get(getMockTestById);
+  .get(getMockTestById)
+  .delete(deleteMockTest);
 
 export default router;

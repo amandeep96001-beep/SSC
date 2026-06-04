@@ -23,16 +23,17 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
     async function loadTest() {
       try {
         const res = await apiService.get(`/mock/${mockTestId}`);
-        if (res.success) {
-          setMockData(res.data.data);
+        if (res.success && res.data) {
+          const testData = res.data;
+          setMockData(testData);
           
           // Pre-populate visited for the first question
-          if (res.data.data.questions && res.data.data.questions.length > 0) {
+          if (testData.questions && testData.questions.length > 0) {
             setQuestionStatuses(prev => ({ ...prev, 0: 'visited' }));
             
             // Set first section based on the first question
-            if (res.data.data.questions[0].section) {
-              setCurrentSection(res.data.data.questions[0].section);
+            if (testData.questions[0].section) {
+              setCurrentSection(testData.questions[0].section);
             }
           }
         }
