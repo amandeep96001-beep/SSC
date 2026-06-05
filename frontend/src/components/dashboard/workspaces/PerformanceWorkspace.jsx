@@ -9,6 +9,9 @@ export function PerformanceWorkspace({ user }) {
   const averageScore = progressCount > 0 
     ? Math.round(user.progress.reduce((sum, curr) => sum + curr.score, 0) / progressCount) 
     : 0;
+  const averageMaxScore = progressCount > 0
+    ? Math.round(user.progress.reduce((sum, curr) => sum + (curr.maxScore || 50), 0) / progressCount)
+    : 50;
   const masteredCount = user.progress?.filter(p => p.status === 'green').length || 0;
   const reviewingCount = user.progress?.filter(p => p.status === 'yellow').length || 0;
   const revisionNeededCount = user.progress?.filter(p => p.status === 'red').length || 0;
@@ -60,7 +63,7 @@ export function PerformanceWorkspace({ user }) {
             </div>
             <div className="stat-box">
               <span className="stat-label">Average Score</span>
-              <span className="stat-val score-blue">{averageScore} / 50</span>
+              <span className="stat-val score-blue">{averageScore} / {averageMaxScore}</span>
             </div>
             <div className="stat-box">
               <span className="stat-label">Mastered (Green)</span>
@@ -99,7 +102,7 @@ export function PerformanceWorkspace({ user }) {
                             Attempt {record.attemptNumber || 1}
                           </span>
                         </td>
-                        <td><strong>{record.score} / 50</strong></td>
+                        <td><strong>{record.score} / {record.maxScore || 50}</strong></td>
                         <td>
                           <span className={`status-badge-pill ${record.status}`} style={{ padding: '6px 12px', fontSize: '0.8rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
                             {record.status === 'green' && 'Mastered'}

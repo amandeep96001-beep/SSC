@@ -1,6 +1,7 @@
 import express from 'express';
 import User, { hashPassword } from '../models/userModel.js';
 import MockProgress from '../models/mockProgressModel.js';
+import Progress from '../models/progressModel.js';
 
 const router = express.Router();
 
@@ -29,8 +30,7 @@ router.post('/register', async (req, res, next) => {
 
     const newUser = new User({
       username: trimmedUsername,
-      password: hashPassword(password),
-      progress: []
+      password: hashPassword(password)
     });
 
     await newUser.save();
@@ -79,12 +79,13 @@ router.post('/login', async (req, res, next) => {
     }
 
     const mockProgress = await MockProgress.find({ username: user.username }).lean() || [];
+    const progress = await Progress.find({ username: user.username }).lean() || [];
 
     res.json({
       status: 'success',
       data: {
         username: user.username,
-        progress: user.progress,
+        progress: progress,
         mockProgress: mockProgress
       }
     });
@@ -124,8 +125,10 @@ router.post('/progress', async (req, res, next) => {
       status = 'yellow';
     }
 
-    const existingCount = user.progress.filter(p => p.topicId === topicId).length;
-    user.progress.push({
+    const existingCount = await Progress.countDocuments({ username: user.username, topicId });
+    
+    await Progress.create({
+      username: user.username,
       topicId,
       score,
       maxScore: dynamicMaxScore,
@@ -135,11 +138,11 @@ router.post('/progress', async (req, res, next) => {
       timestamp: new Date()
     });
 
-    await user.save();
+    const updatedProgress = await Progress.find({ username: user.username }).lean();
 
     res.json({
       status: 'success',
-      data: user.progress
+      data: updatedProgress
     });
   } catch (error) {
     next(error);
