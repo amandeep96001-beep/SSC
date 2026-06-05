@@ -30,6 +30,7 @@ export function useStudy() {
   const [timer, setTimer] = useState(900); // 15 Minutes
   const [testSummary, setTestSummary] = useState(null);
 
+  const timerValueRef = useRef(900);
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
@@ -116,7 +117,7 @@ export function useStudy() {
       clearInterval(timerRef.current);
     }
 
-    const elapsedSeconds = 900 - timer;
+    const elapsedSeconds = 900 - timerValueRef.current;
     const elapsedMins = Math.floor(elapsedSeconds / 60);
     const elapsedSecs = elapsedSeconds % 60;
 
@@ -181,7 +182,7 @@ export function useStudy() {
     }
 
     setActiveView('results');
-  }, [testQuestions, selectedAnswers, timer, user, selectedTopicId, updateProgressApi]);
+  }, [testQuestions, selectedAnswers, user, selectedTopicId, updateProgressApi]);
 
   // Submit mock test
   const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0, sectionTimes = null) => {
@@ -377,6 +378,10 @@ export function useStudy() {
       return next;
     });
   }, [currentQuestionIdx]);
+
+  useEffect(() => {
+    timerValueRef.current = timer;
+  }, [timer]);
 
   // Timer countdown hook
   useEffect(() => {

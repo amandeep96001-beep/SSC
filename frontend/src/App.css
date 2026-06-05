@@ -2,25 +2,25 @@
    Core Theme Colors & Root Tokens (Professional Slate)
    ---------------------------------------------------- */
 :root {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
-  
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Outfit", system-ui, -apple-system, sans-serif;
+
   --bg-main: #0e0f13;
   --bg-sidebar: #13141a;
   --bg-surface: #181920;
   --bg-input: #1d1e28;
-  
+
   --border-color: #242533;
   --border-focus: #292b3a;
-  
+
   --text-primary: #ffffff;
   --text-secondary: #9e9eb0;
   --text-muted: #64748b;
-  
+
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
   --color-primary-glow: rgba(59, 130, 246, 0.15);
-  
+
   --color-success: #10b981;
   --color-danger: #ef4444;
 }
@@ -35,12 +35,20 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin-icon {
@@ -49,15 +57,27 @@ body {
 
 /* Connection Status Badge Keyframes */
 @keyframes statusPulse {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 @keyframes statusPulseRed {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 /* ----------------------------------------------------
@@ -924,7 +944,7 @@ body {
   align-items: center;
   font-size: 14px;
   font-weight: bold;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   height: 45px;
 }
 
@@ -1186,13 +1206,13 @@ body {
   background: white;
   padding: 30px;
   border-radius: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   color: #333;
   text-align: left;
 }
 
-.results-container h2, 
-.results-container h3, 
+.results-container h2,
+.results-container h3,
 .results-container h4 {
   color: #222;
   font-family: Arial, sans-serif;
@@ -1216,9 +1236,9 @@ body {
   border-left: 5px solid #ccc;
   margin-bottom: 15px;
   border-radius: 4px;
-  border-top: 1px solid rgba(0,0,0,0.04);
-  border-right: 1px solid rgba(0,0,0,0.04);
-  border-bottom: 1px solid rgba(0,0,0,0.04);
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .review-card.correct {
@@ -1350,7 +1370,8 @@ body {
   color: var(--text-secondary);
 }
 
-.form-group input, .form-group textarea {
+.form-group input,
+.form-group textarea {
   padding: 10px 14px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
@@ -1361,7 +1382,8 @@ body {
   transition: border-color 0.2s;
 }
 
-.form-group input:focus, .form-group textarea:focus {
+.form-group input:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--color-primary);
 }
@@ -1446,9 +1468,12 @@ body {
 }
 
 .btn-premium-mock::before {
-  content: '';
+  content: "";
   position: absolute;
-  top: 0; right: 0; bottom: 0; left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #d946ef 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -1494,7 +1519,9 @@ body {
 .mock-glass-card:hover {
   transform: translateY(-5px);
   border-color: rgba(236, 72, 153, 0.3);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(236, 72, 153, 0.1);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(236, 72, 153, 0.1);
 }
 
 .mock-badge {
@@ -1514,9 +1541,9 @@ body {
   border-radius: 0 8px 8px 0;
   color: #e2e8f0;
   overflow-x: auto;
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
   font-size: 0.8rem;
-  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .mock-premium-input {
@@ -1881,7 +1908,6 @@ body {
   color: var(--text-secondary);
 }
 
-
 /* ----------------------------------------------------
    User Profile in Sidebar & Authentication UI
    ---------------------------------------------------- */
@@ -1967,7 +1993,7 @@ body {
   max-width: 440px;
   padding: 36px;
   box-sizing: border-box;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
   text-align: center;
   animation: fadeIn 0.3s ease-out;
 }
@@ -2019,7 +2045,7 @@ body {
 .auth-mode-selector button.active {
   background: var(--bg-surface);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .auth-form {
@@ -2076,8 +2102,6 @@ body {
 .btn-auth-submit:hover {
   background: var(--color-primary-hover);
 }
-
-
 
 /* ----------------------------------------------------
    Topic Accuracy Progress Indicator Dots
@@ -2148,7 +2172,8 @@ body {
   text-align: left;
 }
 
-.performance-table th, .performance-table td {
+.performance-table th,
+.performance-table td {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color);
   font-size: 0.88rem;
