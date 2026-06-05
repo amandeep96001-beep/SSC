@@ -103,7 +103,7 @@ export function AnalyticsWorkspace({ user }) {
       <div className="stats-row" style={{ marginBottom: '30px' }}>
         <div className="stat-box" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
           <span className="stat-label" style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Clock size={16} /> Total Application Time
+            <Clock size={16} /> Total Time on Mock
           </span>
           <span className="stat-val" style={{ color: '#10b981', fontSize: '2rem', marginTop: '8px' }}>{analyticsData.totalTimeStr}</span>
         </div>
