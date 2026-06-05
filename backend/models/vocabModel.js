@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const VocabSchema = new mongoose.Schema({
-  word: { type: String, required: true },
+  word: { type: String, required: true, unique: true },
   pos: { type: String, default: 'Noun' },
   definition: { type: String, required: true },
   synonyms: [{ type: String, required: true }],

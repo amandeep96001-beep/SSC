@@ -208,10 +208,36 @@ export const deleteTopic = async (req, res, next) => {
 
 export const getVocab = async (req, res, next) => {
   try {
-    const { category } = req.query;
-    const query = category ? { category } : {};
-    const vocabList = await vocabRepository.findAll(query);
-    res.json({ status: 'success', data: vocabList });
+    const { category, search, page = 1, limit = 30 } = req.query;
+    
+    const query = {};
+    if (category && category !== 'All') {
+      query.category = category;
+    }
+    
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { word: searchRegex },
+        { definition: searchRegex },
+        { synonyms: searchRegex },
+        { antonyms: searchRegex }
+      ];
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const result = await vocabRepository.findAll(query, skip, parseInt(limit, 10));
+    
+    res.json({ 
+      status: 'success', 
+      data: result.data,
+      meta: {
+        total: result.total,
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+        totalPages: Math.ceil(result.total / parseInt(limit, 10))
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -255,5 +281,63 @@ export const updateVocab = async (req, res, next) => {
     res.json({ status: 'success', data: updated });
   } catch (error) {
     next(error);
+  }
+};
+
+export const addVocabBulk = async (req, res, next) => {
+  try {
+    const vocabArray = req.body;
+    if (!Array.isArray(vocabArray)) {
+      return res.status(400).json({ status: 'error', message: 'Expected a JSON array of vocabulary objects.' });
+    }
+
+    const processedArray = vocabArray.map(item => {
+      const dto = new VocabDto(item);
+      const errors = dto.validate();
+      if (errors.length > 0) {
+        throw new Error(`Validation failed for word "${item.word}": ` + errors.join(' '));
+      }
+      return dto;
+    });
+
+    // 1. Get all words from the incoming array
+    const incomingWords = processedArray.map(item => item.word);
+
+    // 2. Find which of these already exist in the database
+    const existingItems = await Vocab.find({ word: { $in: incomingWords } }).select('word').lean();
+    const existingWordsSet = new Set(existingItems.map(item => item.word.toLowerCase()));
+
+    // 3. Filter out words that already exist in DB
+    let newVocabsToInsert = processedArray.filter(item => !existingWordsSet.has(item.word.toLowerCase()));
+
+    // 4. Remove duplicates within the JSON array itself (if user pasted the same word twice)
+    const uniqueMap = new Map();
+    newVocabsToInsert.forEach(item => {
+      if (!uniqueMap.has(item.word.toLowerCase())) {
+        uniqueMap.set(item.word.toLowerCase(), item);
+      }
+    });
+    const finalArrayToInsert = Array.from(uniqueMap.values());
+
+    if (finalArrayToInsert.length === 0) {
+      return res.status(200).json({ 
+        status: 'success', 
+        message: 'No new words added. All words in the JSON already exist in the database.', 
+        data: [] 
+      });
+    }
+
+    const result = await vocabRepository.insertMany(finalArrayToInsert);
+    res.status(201).json({ 
+      status: 'success', 
+      message: `Successfully inserted ${result.length} new words. (${processedArray.length - result.length} duplicates ignored)`, 
+      data: result 
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      // Some duplicate occurred but Mongoose insertMany with ordered:false will throw this at the end
+      return res.status(207).json({ status: 'partial_success', message: 'Bulk insert finished, but some duplicate words were skipped.' });
+    }
+    return res.status(400).json({ status: 'error', message: error.message });
   }
 };

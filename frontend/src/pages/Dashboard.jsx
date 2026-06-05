@@ -111,17 +111,36 @@ export function Dashboard() {
   const [vocabList, setVocabList] = useState([]);
   const [vocabListLoading, setVocabListLoading] = useState(false);
   
+  // Pagination State
+  const [vocabPage, setVocabPage] = useState(1);
+  const [vocabTotalPages, setVocabTotalPages] = useState(1);
+  
   const [vocabModalOpen, setVocabModalOpen] = useState(false);
   const [editingVocabId, setEditingVocabId] = useState(null);
   const [vocabForm, setVocabForm] = useState({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', category: 'Word Power' });
   const [vocabFormError, setVocabFormError] = useState('');
   const [vocabFormSuccess, setVocabFormSuccess] = useState('');
 
-  const loadVocabList = useCallback(async () => {
+  const [vocabBulkModalOpen, setVocabBulkModalOpen] = useState(false);
+  const [vocabBulkJson, setVocabBulkJson] = useState('');
+  const [vocabBulkError, setVocabBulkError] = useState('');
+  const [vocabBulkSuccess, setVocabBulkSuccess] = useState('');
+
+  const loadVocabList = useCallback(async (page = 1, searchStr = '', categoryStr = 'All') => {
     setVocabListLoading(true);
     try {
-      const res = await apiService.get('/study/vocab');
-      if (res.status === 'success') setVocabList(res.data || []);
+      const query = new URLSearchParams({ page, limit: 30 });
+      if (searchStr) query.append('search', searchStr);
+      if (categoryStr && categoryStr !== 'All') query.append('category', categoryStr);
+
+      const res = await apiService.get(`/study/vocab?${query.toString()}`);
+      if (res.status === 'success') {
+        setVocabList(res.data || []);
+        if (res.meta) {
+          setVocabPage(res.meta.page);
+          setVocabTotalPages(res.meta.totalPages || 1);
+        }
+      }
     } catch (e) {
       console.error('Failed to load vocab', e);
     } finally {
@@ -129,19 +148,32 @@ export function Dashboard() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-  useEffect(() => { loadVocabList(); }, []);
+  // Effect to load on mount and when category changes
+  useEffect(() => {
+    setVocabPage(1); // reset to page 1 on category change
+    loadVocabList(1, vocabSearch, vocabCategory);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vocabCategory]);
 
-  const filteredVocabDB = vocabList.filter(item => {
-    const matchCat = vocabCategory === 'All' || item.category === vocabCategory;
-    const q = vocabSearch.toLowerCase();
-    const matchSearch = !q ||
-      item.word?.toLowerCase().includes(q) ||
-      item.definition?.toLowerCase().includes(q) ||
-      (Array.isArray(item.synonyms) ? item.synonyms.join(' ') : (item.synonyms || '')).toLowerCase().includes(q) ||
-      (Array.isArray(item.antonyms) ? item.antonyms.join(' ') : (item.antonyms || '')).toLowerCase().includes(q);
-    return matchCat && matchSearch;
-  });
+  // Debounced search effect
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setVocabPage(1); // reset to page 1 on search change
+      loadVocabList(1, vocabSearch, vocabCategory);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vocabSearch]);
+
+  const handleVocabPageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= vocabTotalPages) {
+      loadVocabList(newPage, vocabSearch, vocabCategory);
+    }
+  };
+
+  // Backend handles filtering now, so filteredVocabDB is just vocabList
+  const filteredVocabDB = vocabList;
 
   const resetVocabForm = () => {
     setVocabForm({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', category: 'Word Power' });
@@ -190,6 +222,35 @@ export function Dashboard() {
       }
     } catch (err) {
       setVocabFormError(err.message || 'Failed to save. Please try again.');
+    }
+  };
+
+  const handleVocabBulkSubmit = async (e) => {
+    e.preventDefault();
+    setVocabBulkError('');
+    setVocabBulkSuccess('');
+    let parsedArray;
+    try {
+      parsedArray = JSON.parse(vocabBulkJson);
+      if (!Array.isArray(parsedArray)) throw new Error('Root must be an array.');
+    } catch (err) {
+      setVocabBulkError('Invalid JSON format: ' + err.message);
+      return;
+    }
+
+    try {
+      const res = await apiService.addVocabBulkApi(parsedArray);
+      if (res.status === 'success' || res.status === 'partial_success') {
+        setVocabBulkSuccess(res.message);
+        await loadVocabList();
+        setTimeout(() => {
+          setVocabBulkModalOpen(false);
+          setVocabBulkJson('');
+          setVocabBulkSuccess('');
+        }, 1500);
+      }
+    } catch (err) {
+      setVocabBulkError(err.message || 'Failed to bulk import vocabulary.');
     }
   };
 
@@ -466,6 +527,16 @@ export function Dashboard() {
               vocabFormError={vocabFormError}
               vocabFormSuccess={vocabFormSuccess}
               resetVocabForm={resetVocabForm}
+              vocabBulkModalOpen={vocabBulkModalOpen}
+              setVocabBulkModalOpen={setVocabBulkModalOpen}
+              vocabBulkJson={vocabBulkJson}
+              setVocabBulkJson={setVocabBulkJson}
+              vocabBulkError={vocabBulkError}
+              vocabBulkSuccess={vocabBulkSuccess}
+              handleVocabBulkSubmit={handleVocabBulkSubmit}
+              vocabPage={vocabPage}
+              vocabTotalPages={vocabTotalPages}
+              handleVocabPageChange={handleVocabPageChange}
             />
           )}
         </div>

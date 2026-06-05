@@ -9,7 +9,8 @@ import {
   deleteTopic,
   getVocab,
   addVocab,
-  updateVocab
+  updateVocab,
+  addVocabBulk
 } from '../controllers/studyController.js';
 
 const router = express.Router();
@@ -24,6 +25,7 @@ router.delete('/topics/:topicId', deleteTopic);
 
 router.get('/vocab', getVocab);
 router.post('/vocab', addVocab);
+router.post('/vocab/bulk', addVocabBulk);
 router.put('/vocab/:vocabId', updateVocab);
 
 export default router;

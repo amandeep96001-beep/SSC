@@ -89,7 +89,17 @@ export function RevisionWorkspace({
   handleVocabSubmit,
   vocabFormError,
   vocabFormSuccess,
-  resetVocabForm
+  resetVocabForm,
+  vocabBulkModalOpen,
+  setVocabBulkModalOpen,
+  vocabBulkJson,
+  setVocabBulkJson,
+  vocabBulkError,
+  vocabBulkSuccess,
+  handleVocabBulkSubmit,
+  vocabPage,
+  vocabTotalPages,
+  handleVocabPageChange
 }) {
   return (
     <>
@@ -275,9 +285,14 @@ export function RevisionWorkspace({
                   onChange={(e) => setVocabSearch(e.target.value)}
                 />
               </div>
-              <button className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
-                <Plus size={15} /> Add New
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="btn-add-vocab" onClick={() => setVocabBulkModalOpen(true)} style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                  <Plus size={15} /> Bulk Import
+                </button>
+                <button className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
+                  <Plus size={15} /> Add New
+                </button>
+              </div>
             </div>
 
             {/* Category tabs */}
@@ -294,8 +309,8 @@ export function RevisionWorkspace({
             </div>
 
             {/* Vocab Cards Grid */}
-            <div className="vocab-results-grid">
-              {vocabListLoading ? (
+            <div className="vocab-results-grid" style={{ minHeight: '60vh', alignContent: 'start', opacity: vocabListLoading ? 0.6 : 1, transition: 'opacity 0.2s ease' }}>
+              {vocabListLoading && filteredVocabDB.length === 0 ? (
                 <div className="empty-syllabus" style={{ gridColumn: '1 / -1' }}>Loading vocabulary...</div>
               ) : filteredVocabDB.length > 0 ? (
                 filteredVocabDB.map((item) => (
@@ -337,6 +352,31 @@ export function RevisionWorkspace({
                 </div>
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {vocabTotalPages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginTop: '20px', padding: '15px' }}>
+                <button 
+                  className="btn-action" 
+                  onClick={() => handleVocabPageChange(vocabPage - 1)} 
+                  disabled={vocabPage === 1 || vocabListLoading}
+                  style={{ opacity: (vocabPage === 1 || vocabListLoading) ? 0.5 : 1, cursor: (vocabPage === 1 || vocabListLoading) ? 'not-allowed' : 'pointer' }}
+                >
+                  &larr; Previous
+                </button>
+                <span style={{ color: '#cbd5e1', fontSize: '0.95rem' }}>
+                  Page {vocabPage} of {vocabTotalPages}
+                </span>
+                <button 
+                  className="btn-action" 
+                  onClick={() => handleVocabPageChange(vocabPage + 1)} 
+                  disabled={vocabPage === vocabTotalPages || vocabListLoading}
+                  style={{ opacity: (vocabPage === vocabTotalPages || vocabListLoading) ? 0.5 : 1, cursor: (vocabPage === vocabTotalPages || vocabListLoading) ? 'not-allowed' : 'pointer' }}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -390,6 +430,53 @@ export function RevisionWorkspace({
               <div className="modal-footer-actions">
                 <button type="button" className="btn-cancel" onClick={() => { setVocabModalOpen(false); resetVocabForm(); }}>Cancel</button>
                 <button type="submit" className="btn-save-topic">{editingVocabId ? 'Update Entry' : 'Add to Deck'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK IMPORT VOCAB MODAL ── */}
+      {vocabBulkModalOpen && (
+        <div className="modal-overlay" onClick={() => setVocabBulkModalOpen(false)}>
+          <div className="modal-content-card modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Bulk Import Vocabulary</h3>
+              <button className="btn-close-modal" onClick={() => setVocabBulkModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form className="modal-form" onSubmit={handleVocabBulkSubmit}>
+              <div className="form-group">
+                <label>
+                  Paste JSON Array
+                  <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 'normal', marginTop: '4px' }}>
+                    Valid Categories: "Word Power", "Idioms & Phrases", "One Word Substitution", "Spelling Rules"<br/>
+                    <pre style={{ margin: '8px 0', padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+{`[
+  { "word": "Ephemeral", "pos": "Adjective", "category": "Word Power", "definition": "Short-lived", "synonyms": "Brief", "antonyms": "Eternal" },
+  { "word": "Break the ice", "pos": "Idiom", "category": "Idioms & Phrases", "definition": "To relieve tension", "synonyms": "", "antonyms": "" },
+  { "word": "Altruist", "pos": "Noun", "category": "One Word Substitution", "definition": "A selfless person", "synonyms": "Philanthropist", "antonyms": "Egoist" }
+]`}
+                    </pre>
+                  </span>
+                </label>
+                <textarea 
+                  rows="12" 
+                  value={vocabBulkJson} 
+                  onChange={e => setVocabBulkJson(e.target.value)} 
+                  placeholder="Paste JSON Array of vocabulary here..."
+                  style={{ fontFamily: 'monospace', fontSize: '12px', background: '#1e293b' }}
+                  required
+                />
+              </div>
+
+              {vocabBulkError && <p style={{ color: '#f87171', fontSize: '0.85rem', margin: 0 }}>{vocabBulkError}</p>}
+              {vocabBulkSuccess && <p style={{ color: '#4ade80', fontSize: '0.85rem', margin: 0 }}>{vocabBulkSuccess}</p>}
+
+              <div className="modal-footer-actions">
+                <button type="button" className="btn-cancel" onClick={() => setVocabBulkModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-save-topic">Import JSON</button>
               </div>
             </form>
           </div>
