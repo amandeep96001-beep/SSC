@@ -81,7 +81,8 @@ class VocabModel {
   }
 
   static async getRandomWord() {
-    const count = await Vocab.countDocuments();
+    const query = { category: { $ne: 'Spelling Rules' } };
+    const count = await Vocab.countDocuments(query);
     if (count === 0) {
       // Return safe fallback word
       return {
@@ -91,22 +92,25 @@ class VocabModel {
         synonyms: ['Eagerness', 'Promptness'],
         antonyms: ['Reluctance', 'Apathy'],
         category: 'Word Power',
-        options: ['Eagerness', 'Reluctance', 'Apathy', 'Doubt']
+        options: ['Reluctance', 'Apathy', 'Doubt']
       };
     }
     const idx = Math.floor(Math.random() * count);
-    const word = await Vocab.findOne().skip(idx).lean();
+    const word = await Vocab.findOne(query).skip(idx).lean();
     
     // Dynamically retrieve wrong options from other words in DB for the drill compatibility
-    const otherWords = await Vocab.find({ _id: { $ne: word._id } }).limit(3).lean();
-    const wrongOptions = otherWords.map(w => w.synonyms[0] || w.word);
-    const correctOption = word.synonyms[0] || word.word;
+    const otherWords = await Vocab.aggregate([
+      { $match: { _id: { $ne: word._id }, category: { $ne: 'Spelling Rules' } } },
+      { $sample: { size: 3 } }
+    ]);
+    
+    const wrongOptions = otherWords.map(w => w.synonyms?.[0] || w.antonyms?.[0] || w.word);
     
     while (wrongOptions.length < 3) {
       wrongOptions.push('IncorrectOption' + wrongOptions.length);
     }
     
-    word.options = [correctOption, ...wrongOptions];
+    word.options = wrongOptions;
     return word;
   }
 

@@ -109,18 +109,17 @@ export const getNextDrill = async (req, res, next) => {
             correctAnswer = wordData.synonyms[Math.floor(Math.random() * wordData.synonyms.length)];
             wrongPool = [
               ...(wordData.antonyms || []),
-              wordData.definition,
-              // fallback distractors from the model's random options
               ...(wordData.options || [])
             ];
+            wrongPool = wrongPool.filter(w => !wordData.synonyms.includes(w) && w !== correctAnswer);
           } else if (qType === 'antonym') {
             question = `What is the ANTONYM of "${wordData.word}"?`;
             correctAnswer = wordData.antonyms[Math.floor(Math.random() * wordData.antonyms.length)];
             wrongPool = [
               ...(wordData.synonyms || []),
-              wordData.definition,
               ...(wordData.options || [])
             ];
+            wrongPool = wrongPool.filter(w => !wordData.antonyms.includes(w) && w !== correctAnswer);
           } else {
             question = `What is the meaning of "${wordData.word}"?`;
             correctAnswer = (wordData.synonyms || [])[0] || wordData.definition;
@@ -133,7 +132,7 @@ export const getNextDrill = async (req, res, next) => {
         }
 
         // Filter out correct answer from wrongPool just in case
-        wrongPool = wrongPool.filter(w => w !== correctAnswer);
+        wrongPool = wrongPool.filter(w => w !== correctAnswer && w != null);
         const shuffledWrong = shuffleArray(wrongPool).slice(0, 3);
         
         while (shuffledWrong.length < 3) {
