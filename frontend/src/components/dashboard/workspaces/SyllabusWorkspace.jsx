@@ -28,7 +28,7 @@ export function SyllabusWorkspace({
       {activeView === 'subjects' && (
         <div className="study-workspace">
           <div className="section-header">
-            <h1>Select Subject Area</h1>
+            <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Select Subject Area</h1>
             <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
           </div>
 
@@ -58,7 +58,7 @@ export function SyllabusWorkspace({
         <div className="study-workspace">
           <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
             <div>
-              <h1>{selectedSubject} Syllabus</h1>
+              <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{selectedSubject} Syllabus</h1>
               <p>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -143,7 +143,7 @@ export function SyllabusWorkspace({
         <div className="study-workspace">
           <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1>{activeNotes.name} Revision Sheet</h1>
+              <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{activeNotes.name} Revision Sheet</h1>
               <p>Read formulas, shortcut tricks, and concepts below.</p>
             </div>
             <button className="btn-back" onClick={() => setActiveView('topics')}>

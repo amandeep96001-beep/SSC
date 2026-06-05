@@ -13,7 +13,7 @@ export function AuthPanel({ loginUser, registerUser }) {
     setAuthError('');
 
     if (!authUsername.trim() || !authPassword) {
-      setAuthError("Bhai input fill karna mandatory hai.");
+      setAuthError("Please fill in all required fields.");
       return;
     }
 
@@ -23,7 +23,7 @@ export function AuthPanel({ loginUser, registerUser }) {
         setAuthUsername('');
         setAuthPassword('');
       } else {
-        setAuthError(res.message || "Login fail ho gaya. Detail inspect karein.");
+        setAuthError(res.message || "Login failed. Please check your credentials.");
       }
     } else {
       const res = await registerUser(authUsername, authPassword);
@@ -31,7 +31,7 @@ export function AuthPanel({ loginUser, registerUser }) {
         setAuthUsername('');
         setAuthPassword('');
       } else {
-        setAuthError(res.message || "Sign up fail ho gaya. Detail check karein.");
+        setAuthError(res.message || "Registration failed. Please try again.");
       }
     }
   };
@@ -42,7 +42,7 @@ export function AuthPanel({ loginUser, registerUser }) {
       <div className="auth-card">
         <div className="auth-brand">
           <GraduationCap className="brand-logo" size={36} />
-          <h2>SSC CHSL & CGL Speed Engine</h2>
+          <h1 style={{ margin: '0 0 5px 0', fontSize: '2rem', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>SSC Speed Engine</h1>
           <p>Master tables, vocab, reasoning, and mock tests</p>
         </div>
 

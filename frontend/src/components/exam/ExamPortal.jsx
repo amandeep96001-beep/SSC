@@ -151,7 +151,7 @@ export function ExamPortal({
               className="btn btn-submit-section" 
               onClick={submitExam}
             >
-              Submit Section 🏁
+              Submit Section
             </button>
             <button 
               className="btn btn-cancel-test" 

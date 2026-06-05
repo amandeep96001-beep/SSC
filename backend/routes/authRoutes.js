@@ -120,23 +120,15 @@ router.post('/progress', async (req, res, next) => {
       status = 'yellow';
     }
 
-    // Check if topicId already has progress recorded
-    const existingIndex = user.progress.findIndex(p => p.topicId === topicId);
-    if (existingIndex !== -1) {
-      // Overwrite if new score is higher or equal, otherwise keep history
-      user.progress[existingIndex].score = score;
-      user.progress[existingIndex].status = status;
-      if (elapsedTime !== undefined) user.progress[existingIndex].elapsedTime = elapsedTime;
-      user.progress[existingIndex].timestamp = new Date();
-    } else {
-      user.progress.push({
-        topicId,
-        score,
-        status,
-        elapsedTime,
-        timestamp: new Date()
-      });
-    }
+    const existingCount = user.progress.filter(p => p.topicId === topicId).length;
+    user.progress.push({
+      topicId,
+      score,
+      status,
+      elapsedTime,
+      attemptNumber: existingCount + 1,
+      timestamp: new Date()
+    });
 
     await user.save();
 
@@ -171,31 +163,20 @@ router.post('/mock-progress', async (req, res, next) => {
       });
     }
 
-    const existingIndex = user.mockProgress.findIndex(p => p.mockTestId === mockTestId);
-    if (existingIndex !== -1) {
-      user.mockProgress[existingIndex].score = score;
-      user.mockProgress[existingIndex].title = title;
-      user.mockProgress[existingIndex].correct = correct;
-      user.mockProgress[existingIndex].wrong = wrong;
-      user.mockProgress[existingIndex].blank = blank;
-      user.mockProgress[existingIndex].accuracy = accuracy;
-      if (elapsedTime !== undefined) user.mockProgress[existingIndex].elapsedTime = elapsedTime;
-      if (sectionTimes !== undefined) user.mockProgress[existingIndex].sectionTimes = sectionTimes;
-      user.mockProgress[existingIndex].timestamp = new Date();
-    } else {
-      user.mockProgress.push({
-        mockTestId,
-        title,
-        score,
-        correct,
-        wrong,
-        blank,
-        accuracy,
-        elapsedTime,
-        sectionTimes,
-        timestamp: new Date()
-      });
-    }
+    const existingCount = user.mockProgress.filter(p => p.mockTestId === mockTestId).length;
+    user.mockProgress.push({
+      mockTestId,
+      title,
+      score,
+      correct,
+      wrong,
+      blank,
+      accuracy,
+      elapsedTime,
+      sectionTimes,
+      attemptNumber: existingCount + 1,
+      timestamp: new Date()
+    });
 
     await user.save();
 

@@ -286,7 +286,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
               onClick={() => onSubmit(mockData, selectedAnswers, timer, sectionTimes)}
               style={{ background: '#10b981' }}
             >
-              Submit Full Test 🏁
+              Submit Full Test
             </button>
             <button 
               className="btn btn-cancel-test" 

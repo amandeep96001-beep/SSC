@@ -217,7 +217,7 @@ export function Dashboard() {
     setTopicAddError('');
 
     if (!editTopicName.trim() || !editTopicNotes.trim()) {
-      setTopicAddError("Bhai heading aur notes likhna compulsory hai!");
+      setTopicAddError("Heading and notes are mandatory!");
       return;
     }
 
@@ -226,18 +226,18 @@ export function Dashboard() {
       try {
         parsedQuestions = JSON.parse(editTopicQuestionsJson.trim());
         if (!Array.isArray(parsedQuestions)) {
-          setTopicAddError("Bhai, MCQ JSON object array ke format me hona chahiye (i.e. [ ... ])!");
+          setTopicAddError("MCQ must be a JSON array format (i.e. [ ... ])!");
           return;
         }
         for (let i = 0; i < parsedQuestions.length; i++) {
           const q = parsedQuestions[i];
           if (!q.q || !Array.isArray(q.o) || typeof q.a !== 'number' || !q.e) {
-            setTopicAddError(`Bhai, index ${i} par MCQ object invalid hai! Structure check karein: { q, o: [...], a, e }`);
+            setTopicAddError(`Invalid MCQ object at index ${i}! Check structure: { q, o: [...], a, e }`);
             return;
           }
         }
       } catch (err) {
-        setTopicAddError("Bhai, MCQ JSON syntax invalid hai! Pehle parse check karein: " + err.message);
+        setTopicAddError("Invalid MCQ JSON syntax! Please check parsing: " + err.message);
         return;
       }
     }
@@ -250,7 +250,7 @@ export function Dashboard() {
     });
 
     if (res.success) {
-      setTopicAddSuccess(" Topic successfully update ho gaya MongoDB Atlas me!");
+      setTopicAddSuccess("Topic successfully updated in database!");
       setTimeout(() => {
         setEditModalOpen(false);
         setTopicAddSuccess('');
@@ -272,7 +272,7 @@ export function Dashboard() {
     setTopicAddError('');
 
     if (!newTopicName.trim() || !newTopicNotes.trim()) {
-      setTopicAddError("Bhai heading aur notes likhna compulsory hai!");
+      setTopicAddError("Heading and notes are mandatory!");
       return;
     }
 
@@ -284,7 +284,7 @@ export function Dashboard() {
 
     const res = await addCustomTopic(payload);
     if (res.success) {
-      setTopicAddSuccess("🎉 Topic successfully save ho gaya MongoDB Atlas me!");
+      setTopicAddSuccess("Topic successfully saved to database!");
       setNewTopicName('');
       setNewTopicSyllabus('');
       setNewTopicNotes('');
@@ -293,7 +293,7 @@ export function Dashboard() {
         setTopicAddSuccess('');
       }, 1500);
     } else {
-      setTopicAddError(res.message || "Custom topic add karne me fail ho gaya database call.");
+      setTopicAddError(res.message || "Failed to add custom topic to database.");
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Clock, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
 
 export function PerformanceWorkspace({ user }) {
   const [activeTab, setActiveTab] = useState('syllabus');
@@ -92,7 +93,12 @@ export function PerformanceWorkspace({ user }) {
                   <tbody>
                     {user.progress.map((record, i) => (
                       <tr key={i} style={{ transition: 'background 0.2s', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td><code style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '4px 8px', borderRadius: '4px' }}>{record.topicId}</code></td>
+                        <td>
+                          <code style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '4px 8px', borderRadius: '4px' }}>{record.topicId}</code>
+                          <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--color-primary)', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                            Attempt {record.attemptNumber || 1}
+                          </span>
+                        </td>
                         <td><strong>{record.score} / 50</strong></td>
                         <td>
                           <span className={`status-badge-pill ${record.status}`} style={{ padding: '6px 12px', fontSize: '0.8rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -101,7 +107,9 @@ export function PerformanceWorkspace({ user }) {
                             {record.status === 'red' && 'Action Needed'}
                           </span>
                         </td>
-                        <td style={{ color: 'var(--color-primary)', fontWeight: '500' }}>⏱️ {record.elapsedTime || 'N/A'}</td>
+                        <td style={{ color: 'var(--color-primary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Clock size={14} /> {record.elapsedTime || 'N/A'}
+                        </td>
                         <td style={{ color: 'var(--text-muted)' }}>{new Date(record.timestamp).toLocaleString()}</td>
                       </tr>
                     ))}
@@ -158,13 +166,28 @@ export function PerformanceWorkspace({ user }) {
                   <tbody>
                     {user.mockProgress.map((record, i) => (
                       <tr key={i} style={{ transition: 'background 0.2s', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td><strong style={{ color: '#f8fafc' }}>{record.title}</strong></td>
+                        <td>
+                          <strong style={{ color: '#f8fafc' }}>{record.title}</strong>
+                          <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--color-primary)' }}>
+                            <span style={{ background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                              Attempt {record.attemptNumber || 1}
+                            </span>
+                          </div>
+                        </td>
                         <td><strong style={{ fontSize: '1.1rem', color: '#fff' }}>{record.score} <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>/ 200</span></strong></td>
                         <td>
-                          <div style={{ fontSize: '0.85rem', background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: '6px', display: 'inline-block' }}>
-                            <span style={{ color: '#2ecc71', fontWeight: 'bold' }}>{record.correct} ✔</span> <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>{' '}
-                            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>{record.wrong} ❌</span> <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>{' '}
-                            <span style={{ color: '#7f8c8d' }}>{record.blank} ⚪</span>
+                          <div style={{ fontSize: '0.85rem', background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle size={14} /> {record.correct}
+                            </span> 
+                            <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>
+                            <span style={{ color: '#e74c3c', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <XCircle size={14} /> {record.wrong}
+                            </span> 
+                            <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>
+                            <span style={{ color: '#7f8c8d', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <MinusCircle size={14} /> {record.blank}
+                            </span>
                           </div>
                         </td>
                         <td>
@@ -173,8 +196,8 @@ export function PerformanceWorkspace({ user }) {
                           </span>
                         </td>
                         <td>
-                          <div style={{ fontWeight: '500', color: 'var(--color-primary)' }}>
-                            ⏱️ {record.elapsedTime || 'N/A'}
+                          <div style={{ fontWeight: '500', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={14} /> {record.elapsedTime || 'N/A'}
                           </div>
                           {record.sectionTimes && (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '8px', fontSize: '0.75rem' }}>

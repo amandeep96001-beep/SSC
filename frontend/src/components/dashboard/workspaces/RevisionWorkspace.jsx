@@ -96,7 +96,7 @@ export function RevisionWorkspace({
       {/* --- VIEW: REVISION DECK --- */}
       <div className="study-workspace">
         <div className="section-header">
-          <h1>Revision & Learning Deck</h1>
+          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Revision & Learning Deck</h1>
           <p>Quick-reference sheets for tables, fractions, and vocabulary mastery.</p>
         </div>
 

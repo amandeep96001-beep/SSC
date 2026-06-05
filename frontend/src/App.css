@@ -1576,9 +1576,9 @@ body {
 
 /* Fraction/Table inline list */
 .fraction-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
 }
 .fraction-row {
   display: flex;

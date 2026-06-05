@@ -12,7 +12,7 @@ export function ResultsPortal({
   const copyErrorLog = () => {
     if (testSummary && testSummary.errorLog) {
       navigator.clipboard.writeText(testSummary.errorLog);
-      alert(`📋 Full ${testSummary.isMock ? '100-Q' : '25-Q'} Error Log safely copy ho gaya hai bhai!`);
+      alert(`Full ${testSummary.isMock ? '100-Q' : '25-Q'} Error Log successfully copied to clipboard!`);
     }
   };
 
@@ -22,12 +22,12 @@ export function ResultsPortal({
     <div className="results-container results-portal-visible" id="results-portal">
       <Helmet><title>Test Results | SSC Speed Engine</title></Helmet>
       <div className="score-box">
-        <h2>Performance Assessment Summary</h2>
-        <p>Bhai, tera final official calculations sheet:</p>
+        <h2 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Performance Assessment Summary</h2>
+        <p>Your final official calculation sheet:</p>
         <div className="score-num" id="final-marks">{testSummary?.score} / {testSummary?.maxScore || 50}</div>
         
         <div style={{ background: 'var(--bg-surface)', padding: '15px 25px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'inline-block', marginBottom: '25px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-            <h4 style={{ margin: '0 0 10px 0', color: 'var(--color-primary)', fontSize: '1.2rem' }}>⏱️ Total Time Taken: {testSummary?.elapsedTime || 'N/A'}</h4>
+            <h4 style={{ margin: '0 0 10px 0', color: 'var(--color-primary)', fontSize: '1.2rem' }}>Total Time Taken: {testSummary?.elapsedTime || 'N/A'}</h4>
             <p className="results-summary-subtitle" style={{ margin: 0, fontSize: '0.95rem' }}>
               Correct: <span style={{color: '#10b981'}}>{testSummary?.correct}</span> | Wrong: <span style={{color: '#ef4444'}}>{testSummary?.wrong}</span> | Blank: {testSummary?.blank}
             </p>

@@ -131,12 +131,12 @@ export function useStudy() {
 
       if (userAns === null) {
         unattemptedCount++;
-        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n⚪ Unattempted\n✅ Key: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n[Unattempted]\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       } else if (userAns === correctAns) {
         correctCount++;
       } else {
         wrongCount++;
-        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n❌ My Input: ${item.o[userAns]}\n✅ Key: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n[Your Input]: ${item.o[userAns]}\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       }
     });
 
@@ -155,7 +155,7 @@ export function useStudy() {
       accuracy,
       elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
       summaryText,
-      errorLog: totalScore === 50 ? "ABSOLUTE FLAWLESS LEGENDARY SWEEP! Pure 50/50 Marks Koot Diye Tumne Bhai! 🔥" : errorLog
+      errorLog: totalScore === 50 ? "Perfect Score! Excellent performance!" : errorLog
     });
 
     // Save progress user metrics to MongoDB Atlas
@@ -197,12 +197,12 @@ export function useStudy() {
 
       if (userAns === undefined || userAns === null) {
         unattemptedCount++;
-        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n⚪ Unattempted\n✅ Key: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n[Unattempted]\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       } else if (userAns === correctAns) {
         correctCount++;
       } else {
         wrongCount++;
-        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n❌ My Input: ${item.o[userAns]}\n✅ Key: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [Section: ${item.section || 'General'}] ${item.q}\n[Your Input]: ${item.o[userAns]}\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       }
     });
 
@@ -223,7 +223,7 @@ export function useStudy() {
       elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
       summaryText,
       sectionTimes,
-      errorLog: totalScore === 200 ? "ABSOLUTE FLAWLESS LEGENDARY SWEEP! Pure 200/200 Marks Koot Diye Tumne Bhai! 🔥" : errorLog,
+      errorLog: totalScore === 200 ? "Perfect Score! Excellent performance!" : errorLog,
       isMock: true
     });
 
@@ -335,7 +335,7 @@ export function useStudy() {
         return next;
       });
     } else {
-      alert("Bhai pure 25 questions par atack complete! Side panel se 'Submit Section' click karo.");
+      alert("All 25 questions attempted! Please click 'Submit Section' from the side panel.");
     }
   }, [currentQuestionIdx, selectedAnswers]);
 
