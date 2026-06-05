@@ -79,6 +79,7 @@ export function SyllabusWorkspace({
                 const progressRecord = user.progress?.find(p => p.topicId === topic.id);
                 const status = progressRecord?.status || 'gray';
                 const score = progressRecord?.score;
+                const maxScore = progressRecord?.maxScore || 50;
 
                 return (
                   <div 
@@ -90,9 +91,9 @@ export function SyllabusWorkspace({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {/* Color indicator dot */}
                         <span className={`progress-status-dot ${status}`} title={
-                          status === 'green' ? `Mastered (Score: ${score}/50)` :
-                          status === 'yellow' ? `Reviewing (Score: ${score}/50)` :
-                          status === 'red' ? `Action Needed (Score: ${score}/50)` :
+                          status === 'green' ? `Mastered (Score: ${score}/${maxScore})` :
+                          status === 'yellow' ? `Reviewing (Score: ${score}/${maxScore})` :
+                          status === 'red' ? `Action Needed (Score: ${score}/${maxScore})` :
                           'Unattempted'
                         }></span>
                         <h3>{topic.name}</h3>
@@ -123,7 +124,7 @@ export function SyllabusWorkspace({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="read-more-tag">Read Study notes & formulas</span>
                       {score !== undefined && (
-                        <span className="topic-score-badge">Latest: {score}/50</span>
+                        <span className="topic-score-badge">Latest: {score}/{maxScore}</span>
                       )}
                     </div>
                   </div>
