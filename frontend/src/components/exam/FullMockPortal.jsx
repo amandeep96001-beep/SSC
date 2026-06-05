@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
 import '../../pages/Dashboard.css';
@@ -17,6 +17,20 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [questionStatuses, setQuestionStatuses] = useState({}); // 'not-visited', 'visited', 'answered', 'marked'
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+
+  const [sectionTimes, setSectionTimes] = useState({
+    'English': 0, 'GK': 0, 'Quant': 0, 'Reasoning': 0
+  });
+
+  const stateRef = useRef({ mockData, selectedAnswers, sectionTimes });
+  useEffect(() => {
+    stateRef.current = { mockData, selectedAnswers, sectionTimes };
+  }, [mockData, selectedAnswers, sectionTimes]);
+
+  const currentSectionRef = useRef(currentSection);
+  useEffect(() => {
+    currentSectionRef.current = currentSection;
+  }, [currentSection]);
 
   // Fetch Mock Data
   useEffect(() => {
@@ -54,20 +68,21 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
       setTimer((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          handleAutoSubmit();
+          const { mockData: md, selectedAnswers: sa, sectionTimes: st } = stateRef.current;
+          onSubmit(md, sa, 0, st);
           return 0;
         }
         return prev - 1;
       });
+
+      setSectionTimes(prev => {
+        const sec = currentSectionRef.current;
+        return { ...prev, [sec]: (prev[sec] || 0) + 1 };
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [loading]);
-
-  const handleAutoSubmit = useCallback(() => {
-    // Calculate final results
-    onSubmit(mockData, selectedAnswers, 0);
-  }, [mockData, selectedAnswers, onSubmit]);
+  }, [loading, onSubmit]);
 
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -268,7 +283,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
             </div>
             <button 
               className="btn btn-submit-section" 
-              onClick={() => onSubmit(mockData, selectedAnswers, timer)}
+              onClick={() => onSubmit(mockData, selectedAnswers, timer, sectionTimes)}
               style={{ background: '#10b981' }}
             >
               Submit Full Test 🏁

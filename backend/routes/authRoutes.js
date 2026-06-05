@@ -96,7 +96,7 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/progress', async (req, res, next) => {
   try {
-    const { username, topicId, score } = req.body;
+    const { username, topicId, score, elapsedTime } = req.body;
     if (!username || !topicId || score === undefined) {
       return res.status(400).json({
         status: 'error',
@@ -126,12 +126,14 @@ router.post('/progress', async (req, res, next) => {
       // Overwrite if new score is higher or equal, otherwise keep history
       user.progress[existingIndex].score = score;
       user.progress[existingIndex].status = status;
+      if (elapsedTime !== undefined) user.progress[existingIndex].elapsedTime = elapsedTime;
       user.progress[existingIndex].timestamp = new Date();
     } else {
       user.progress.push({
         topicId,
         score,
         status,
+        elapsedTime,
         timestamp: new Date()
       });
     }
@@ -153,7 +155,7 @@ router.post('/progress', async (req, res, next) => {
  */
 router.post('/mock-progress', async (req, res, next) => {
   try {
-    const { username, mockTestId, title, score, correct, wrong, blank, accuracy } = req.body;
+    const { username, mockTestId, title, score, correct, wrong, blank, accuracy, elapsedTime, sectionTimes } = req.body;
     if (!username || !mockTestId || !title || score === undefined || correct === undefined || wrong === undefined || blank === undefined || accuracy === undefined) {
       return res.status(400).json({
         status: 'error',
@@ -177,6 +179,8 @@ router.post('/mock-progress', async (req, res, next) => {
       user.mockProgress[existingIndex].wrong = wrong;
       user.mockProgress[existingIndex].blank = blank;
       user.mockProgress[existingIndex].accuracy = accuracy;
+      if (elapsedTime !== undefined) user.mockProgress[existingIndex].elapsedTime = elapsedTime;
+      if (sectionTimes !== undefined) user.mockProgress[existingIndex].sectionTimes = sectionTimes;
       user.mockProgress[existingIndex].timestamp = new Date();
     } else {
       user.mockProgress.push({
@@ -187,6 +191,8 @@ router.post('/mock-progress', async (req, res, next) => {
         wrong,
         blank,
         accuracy,
+        elapsedTime,
+        sectionTimes,
         timestamp: new Date()
       });
     }

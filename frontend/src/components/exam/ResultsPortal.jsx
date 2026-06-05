@@ -25,9 +25,24 @@ export function ResultsPortal({
         <h2>Performance Assessment Summary</h2>
         <p>Bhai, tera final official calculations sheet:</p>
         <div className="score-num" id="final-marks">{testSummary?.score} / {testSummary?.maxScore || 50}</div>
-        <p className="results-summary-subtitle" id="time-taken-summary">
-          {testSummary?.summaryText}
-        </p>
+        
+        <div style={{ background: 'var(--bg-surface)', padding: '15px 25px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'inline-block', marginBottom: '25px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+            <h4 style={{ margin: '0 0 10px 0', color: 'var(--color-primary)', fontSize: '1.2rem' }}>⏱️ Total Time Taken: {testSummary?.elapsedTime || 'N/A'}</h4>
+            <p className="results-summary-subtitle" style={{ margin: 0, fontSize: '0.95rem' }}>
+              Correct: <span style={{color: '#10b981'}}>{testSummary?.correct}</span> | Wrong: <span style={{color: '#ef4444'}}>{testSummary?.wrong}</span> | Blank: {testSummary?.blank}
+            </p>
+        </div>
+
+        {testSummary?.sectionTimes && (
+          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '20px' }}>
+            {Object.entries(testSummary.sectionTimes).map(([sec, secs]) => (
+              <div key={sec} style={{ background: '#1e293b', padding: '10px 15px', borderRadius: '8px', border: '1px solid #334155', minWidth: '100px' }}>
+                <div style={{ color: '#94a3b8', marginBottom: '4px', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sec}</div>
+                <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '1.1rem' }}>{Math.floor(secs / 60)}m {secs % 60}s</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="results-error-log-banner">

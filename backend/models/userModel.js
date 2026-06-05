@@ -12,6 +12,7 @@ const TopicProgressSchema = new mongoose.Schema({
   topicId: { type: String, required: true },
   score: { type: Number, required: true },
   status: { type: String, enum: ['red', 'yellow', 'green'], required: true },
+  elapsedTime: { type: String, required: false },
   timestamp: { type: Date, default: Date.now }
 });
 
@@ -23,6 +24,8 @@ const MockProgressSchema = new mongoose.Schema({
   wrong: { type: Number, required: true },
   blank: { type: Number, required: true },
   accuracy: { type: Number, required: true },
+  elapsedTime: { type: String, required: false },
+  sectionTimes: { type: mongoose.Schema.Types.Mixed, required: false },
   timestamp: { type: Date, default: Date.now }
 });
 

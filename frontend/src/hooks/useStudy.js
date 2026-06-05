@@ -163,7 +163,8 @@ export function useStudy() {
       updateProgressApi.execute({
         username: user.username,
         topicId: selectedTopicId,
-        score: totalScore
+        score: totalScore,
+        elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`
       }).then(res => {
         if (res.success && res.data?.data) {
           const updatedProgress = res.data.data;
@@ -180,7 +181,7 @@ export function useStudy() {
   }, [testQuestions, selectedAnswers, timer, user, selectedTopicId, updateProgressApi]);
 
   // Submit mock test
-  const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0) => {
+  const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0, sectionTimes = null) => {
     const elapsedSeconds = 3600 - remainingTimer;
     const elapsedMins = Math.floor(elapsedSeconds / 60);
     const elapsedSecs = elapsedSeconds % 60;
@@ -221,6 +222,7 @@ export function useStudy() {
       accuracy,
       elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
       summaryText,
+      sectionTimes,
       errorLog: totalScore === 200 ? "ABSOLUTE FLAWLESS LEGENDARY SWEEP! Pure 200/200 Marks Koot Diye Tumne Bhai! 🔥" : errorLog,
       isMock: true
     });
@@ -242,7 +244,9 @@ export function useStudy() {
         correct: correctCount,
         wrong: wrongCount,
         blank: unattemptedCount,
-        accuracy
+        accuracy,
+        elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
+        sectionTimes
       }).then(res => {
         if (res.success && res.data?.data) {
           const updatedMockProgress = res.data.data;
