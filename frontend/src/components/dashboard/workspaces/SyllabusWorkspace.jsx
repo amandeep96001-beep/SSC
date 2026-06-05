@@ -164,11 +164,11 @@ export function SyllabusWorkspace({
                 <ClipboardList size={22} className="strip-icon" />
                 <div>
                   <h4>Ready to test your speed?</h4>
-                  <p>Launches a real TCS iON simulated test consisting of 25 PYQs.</p>
+                  <p>Launches a real TCS iON simulated test for this topic.</p>
                 </div>
               </div>
               <button className="btn-take-test" onClick={startTest}>
-                Take 25-Question Test
+                Take Topic Test
               </button>
             </div>
           </div>
