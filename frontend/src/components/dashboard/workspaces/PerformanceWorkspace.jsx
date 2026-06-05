@@ -64,15 +64,15 @@ export function PerformanceWorkspace({ user }) {
             </div>
             <div className="stat-box">
               <span className="stat-label">Mastered (Green)</span>
-              <span className="stat-val score-green">{masteredCount}</span>
+              <span className="stat-val" style={{ color: '#2ecc71', marginTop: '6px' }}>{masteredCount}</span>
             </div>
             <div className="stat-box">
               <span className="stat-label">Reviewing (Yellow)</span>
-              <span className="stat-val score-yellow">{reviewingCount}</span>
+              <span className="stat-val" style={{ color: '#f1c40f', marginTop: '6px' }}>{reviewingCount}</span>
             </div>
             <div className="stat-box">
               <span className="stat-label">Needs Help (Red)</span>
-              <span className="stat-val score-red">{revisionNeededCount}</span>
+              <span className="stat-val" style={{ color: '#e74c3c', marginTop: '6px' }}>{revisionNeededCount}</span>
             </div>
           </div>
 

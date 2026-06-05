@@ -96,7 +96,7 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/progress', async (req, res, next) => {
   try {
-    const { username, topicId, score, elapsedTime } = req.body;
+    const { username, topicId, score, maxScore, elapsedTime } = req.body;
     if (!username || !topicId || score === undefined) {
       return res.status(400).json({
         status: 'error',
@@ -114,9 +114,10 @@ router.post('/progress', async (req, res, next) => {
 
     // Determine performance color status
     let status = 'red';
-    if (score >= 40) {
+    const dynamicMaxScore = maxScore || 50;
+    if (score >= (dynamicMaxScore * 0.8)) {
       status = 'green';
-    } else if (score >= 20) {
+    } else if (score >= (dynamicMaxScore * 0.4)) {
       status = 'yellow';
     }
 
@@ -124,6 +125,7 @@ router.post('/progress', async (req, res, next) => {
     user.progress.push({
       topicId,
       score,
+      maxScore: dynamicMaxScore,
       status,
       elapsedTime,
       attemptNumber: existingCount + 1,

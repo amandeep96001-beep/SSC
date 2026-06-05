@@ -11,6 +11,7 @@ export function hashPassword(password) {
 const TopicProgressSchema = new mongoose.Schema({
   topicId: { type: String, required: true },
   score: { type: Number, required: true },
+  maxScore: { type: Number, default: 50 },
   status: { type: String, enum: ['red', 'yellow', 'green'], required: true },
   elapsedTime: { type: String, required: false },
   attemptNumber: { type: Number, default: 1 },

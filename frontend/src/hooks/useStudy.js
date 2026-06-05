@@ -141,6 +141,7 @@ export function useStudy() {
     });
 
     const totalScore = (correctCount * 2) - (wrongCount * 0.5);
+    const maxScore = testQuestions.length * 2;
     const accuracy = correctCount + wrongCount > 0 
       ? Math.round((correctCount / (correctCount + wrongCount)) * 100) 
       : 0;
@@ -149,13 +150,14 @@ export function useStudy() {
 
     setTestSummary({
       score: totalScore,
+      maxScore,
       correct: correctCount,
       wrong: wrongCount,
       blank: unattemptedCount,
       accuracy,
       elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
       summaryText,
-      errorLog: totalScore === 50 ? "Perfect Score! Excellent performance!" : errorLog
+      errorLog: totalScore === maxScore ? "Perfect Score! Excellent performance!" : errorLog
     });
 
     // Save progress user metrics to MongoDB Atlas
@@ -164,6 +166,7 @@ export function useStudy() {
         username: user.username,
         topicId: selectedTopicId,
         score: totalScore,
+        maxScore,
         elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`
       }).then(res => {
         if (res.success && res.data?.data) {
@@ -325,7 +328,7 @@ export function useStudy() {
       return next;
     });
 
-    if (currentQuestionIdx < 24) {
+    if (currentQuestionIdx < testQuestions.length - 1) {
       setCurrentQuestionIdx((prev) => prev + 1);
       setQuestionStatuses((prev) => {
         const next = [...prev];
@@ -335,9 +338,9 @@ export function useStudy() {
         return next;
       });
     } else {
-      alert("All 25 questions attempted! Please click 'Submit Section' from the side panel.");
+      alert("No more questions available! Please click 'Submit Section' to view your results.");
     }
-  }, [currentQuestionIdx, selectedAnswers]);
+  }, [currentQuestionIdx, selectedAnswers, testQuestions.length]);
 
   // Mark for review & advance index
   const markForReview = useCallback(() => {
@@ -347,7 +350,7 @@ export function useStudy() {
       return next;
     });
 
-    if (currentQuestionIdx < 24) {
+    if (currentQuestionIdx < testQuestions.length - 1) {
       setCurrentQuestionIdx((prev) => prev + 1);
       setQuestionStatuses((prev) => {
         const next = [...prev];
@@ -356,8 +359,10 @@ export function useStudy() {
         }
         return next;
       });
+    } else {
+      alert("No more questions available! Please click 'Submit Section' to view your results.");
     }
-  }, [currentQuestionIdx]);
+  }, [currentQuestionIdx, testQuestions.length]);
 
   // Clear active question answer
   const clearResponse = useCallback(() => {
