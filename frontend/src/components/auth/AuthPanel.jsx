@@ -49,13 +49,13 @@ export function AuthPanel({ loginUser, registerUser }) {
         <div className="auth-mode-selector">
           <button 
             className={authMode === 'login' ? 'active' : ''}
-            onClick={() => { setAuthMode('login'); setAuthError(''); }}
+            onClick={() => { setAuthMode('login'); setAuthError(''); setAuthUsername(''); setAuthPassword(''); }}
           >
             Log In
           </button>
           <button 
             className={authMode === 'register' ? 'active' : ''}
-            onClick={() => { setAuthMode('register'); setAuthError(''); }}
+            onClick={() => { setAuthMode('register'); setAuthError(''); setAuthUsername(''); setAuthPassword(''); }}
           >
             Sign Up
           </button>
