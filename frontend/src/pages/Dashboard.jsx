@@ -15,6 +15,7 @@ import { DrillWorkspace } from '../components/dashboard/workspaces/DrillWorkspac
 import { SyllabusWorkspace } from '../components/dashboard/workspaces/SyllabusWorkspace';
 import { RevisionWorkspace } from '../components/dashboard/workspaces/RevisionWorkspace';
 import { PerformanceWorkspace } from '../components/dashboard/workspaces/PerformanceWorkspace';
+import { AnalyticsWorkspace } from '../components/dashboard/workspaces/AnalyticsWorkspace';
 import { MockWorkspace } from '../components/dashboard/workspaces/MockWorkspace';
 import { FullMockPortal } from '../components/exam/FullMockPortal';
 import { useMockTests } from '../hooks/useMockTests';
@@ -416,6 +417,10 @@ export function Dashboard() {
 
           {activeView === 'performance' && (
             <PerformanceWorkspace user={user} />
+          )}
+
+          {activeView === 'analytics' && (
+            <AnalyticsWorkspace user={user} />
           )}
 
           {activeView === 'mock' && (

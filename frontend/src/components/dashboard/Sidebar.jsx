@@ -6,7 +6,8 @@ import {
   BookMarked, 
   Book, 
   Trophy,
-  Activity
+  Activity,
+  PieChart
 } from 'lucide-react';
 
 export function Sidebar({
@@ -87,6 +88,14 @@ export function Sidebar({
         >
           <Trophy className="nav-icon" size={18} />
           <span>Performance Tracker</span>
+        </button>
+
+        <button 
+          className={`nav-item ${activeView === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveView('analytics')}
+        >
+          <PieChart className="nav-icon" size={18} />
+          <span>Insights & Analytics</span>
         </button>
       </nav>
 
