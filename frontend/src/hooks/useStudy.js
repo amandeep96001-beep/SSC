@@ -25,8 +25,8 @@ export function useStudy() {
   // TCS iON Mock Exam states
   const [testQuestions, setTestQuestions] = useState([]);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState(Array(25).fill(null));
-  const [questionStatuses, setQuestionStatuses] = useState(Array(25).fill('not-visited'));
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
+  const [questionStatuses, setQuestionStatuses] = useState([]);
   const [timer, setTimer] = useState(900); // 15 Minutes
   const [testSummary, setTestSummary] = useState(null);
 
@@ -272,12 +272,13 @@ export function useStudy() {
     const result = await getTestApi.execute(selectedTopicId);
     console.log(result,"getting result")
     if (result.success && result.data.data) {
+      const qLen = result.data.data.length;
       setTestQuestions(result.data.data);
       setCurrentQuestionIdx(0);
-      setSelectedAnswers(Array(25).fill(null));
+      setSelectedAnswers(Array(qLen).fill(null));
       
-      const initialStatuses = Array(25).fill('not-visited');
-      initialStatuses[0] = 'not-answered';
+      const initialStatuses = Array(qLen).fill('not-visited');
+      if (qLen > 0) initialStatuses[0] = 'not-answered';
       setQuestionStatuses(initialStatuses);
 
       setTimer(900); // 15 Mins
@@ -293,8 +294,8 @@ export function useStudy() {
     }
     setTestQuestions([]);
     setCurrentQuestionIdx(0);
-    setSelectedAnswers(Array(25).fill(null));
-    setQuestionStatuses(Array(25).fill('not-visited'));
+    setSelectedAnswers([]);
+    setQuestionStatuses([]);
     setTimer(900);
     setTestSummary(null);
     setActiveView('notes');
