@@ -2,6 +2,7 @@ import subjectRepository from '../repositories/subjectRepository.js';
 import topicRepository from '../repositories/topicRepository.js';
 import questionRepository from '../repositories/questionRepository.js';
 import vocabRepository from '../repositories/vocabRepository.js';
+import { Vocab } from '../models/vocabModel.js';
 import TopicDto from '../dtos/topicDto.js';
 import VocabDto from '../dtos/vocabDto.js';
 

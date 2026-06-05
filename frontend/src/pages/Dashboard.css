@@ -53,10 +53,18 @@
 }
 
 /* Dot Legends */
-.dot-white { background: #fff; }
-.dot-red { background: #d9534f; }
-.dot-green { background: #5cb85c; }
-.dot-yellow { background: #8a6d3b; }
+.dot-white {
+  background: #fff;
+}
+.dot-red {
+  background: #d9534f;
+}
+.dot-green {
+  background: #5cb85c;
+}
+.dot-yellow {
+  background: #8a6d3b;
+}
 
 .btn-submit-section {
   width: 100%;
@@ -251,13 +259,23 @@
 }
 
 /* Performance Workspace */
-.score-blue { color: #3b82f6; }
-.score-green { color: #10b981; }
-.score-yellow { color: #f59e0b; }
-.score-red { color: #ef4444; }
+.score-blue {
+  color: #3b82f6;
+}
+.score-green {
+  color: #10b981;
+}
+.score-yellow {
+  color: #f59e0b;
+}
+.score-red {
+  color: #ef4444;
+}
 
 /* Topic Workspace */
-.vocab-search-flex { flex: 1; }
+.vocab-search-flex {
+  flex: 1;
+}
 .vocab-filters-row {
   display: flex;
   gap: 10px;
