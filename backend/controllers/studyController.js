@@ -1,4 +1,5 @@
 import subjectRepository from '../repositories/subjectRepository.js';
+import topicRepository from '../repositories/topicRepository.js';
 import questionRepository from '../repositories/questionRepository.js';
 import vocabRepository from '../repositories/vocabRepository.js';
 import TopicDto from '../dtos/topicDto.js';
@@ -36,13 +37,15 @@ export const getTopics = async (req, res, next) => {
       return res.json({ status: 'success', data: [] });
     }
 
-    const topics = subject.topics.map(t => ({
+    const topics = await topicRepository.findBySubjectName(subjectName);
+    
+    const mappedTopics = topics.map(t => ({
       id: t.id,
       name: t.name,
       syllabus: t.syllabus
     }));
 
-    res.json({ status: 'success', data: topics });
+    res.json({ status: 'success', data: mappedTopics });
   } catch (error) {
     next(error);
   }
@@ -51,12 +54,11 @@ export const getTopics = async (req, res, next) => {
 export const getTopicNotes = async (req, res, next) => {
   try {
     const { topicId } = req.params;
-    const subject = await subjectRepository.findByTopicId(topicId, true);
-    if (!subject) {
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
-    const topic = subject.topics.find(t => t.id === topicId);
     const questions = await questionRepository.findByTopicId(topicId);
     
     res.json({
@@ -76,8 +78,8 @@ export const getTopicNotes = async (req, res, next) => {
 export const getTopicTest = async (req, res, next) => {
   try {
     const { topicId } = req.params;
-    const subject = await subjectRepository.findByTopicId(topicId, true);
-    if (!subject) {
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
@@ -117,20 +119,21 @@ export const addTopic = async (req, res, next) => {
       return res.status(404).json({ status: 'error', message: 'Subject not found.' });
     }
 
+    const existingTopics = await topicRepository.findBySubjectName(subjectName);
     const rawId = `${subjectName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const finalId = subject.topics.some(t => t.id === rawId) 
+    const finalId = existingTopics.some(t => t.id === rawId) 
       ? `${rawId}-${Date.now()}`
       : rawId;
 
     const newTopic = {
       id: finalId,
+      subjectName,
       name: dto.name,
       syllabus: dto.syllabus || 'Custom added user revision topic.',
       notes: dto.notes
     };
 
-    subject.topics.push(newTopic);
-    await subjectRepository.save(subject);
+    await topicRepository.create(newTopic);
 
     await questionRepository.create({
       topicId: finalId,
@@ -159,27 +162,27 @@ export const updateTopic = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
     }
 
-    const subject = await subjectRepository.findByTopicId(topicId);
-    if (!subject) {
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
-    const topic = subject.topics.find(t => t.id === topicId);
-    topic.name = dto.name;
-    topic.syllabus = dto.syllabus || topic.syllabus;
-    topic.notes = dto.notes;
+    const updateData = {
+      name: dto.name,
+      syllabus: dto.syllabus || topic.syllabus,
+      notes: dto.notes
+    };
+
+    await topicRepository.update(topicId, updateData);
 
     if (dto.questions.length > 0) {
       const qsToInsert = dto.questions.map(q => ({ ...q, topicId }));
       await questionRepository.insertMany(qsToInsert);
     }
 
-    subject.markModified('topics');
-    await subjectRepository.save(subject);
-
     res.json({
       status: 'success',
-      data: { id: topicId, name: dto.name, syllabus: topic.syllabus }
+      data: { id: topicId, name: dto.name, syllabus: updateData.syllabus }
     });
   } catch (error) {
     next(error);
@@ -189,13 +192,12 @@ export const updateTopic = async (req, res, next) => {
 export const deleteTopic = async (req, res, next) => {
   try {
     const { topicId } = req.params;
-    const subject = await subjectRepository.findByTopicId(topicId);
-    if (!subject) {
+    const deletedTopic = await topicRepository.deleteById(topicId);
+    
+    if (!deletedTopic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
-    subject.topics = subject.topics.filter(t => t.id !== topicId);
-    await subjectRepository.save(subject);
     await questionRepository.deleteByTopicId(topicId);
 
     res.json({ status: 'success', message: 'Topic deleted successfully.' });

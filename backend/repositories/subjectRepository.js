@@ -12,10 +12,6 @@ class SubjectRepository {
     return lean ? await query.lean() : await query;
   }
 
-  async findByTopicId(topicId, lean = false) {
-    const query = Subject.findOne({ 'topics.id': topicId });
-    return lean ? await query.lean() : await query;
-  }
 
   async save(subject) {
     return await subject.save();

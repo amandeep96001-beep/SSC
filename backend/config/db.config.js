@@ -146,7 +146,10 @@ export const connectDB = async () => {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ssc_prep';
     console.log(`🔄 Connecting to Database at: ${mongoUri.replace(/:([^:@]+)@/, ':****@')}`);
     
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, {
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      serverSelectionTimeoutMS: 5000,
+    });
     isDbConnected = true;
     console.log('🔥 MongoDB connected successfully!');
 
