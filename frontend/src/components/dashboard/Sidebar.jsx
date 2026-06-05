@@ -16,10 +16,20 @@ export function Sidebar({
   isOnline,
   activeView,
   setActiveView,
-  skipToSubjects
+  skipToSubjects,
+  isMobileOpen,
+  setIsMobileOpen
 }) {
   return (
-    <aside className="lms-sidebar">
+    <>
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="sidebar-mobile-overlay" 
+          onClick={() => setIsMobileOpen(false)}
+        ></div>
+      )}
+      <aside className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <GraduationCap className="brand-icon" size={28} />
         <div className="brand-text">
@@ -103,5 +113,6 @@ export function Sidebar({
         <span className="version-label">v1.4.0 Tracking Enabled</span>
       </div>
     </aside>
+    </>
   );
 }

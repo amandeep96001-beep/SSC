@@ -348,12 +348,14 @@ body {
 
 .drill-tabs {
   display: flex;
+  flex-wrap: wrap;
   background: var(--bg-sidebar);
   padding: 4px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
   gap: 4px;
   width: fit-content;
+  max-width: 100%;
 }
 
 .drill-tab {
@@ -2219,3 +2221,111 @@ body {
   background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
+
+/* ----------------------------------------------------
+   Mobile Responsiveness (Added)
+   ---------------------------------------------------- */
+
+.mobile-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .lms-container {
+    flex-direction: column;
+  }
+
+  .lms-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .lms-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1040;
+    backdrop-filter: blur(2px);
+  }
+
+  .lms-workspace {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 16px;
+  }
+
+  .mobile-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #fff;
+    font-family: var(--font-display);
+  }
+
+  .btn-mobile-toggle {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  /* Adjust grids for mobile */
+  .stats-row,
+  .subjects-grid,
+  .options-selector-grid,
+  .palette-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Exam Portal fixes */
+  #exam-portal .main-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  #exam-portal .left-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 2px solid #ccc;
+    min-height: 50vh;
+  }
+
+  #exam-portal .right-panel {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Modal scaling */
+  .modal-content-card {
+    width: 95%;
+    padding: 20px;
+  }
+
+  .section-header h1 {
+    font-size: 1.4rem;
+  }
+}
+

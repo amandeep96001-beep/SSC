@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useDrills } from '../hooks/useDrills';
 import { useStudy } from '../hooks/useStudy';
-import { RefreshCw, XCircle, X } from 'lucide-react';
+import { RefreshCw, XCircle, X, Menu } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import './Dashboard.css';
 
@@ -101,6 +101,7 @@ export function Dashboard() {
   const [deletingTopicId, setDeletingTopicId] = useState('');
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const [deckTab, setDeckTab] = useState('tables');
   const [tableSubTab, setTableSubTab] = useState('tables');
@@ -369,9 +370,19 @@ export function Dashboard() {
         activeView={activeView}
         setActiveView={setActiveView}
         skipToSubjects={skipToSubjects}
+        isMobileOpen={isMobileSidebarOpen}
+        setIsMobileOpen={setIsMobileSidebarOpen}
       />
 
       <main className="lms-workspace">
+        {/* Mobile Header Toggle */}
+        <div className="mobile-header">
+          <button className="btn-mobile-toggle" onClick={() => setIsMobileSidebarOpen(true)}>
+            <Menu size={24} />
+          </button>
+          <h2>{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h2>
+        </div>
+
         {globalError && (
           <div className="alert-banner error">
             <XCircle size={16} />
