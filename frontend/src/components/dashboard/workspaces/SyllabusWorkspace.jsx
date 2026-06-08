@@ -135,11 +135,13 @@ export function SyllabusWorkspace({
             </div>
           </div>
           <div className="workspace-scrollable-content">
-            <div className="subject-grid">
+            <div className="subjects-grid">
               {subjects.map((sub) => (
                 <div key={sub} className="subject-selection-card" onClick={() => selectSubject(sub)}>
-                  <BookMarked className="subject-icon" size={32} />
-                  <div className="subject-card-info">
+                  <div className="subject-icon-box">
+                    <BookMarked size={24} />
+                  </div>
+                  <div className="subject-content">
                     <h3>{sub}</h3>
                     <p>Read detailed syllabus points and practice mock tests.</p>
                   </div>
@@ -171,7 +173,7 @@ export function SyllabusWorkspace({
             </div>
           </div>
           <div className="workspace-scrollable-content">
-            <div className="topics-grid">
+            <div className="topics-list-container">
             {topicsList.length > 0 ? (
               topicsList.map((topic) => {
                 // Look up topic accuracy indicators in user's profile
