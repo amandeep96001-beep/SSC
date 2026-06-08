@@ -1,33 +1,32 @@
 :root {
-  --font-sans:
-    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  --font-display: "Inter", sans-serif;
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-  /* Premium Modern Dark Theme (Not too AI, not too flat) */
-  --bg-main: #0f1115; /* Deep rich slate/black */
-  --bg-surface: #1a1d24; /* Slightly lighter surface */
-  --bg-surface-hover: #222630;
-  --border-color: #2e3440;
-  --border-glow: #3b4252;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
 
-  --color-primary: #3b82f6; /* Soft Blue */
-  --color-primary-glow: rgba(59, 130, 246, 0.1);
-  --color-secondary: #8b5cf6; /* Soft Violet */
-  --color-secondary-glow: rgba(139, 92, 246, 0.1);
-  --color-success: #10b981; /* Emerald */
-  --color-success-glow: rgba(16, 185, 129, 0.1);
-  --color-warning: #f59e0b; /* Amber */
-  --color-danger: #ef4444; /* Rose */
+  /* True Pitch-Black Theme */
+  --bg-main: #000000;
+  --bg-surface: #0a0a0a; /* Very subtle elevation */
+  --bg-surface-hover: #121212;
+  --border-color: #222222; /* Crisp, hard lines */
+  --border-glow: #333333;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --color-primary: #3b82f6; /* Vibrant Blue */
+  --color-primary-glow: rgba(59, 130, 246, 0.15);
+  --color-secondary: #8b5cf6; /* Vibrant Violet */
+  --color-secondary-glow: rgba(139, 92, 246, 0.15);
+  --color-success: #10b981; /* Neon Emerald */
+  --color-success-glow: rgba(16, 185, 129, 0.15);
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
 
-  --transition-smooth: all 0.2s ease-in-out;
-  --shadow-main:
-    0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
-  --shadow-glow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-main: 0 4px 20px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 15px rgba(255, 255, 255, 0.03);
 
   box-sizing: border-box;
 }
@@ -45,10 +44,10 @@ body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   min-height: 100vh;
-  /* Very subtle, elegant gradient, not overwhelming */
+  /* Extremely subtle gradient map for depth without breaking the true-dark feel */
   background-image:
-    radial-gradient(circle at top right, #1a1d24 0%, transparent 40%),
-    radial-gradient(circle at bottom left, #14171d 0%, transparent 40%);
+    radial-gradient(ellipse at top right, rgba(59, 130, 246, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at bottom left, rgba(139, 92, 246, 0.03) 0%, transparent 40%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -73,57 +72,43 @@ body {
 }
 
 @keyframes statusPulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-    box-shadow: 0 0 10px var(--color-success);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 @keyframes statusPulseRed {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 1;
-    box-shadow: 0 0 10px var(--color-danger);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
 /* Scrollbar styles */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-main);
 }
 ::-webkit-scrollbar-thumb {
-  background: #2e3440;
-  border-radius: 4px;
+  background: #222222;
+  border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
+  background: #444444;
 }
 
 /* ============================================================
-   SPACIOUS & ELEGANT OVERRIDES
+   PREMIUM GLASSMORPHISM & UI OVERRIDES
    ============================================================ */
 
-/* 1. Eliminate harsh AI glows, but keep natural depth (shadows) */
+/* 1. Glassmorphism for modern feel */
 * {
-  backdrop-filter: none !important; /* Removes the "glass" look which feels AI generated */
+  /* Removed backdrop-filter override */
 }
 
-/* 2. Soft, modern border radiuses (not too sharp, not too round) */
+/* 2. Soft, modern border radiuses */
 button,
 input,
 select,
@@ -145,31 +130,37 @@ textarea,
 .modal-content-card,
 .drill-interactive-card,
 .drill-workspace-card {
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-color) !important;
-  box-shadow: var(--shadow-main) !important; /* Add natural depth back */
-  padding: 32px !important; /* Fixed padding for the outer container */
+  background: rgba(10, 10, 10, 0.7) !important; /* Semi-transparent */
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: var(--shadow-main) !important;
+  padding: 32px !important;
 }
 
 /* 4. Elegant Modals */
 .modal-content-card {
   border-top: 3px solid var(--color-primary) !important;
+  background: rgba(15, 15, 15, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
 }
 
-/* 5. Clean inputs (not compact) */
+/* 5. Clean inputs */
 input,
 select,
 textarea {
-  background: #111318 !important;
-  border: 1px solid var(--border-color) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: var(--text-primary) !important;
-  padding: 12px 16px !important; /* Make inputs more spacious */
+  padding: 12px 16px !important;
   font-size: 15px !important;
+  transition: var(--transition-smooth) !important;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
+  background: rgba(255, 255, 255, 0.05) !important;
   border-color: var(--color-primary) !important;
   outline: none !important;
   box-shadow: 0 0 0 3px var(--color-primary-glow) !important;
@@ -177,13 +168,14 @@ textarea:focus {
 
 /* Fix for double-highlighting inside icon-wrapper inputs (like Login page) */
 .input-with-icon {
-  background: #111318 !important;
-  border: 1px solid var(--border-color) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 12px !important;
-  transition: all 0.2s ease;
+  transition: var(--transition-smooth) !important;
 }
 
 .input-with-icon:focus-within {
+  background: rgba(255, 255, 255, 0.05) !important;
   border-color: var(--color-primary) !important;
   box-shadow: 0 0 0 3px var(--color-primary-glow) !important;
 }
@@ -200,14 +192,20 @@ textarea:focus {
   box-shadow: none !important;
 }
 
-/* 6. Buttons should breathe */
+/* 6. Buttons should breathe and have micro-animations */
 button {
   padding: 10px 20px;
-  font-weight: 500;
-  letter-spacing: normal;
-  text-transform: none; /* Revert the uppercase brutalist look */
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
   transition: var(--transition-smooth);
 }
+
 button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+  transform: translateY(0);
 }

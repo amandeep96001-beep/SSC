@@ -39,17 +39,17 @@
   font-size: 12px;
   font-weight: bold;
   margin-bottom: 8px;
-  color: #444;
+  color: #94a3b8;
 }
 
 .palette-warning {
   margin-top: 12px;
   padding: 10px;
-  background: #fff3cd;
-  color: #856404;
+  background: rgba(245, 158, 11, 0.1);
+  color: #fcd34d;
   border-radius: 4px;
   font-size: 12px;
-  border-left: 3px solid #ffeeba;
+  border-left: 3px solid #f59e0b;
 }
 
 /* Dot Legends */
@@ -158,7 +158,7 @@
 }
 
 .results-error-log-banner {
-  background: #fff8e7;
+  background: rgba(245, 158, 11, 0.05);
   padding: 15px;
   border-left: 4px solid #f59e0b;
   border-radius: 4px;
@@ -167,7 +167,7 @@
 
 .results-error-log-title {
   font-weight: bold;
-  color: #b36b00;
+  color: #fbbf24;
 }
 
 .results-error-log-textarea {
@@ -201,12 +201,12 @@
 
 .review-core-logic {
   font-size: 13px;
-  color: #1f618d;
-  background: #ebf5fb;
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.08);
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 8px;
   margin-top: 10px;
-  border-left: 3px solid #1a5276;
+  border-left: 3px solid #0ea5e9;
 }
 
 .results-actions-row {
@@ -233,13 +233,13 @@
 }
 
 .drill-error-vocab-details {
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 6px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 8px;
   width: 100%;
-  color: #333;
+  color: #fca5a5;
   font-size: 13px;
-  border-left: 3px solid #e74c3c;
+  border-left: 3px solid #ef4444;
 }
 
 .drill-error-vocab-row {
@@ -284,10 +284,11 @@
 
 .topic-notes-html {
   margin-top: 15px;
-  padding: 15px;
-  background: #f9f9fa;
-  border-left: 3px solid #4f46e5;
-  border-radius: 4px;
+  padding: 20px;
+  background: rgba(15, 15, 15, 0.6);
+  border-left: 3px solid var(--color-primary);
+  border-radius: 8px;
   font-size: 14px;
   line-height: 1.6;
+  color: #e2e8f0;
 }

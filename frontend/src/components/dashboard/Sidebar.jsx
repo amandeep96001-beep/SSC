@@ -9,6 +9,9 @@ import {
   Activity,
   PieChart
 } from 'lucide-react';
+import { useRef } from 'react';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 export function Sidebar({
   user,
@@ -20,6 +23,28 @@ export function Sidebar({
   isMobileOpen,
   setIsMobileOpen
 }) {
+  const sidebarRef = useRef(null);
+
+  useGSAP(() => {
+    // Elegant entrance animation
+    gsap.fromTo('.sidebar-brand', 
+      { y: -20, opacity: 0 }, 
+      { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out', clearProps: 'all' }
+    );
+    gsap.fromTo('.user-profile-card, .connection-card', 
+      { x: -20, opacity: 0 }, 
+      { x: 0, opacity: 1, duration: 0.5, stagger: 0.1, delay: 0.2, ease: 'power2.out', clearProps: 'all' }
+    );
+    gsap.fromTo('.nav-item', 
+      { x: -30, opacity: 0 }, 
+      { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 0.4, ease: 'back.out(1.2)', clearProps: 'all' }
+    );
+    gsap.fromTo('.sidebar-footer', 
+      { opacity: 0 }, 
+      { opacity: 1, duration: 0.8, delay: 1, clearProps: 'all' }
+    );
+  }, { scope: sidebarRef });
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -29,7 +54,7 @@ export function Sidebar({
           onClick={() => setIsMobileOpen(false)}
         ></div>
       )}
-      <aside className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+      <aside ref={sidebarRef} className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
         <GraduationCap className="brand-icon" size={28} />
         <div className="brand-text">

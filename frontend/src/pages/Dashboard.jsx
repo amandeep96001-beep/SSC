@@ -1,5 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { useDrills } from '../hooks/useDrills';
 import { useStudy } from '../hooks/useStudy';
 import { RefreshCw, XCircle, X, Menu } from 'lucide-react';
@@ -76,6 +78,27 @@ export function Dashboard() {
 
   const mockTestsHooks = useMockTests();
   const [activeMockTestId, setActiveMockTestId] = useState(null);
+
+  const workspaceRef = useRef(null);
+
+  useGSAP(() => {
+    if (workspaceRef.current && activeView !== 'test' && activeView !== 'results' && activeView !== 'mock_exam_active') {
+      // 1. Subtle, instantaneous fade for the main wrapper (no clunky scaling)
+      gsap.fromTo(workspaceRef.current, 
+        { opacity: 0 }, 
+        { opacity: 1, duration: 0.25, ease: 'power1.inOut', clearProps: 'opacity' }
+      );
+
+      // 2. Premium staggered cascade for all inner interactive cards and headers
+      const cards = workspaceRef.current.querySelectorAll('.section-header, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html');
+      if (cards.length > 0) {
+        gsap.fromTo(cards, 
+          { opacity: 0, y: 12 }, 
+          { opacity: 1, y: 0, duration: 0.5, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
+        );
+      }
+    }
+  }, { dependencies: [activeView], scope: workspaceRef });
 
   // Start mock test
   const startMockExam = (testId) => {
@@ -453,7 +476,7 @@ export function Dashboard() {
           </div>
         )}
 
-        <div className="workspace-card-enclosure">
+        <div className="workspace-card-enclosure" ref={workspaceRef}>
           {activeView === 'drill' && (
             <DrillWorkspace 
               drillType={drillType}
