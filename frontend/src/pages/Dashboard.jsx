@@ -509,6 +509,7 @@ export function Dashboard() {
               handleDeleteClick={handleDeleteClick}
               activeNotes={activeNotes}
               startTest={startTest}
+              updateCustomTopic={updateCustomTopic}
             />
           )}
 

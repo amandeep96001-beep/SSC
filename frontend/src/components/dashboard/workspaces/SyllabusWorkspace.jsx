@@ -1,10 +1,16 @@
+import { useState, useRef, useCallback } from 'react';
 import { 
   BookMarked, 
   ChevronRight, 
   Plus, 
   Edit2, 
   Trash2, 
-  ClipboardList 
+  ClipboardList,
+  Highlighter,
+  Pencil,
+  Save,
+  X,
+  Eraser
 } from 'lucide-react';
 
 export function SyllabusWorkspace({
@@ -20,66 +26,152 @@ export function SyllabusWorkspace({
   handleOpenEditModal,
   handleDeleteClick,
   activeNotes,
-  startTest
+  startTest,
+  updateCustomTopic
 }) {
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const notesRef = useRef(null);
+
+  const handleEditToggle = () => {
+    setIsEditingNotes(prev => !prev);
+  };
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!notesRef.current) return;
+    setIsSaving(true);
+    const newHtml = notesRef.current.innerHTML;
+    const res = await updateCustomTopic(activeNotes.id, {
+      name: activeNotes.name,
+      notes: newHtml,
+      questions: []
+    });
+    setIsSaving(false);
+    if (res.success) {
+      activeNotes.notes = newHtml;
+      setIsEditingNotes(false);
+    } else {
+      alert(res.message || "Failed to save notes");
+    }
+  }, [activeNotes, updateCustomTopic]);
+
+  const handleHighlight = useCallback(async (color) => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || selection.isCollapsed) return;
+    
+    const range = selection.getRangeAt(0);
+    const mark = document.createElement('mark');
+    mark.className = `hl-${color}`;
+    
+    try {
+      range.surroundContents(mark);
+      selection.removeAllRanges();
+      // Auto-save the highlight
+      if (notesRef.current) {
+        const newHtml = notesRef.current.innerHTML;
+        const res = await updateCustomTopic(activeNotes.id, {
+          name: activeNotes.name,
+          notes: newHtml,
+          questions: []
+        });
+        if (res.success) {
+          activeNotes.notes = newHtml;
+        }
+      }
+    } catch {
+      alert("Please select text within a single line to highlight.");
+    }
+  }, [activeNotes, updateCustomTopic]);
+
+  const handleRemoveHighlight = useCallback(async () => {
+    const selection = window.getSelection();
+    if (!selection.rangeCount || selection.isCollapsed) {
+      alert("Please click inside or select the highlighted text you want to remove.");
+      return;
+    }
+    
+    let node = selection.anchorNode;
+    // Walk up to find the <mark> tag
+    while (node && node.nodeName !== 'MARK' && node.id !== 'notes-content-view') {
+      node = node.parentNode;
+    }
+    
+    if (node && node.nodeName === 'MARK') {
+      // Unwrap the <mark> tag
+      const parent = node.parentNode;
+      while (node.firstChild) {
+        parent.insertBefore(node.firstChild, node);
+      }
+      parent.removeChild(node);
+      
+      // Auto-save the un-highlight
+      if (notesRef.current) {
+        const newHtml = notesRef.current.innerHTML;
+        const res = await updateCustomTopic(activeNotes.id, {
+          name: activeNotes.name,
+          notes: newHtml,
+          questions: []
+        });
+        if (res.success) {
+          activeNotes.notes = newHtml;
+        }
+      }
+    } else {
+      alert("Please click inside an existing highlight to remove it.");
+    }
+  }, [activeNotes, updateCustomTopic]);
+
   return (
     <>
       {/* --- VIEW: SUBJECT LISTS --- */}
       {activeView === 'subjects' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header">
-              <h1>Select Subject Area</h1>
-              <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
+                <h1 style={{ margin: '0 0 6px 0' }}>Select Subject Area</h1>
+                <p style={{ margin: 0 }}>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+              </div>
             </div>
           </div>
-
           <div className="workspace-scrollable-content">
-            <div className="subjects-grid">
-            {subjects.map((sub) => (
-              <div 
-                key={sub}
-                className="subject-selection-card"
-                onClick={() => selectSubject(sub)}
-              >
-                <div className="subject-icon-box">
-                  <BookMarked size={24} />
+            <div className="subject-grid">
+              {subjects.map((sub) => (
+                <div key={sub} className="subject-selection-card" onClick={() => selectSubject(sub)}>
+                  <BookMarked className="subject-icon" size={32} />
+                  <div className="subject-card-info">
+                    <h3>{sub}</h3>
+                    <p>Read detailed syllabus points and practice mock tests.</p>
+                  </div>
+                  <ChevronRight className="arrow-icon" size={18} />
                 </div>
-                <div className="subject-content">
-                  <h3>{sub}</h3>
-                  <p>Read detailed syllabus points and practice mock tests.</p>
-                </div>
-                <ChevronRight className="arrow-icon" size={18} />
-              </div>
-            ))}
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* --- VIEW: TOPICS/SYLLABUS OUTLINES WITH ACCURACY INDICATORS --- */}
+      {/* --- VIEW: TOPIC LISTS (Under a subject) --- */}
       {activeView === 'topics' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
-              <div style={{ flex: '1 1 auto', minWidth: '250px', paddingRight: '20px' }}>
-                <h1 style={{ margin: '0 0 6px 0' }}>{selectedSubject} Syllabus</h1>
-                <p style={{ margin: 0 }}>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
+            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
+                <h1 style={{ margin: '0 0 6px 0' }}>{selectedSubject} — Topics</h1>
+                <p style={{ margin: 0 }}>Select a topic to read revision notes and take a speed test.</p>
               </div>
-              <div style={{ display: 'flex', gap: '10px', flexShrink: 0, alignItems: 'flex-start', marginLeft: 'auto' }}>
-                <button className="btn-create-topic" onClick={() => setModalOpen(true)}>
-                  <Plus size={16} />
-                  <span>Add Custom Topic</span>
-                </button>
+              <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
                 <button className="btn-back" onClick={() => setActiveView('subjects')}>
-                  Back to Subjects
+                  All Subjects
+                </button>
+                <button className="btn-add" onClick={() => setModalOpen(true)}>
+                  <Plus size={16} /> Add Topic
                 </button>
               </div>
             </div>
           </div>
-
           <div className="workspace-scrollable-content">
-            <div className="topics-list-container">
+            <div className="topics-grid">
             {topicsList.length > 0 ? (
               topicsList.map((topic) => {
                 // Look up topic accuracy indicators in user's profile
@@ -156,20 +248,39 @@ export function SyllabusWorkspace({
                 <h1 style={{ margin: '0 0 6px 0' }}>{activeNotes.name} Revision Sheet</h1>
                 <p style={{ margin: 0 }}>Read formulas, shortcut tricks, and concepts below.</p>
               </div>
-              <button className="btn-back" style={{ marginLeft: 'auto' }} onClick={() => setActiveView('topics')}>
+              <button className="btn-back" style={{ marginLeft: 'auto' }} onClick={() => { setIsEditingNotes(false); setActiveView('topics'); }}>
                 Back to Topics
               </button>
             </div>
 
-            <div className="take-test-strip" style={{ marginBottom: '15px' }}>
-              <div className="strip-info">
-                <ClipboardList size={22} className="strip-icon" />
-                <div>
-                  <h4 style={{ margin: 0, color: '#f8fafc' }}>Ready to test your speed?</h4>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Launches a real TCS iON simulated test for this topic.</p>
+            {/* Notes Toolbar — Highlight + Edit + Test */}
+            <div className="notes-toolbar-strip">
+              <div className="notes-toolbar-left">
+                <div className="highlight-palette">
+                  <span className="palette-label"><Highlighter size={14} /> Highlight:</span>
+                  <button className="hl-btn" style={{ color: '#eab308', background: 'rgba(234,179,8,0.15)' }} onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
+                  <button className="hl-btn" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.15)' }} onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
+                  <button className="hl-btn" style={{ color: '#ec4899', background: 'rgba(236,72,153,0.15)' }} onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
+                  <button className="hl-btn" style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.15)' }} onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
+                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }}></div>
+                  <button className="hl-btn" style={{ color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }} onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
                 </div>
+
+                <button className={`notes-action-btn ${isEditingNotes ? 'active' : ''}`} onClick={handleEditToggle}>
+                  {isEditingNotes ? <X size={16} /> : <Pencil size={16} />}
+                  {isEditingNotes ? 'Stop Editing' : 'Edit Notes'}
+                </button>
+
+                {isEditingNotes && (
+                  <button className="notes-action-btn save" onClick={handleSaveNotes} disabled={isSaving}>
+                    <Save size={16} />
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                )}
               </div>
+
               <button className="btn-take-test" onClick={startTest}>
+                <ClipboardList size={16} />
                 Take Topic Test
               </button>
             </div>
@@ -177,11 +288,16 @@ export function SyllabusWorkspace({
 
           <div className="workspace-scrollable-content">
             <div className="revision-notes-container">
-            <div className="notes-sheet">
-              <pre className="notes-display-pre">
-                {activeNotes.notes}
-              </pre>
-            </div>
+              <div className="notes-sheet">
+                <pre
+                  ref={notesRef}
+                  className={`notes-display-pre ${isEditingNotes ? 'editing' : ''}`}
+                  id="notes-content-view"
+                  contentEditable={isEditingNotes}
+                  suppressContentEditableWarning
+                  dangerouslySetInnerHTML={{ __html: activeNotes.notes }}
+                />
+              </div>
             </div>
           </div>
         </div>
