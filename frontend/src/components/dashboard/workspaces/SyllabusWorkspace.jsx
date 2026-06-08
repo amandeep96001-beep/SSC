@@ -61,12 +61,12 @@ export function SyllabusWorkspace({
       {activeView === 'topics' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-              <div>
-                <h1>{selectedSubject} Syllabus</h1>
-                <p>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ paddingRight: '20px' }}>
+                <h1 style={{ margin: '0 0 6px 0' }}>{selectedSubject} Syllabus</h1>
+                <p style={{ margin: 0 }}>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexShrink: 0, alignItems: 'flex-start' }}>
                 <button className="btn-create-topic" onClick={() => setModalOpen(true)}>
                   <Plus size={16} />
                   <span>Add Custom Topic</span>
