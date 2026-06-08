@@ -28,7 +28,7 @@ export function DrillWorkspace({
     <div className="drill-workspace">
       <div className="workspace-header-sticky">
         <div className="section-header">
-          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Practice Speed Drills</h1>
+          <h1>Practice Speed Drills</h1>
           <p>Solve high-speed calculations and English vocab vocabulary drills.</p>
         </div>
         <div className="tabs-header">

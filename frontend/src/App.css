@@ -2,16 +2,16 @@
    Core Theme Colors & Root Tokens (Professional Slate)
    ---------------------------------------------------- */
 :root {
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --font-display: "Outfit", system-ui, -apple-system, sans-serif;
 
-  --bg-main: #0e0f13;
-  --bg-sidebar: #13141a;
-  --bg-surface: #181920;
-  --bg-input: #1d1e28;
+  --bg-main: #09090b;
+  --bg-sidebar: #09090b;
+  --bg-surface: #18181b;
+  --bg-input: #18181b;
 
-  --border-color: #242533;
-  --border-focus: #292b3a;
+  --border-color: #27272a;
+  --border-focus: #3f3f46;
 
   --text-primary: #ffffff;
   --text-secondary: #9e9eb0;
@@ -88,6 +88,9 @@ body {
   min-height: 100vh;
   width: 100vw;
   background-color: var(--bg-main);
+  background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+  background-attachment: fixed;
 }
 
 /* Left Sidebar Navigation */
@@ -283,9 +286,13 @@ body {
 .section-header h1 {
   font-family: var(--font-display);
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   margin: 0 0 6px 0;
-  color: #fff;
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
 .section-header p {
@@ -689,6 +696,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
@@ -809,15 +817,20 @@ body {
 .revision-notes-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 40px;
 }
 
 .notes-sheet {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--bg-main);
+  border: none;
+  border-left: 2px solid var(--border-focus);
+  border-radius: 0;
+  padding: 10px 0 10px 30px;
+  max-width: 800px;
+  width: 100%;
+  box-shadow: none;
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -1327,9 +1340,10 @@ body {
 .notes-display-pre {
   white-space: pre-wrap;
   font-family: var(--font-sans);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: #e2e8f0;
+  letter-spacing: 0.2px;
   margin: 0;
   padding: 0;
   background: transparent;
@@ -1494,8 +1508,8 @@ body {
 }
 
 .btn-premium-mock {
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  color: white;
+  background: var(--text-primary);
+  color: var(--bg-main);
   border: none;
   border-radius: 12px;
   padding: 12px 24px;
@@ -1508,36 +1522,18 @@ body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 20px rgba(236, 72, 153, 0.3);
   position: relative;
   overflow: hidden;
 }
 
 .btn-premium-mock::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #d946ef 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 1;
-}
-
-.btn-premium-mock > * {
-  position: relative;
-  z-index: 2;
-}
-
-.btn-premium-mock:hover::before {
-  opacity: 1;
+  display: none;
 }
 
 .btn-premium-mock:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 12px 25px rgba(139, 92, 246, 0.5);
+  background: #e2e8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .btn-premium-mock:active {
@@ -1552,27 +1548,23 @@ body {
 }
 
 .mock-glass-card {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   padding: 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: all 0.3s ease;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .mock-glass-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(236, 72, 153, 0.3);
-  box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.3),
-    0 0 20px rgba(236, 72, 153, 0.1);
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .mock-badge {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
+  background: var(--color-success);
+  color: #fff;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 0.75rem;

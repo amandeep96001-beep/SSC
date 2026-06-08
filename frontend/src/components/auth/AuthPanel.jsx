@@ -42,7 +42,7 @@ export function AuthPanel({ loginUser, registerUser }) {
       <div className="auth-card">
         <div className="auth-brand">
           <GraduationCap className="brand-logo" size={36} />
-          <h1 style={{ margin: '0 0 5px 0', fontSize: '2rem', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>SSC Speed Engine</h1>
+          <h1 style={{ margin: '0 0 5px 0', fontSize: '2rem', color: '#fafafa', fontWeight: 600, letterSpacing: '-0.02em' }}>SSC Speed Engine</h1>
           <p>Master tables, vocab, reasoning, and mock tests</p>
         </div>
 

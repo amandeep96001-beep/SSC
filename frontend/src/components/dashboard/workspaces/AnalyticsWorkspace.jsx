@@ -93,7 +93,7 @@ export function AnalyticsWorkspace({ user }) {
       <div className="workspace-header-sticky">
         <div className="section-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ background: 'linear-gradient(90deg, #10b981, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
+            <h1>
               Insights & Analytics
             </h1>
             <p style={{ color: 'var(--text-muted)' }}>Visualize your study time, mock progression, and engagement scale.</p>

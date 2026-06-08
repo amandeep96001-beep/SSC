@@ -22,7 +22,7 @@ export function ResultsPortal({
     <div className="results-container results-portal-visible" id="results-portal">
       <Helmet><title>Test Results | SSC Speed Engine</title></Helmet>
       <div className="score-box">
-        <h2 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Performance Assessment Summary</h2>
+        <h2 style={{ marginBottom: '8px', color: '#fafafa', fontWeight: 600, letterSpacing: '-0.02em' }}>Performance Assessment Summary</h2>
         <p>Your final official calculation sheet:</p>
         <div className="score-num" id="final-marks">{testSummary?.score} / {testSummary?.maxScore || 50}</div>
         

@@ -76,7 +76,7 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
       <div className="workspace-header-sticky">
         <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Full Mock Exams</h1>
+            <h1>Full Mock Exams</h1>
             <p>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
           </div>
           <button className="btn-create-topic" onClick={() => {

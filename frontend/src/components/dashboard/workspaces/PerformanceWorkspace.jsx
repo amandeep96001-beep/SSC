@@ -32,7 +32,7 @@ export function PerformanceWorkspace({ user }) {
       <div className="workspace-header-sticky">
         <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
+          <h1>
             Performance Analytics Dashboard
           </h1>
           <p style={{ color: 'var(--text-muted)' }}>Track your target concepts, average mock scores, and revision statistics.</p>
