@@ -440,7 +440,7 @@ export function Dashboard() {
 
   return (
     <div className="lms-container">
-      <Helmet><title>Dashboard | SSC Speed Engine</title></Helmet>
+      <Helmet><title>Dashboard | ExamPrep Pro</title></Helmet>
       
       {globalLoading && (
         <div className="absolute-loader-strip">

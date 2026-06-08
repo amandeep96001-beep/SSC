@@ -239,7 +239,7 @@ export function RevisionWorkspace({
                       <div className="table-card-header" style={{ cursor: 'default' }}>
                         <h3>
                           {num}² = {num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ SSC</span>}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ IMP</span>}
                         </h3>
                       </div>
                       <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
@@ -268,7 +268,7 @@ export function RevisionWorkspace({
                       <div className="table-card-header" style={{ cursor: 'default' }}>
                         <h3>
                           {num}³ = {num * num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ SSC</span>}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ IMP</span>}
                         </h3>
                       </div>
                       <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>

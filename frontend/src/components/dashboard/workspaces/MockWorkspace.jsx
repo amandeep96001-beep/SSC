@@ -111,7 +111,7 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
               <input 
                 type="text" 
                 className="mock-premium-input" 
-                placeholder="Test Title (e.g. SSC CGL Tier-I)" 
+                placeholder="Test Title (e.g. Full Mock Tier-I)" 
                 value={title} 
                 onChange={e => setTitle(e.target.value)} 
                 required 

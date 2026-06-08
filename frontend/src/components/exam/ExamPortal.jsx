@@ -30,7 +30,7 @@ export function ExamPortal({
 
   return (
     <div id="exam-portal" className="no-select">
-      <Helmet><title>Mock Test | SSC Speed Engine</title></Helmet>
+      <Helmet><title>Mock Test | ExamPrep Pro</title></Helmet>
       <div className="navbar">
         <div>CHSL DYNAMIC EXAM INTERFACE - {selectedSubject?.toUpperCase()}</div>
         <div id="timer-box">{formatTimer(timer)}</div>

@@ -20,7 +20,7 @@ export function ResultsPortal({
 
   return (
     <div className="results-container results-portal-visible" id="results-portal">
-      <Helmet><title>Test Results | SSC Speed Engine</title></Helmet>
+      <Helmet><title>Test Results | ExamPrep Pro</title></Helmet>
       <div className="score-box">
         <h2 style={{ marginBottom: '8px', color: '#fafafa', fontWeight: 600, letterSpacing: '-0.02em' }}>Performance Assessment Summary</h2>
         <p>Your final official calculation sheet:</p>

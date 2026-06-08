@@ -152,7 +152,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
   return (
     <div id="exam-portal" className="no-select">
-      <Helmet><title>Full Mock Test | SSC Speed Engine</title></Helmet>
+      <Helmet><title>Full Mock Test | ExamPrep Pro</title></Helmet>
       
       {/* Top Navbar */}
       <div className="navbar">

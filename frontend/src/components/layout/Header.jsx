@@ -5,7 +5,7 @@ export function Header({ connection }) {
   return (
     <header className="app-header">
       <div className="brand-section">
-        <h1>🎯 SSC Exam Preparation Portal</h1>
+        <h1>🎯 Exam Preparation Portal</h1>
         <p>Production-Ready Workspace for CGL & CHSL Prep</p>
       </div>
       <div className="status-badge-container">

@@ -193,7 +193,7 @@ export function useStudy() {
     let correctCount = 0;
     let wrongCount = 0;
     let unattemptedCount = 0;
-    let errorLog = "=== SSC 100-QUESTION FULL MOCK ERROR LOG ===\n\n";
+    let errorLog = "=== EXAM 100-QUESTION FULL MOCK ERROR LOG ===\n\n";
 
     mockData.questions.forEach((item, index) => {
       const userAns = answers[index];

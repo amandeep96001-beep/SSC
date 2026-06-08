@@ -222,7 +222,7 @@ export function PerformanceWorkspace({ user }) {
                   <tfoot>
                     <tr>
                       <td colSpan="5" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '10px' }}>
-                        * Mock exam grades are computed on the official SSC scheme: +2 for correct, -0.5 for wrong answers.
+                        * Mock exam grades are computed on the official exam scheme: +2 for correct, -0.5 for wrong answers.
                       </td>
                     </tr>
                   </tfoot>

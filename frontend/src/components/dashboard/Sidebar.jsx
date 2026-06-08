@@ -58,7 +58,7 @@ export function Sidebar({
       <div className="sidebar-brand">
         <GraduationCap className="brand-icon" size={28} />
         <div className="brand-text">
-          <h2>SSC Prep Portal</h2>
+          <h2>ExamPrep Portal</h2>
           <span>CGL & CHSL Speed Engine</span>
         </div>
       </div>
