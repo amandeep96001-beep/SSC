@@ -105,35 +105,33 @@ export function RevisionWorkspace({
     <>
       {/* --- VIEW: REVISION DECK --- */}
       <div className="study-workspace">
-        <div className="section-header">
-          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Revision & Learning Deck</h1>
-          <p>Quick-reference sheets for tables, fractions, and vocabulary mastery.</p>
-        </div>
-
-        {/* TOP TABS: Tables | Vocab */}
-        <div className="tabs-header">
-          <div className="drill-tabs">
-            <button
-              className={`drill-tab ${deckTab === 'tables' ? 'active' : ''}`}
-              onClick={() => setDeckTab('tables')}
-            >
-              <Zap size={14} />
-              <span>Tables & Fractions</span>
-            </button>
-            <button
-              className={`drill-tab ${deckTab === 'vocab' ? 'active' : ''}`}
-              onClick={() => { setDeckTab('vocab'); loadVocabList(); }}
-            >
-              <Book size={14} />
-              <span>Vocabulary</span>
-            </button>
+        <div className="workspace-header-sticky">
+          <div className="section-header">
+            <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Revision & Learning Deck</h1>
+            <p>Quick-reference sheets for tables, fractions, and vocabulary mastery.</p>
           </div>
-        </div>
 
-        {/* ── TABLES & FRACTIONS TAB ── */}
-        {deckTab === 'tables' && (
-          <div>
-            {/* Sub-tabs */}
+          {/* TOP TABS: Tables | Vocab */}
+          <div className="tabs-header">
+            <div className="drill-tabs">
+              <button
+                className={`drill-tab ${deckTab === 'tables' ? 'active' : ''}`}
+                onClick={() => setDeckTab('tables')}
+              >
+                <Zap size={14} />
+                <span>Tables & Fractions</span>
+              </button>
+              <button
+                className={`drill-tab ${deckTab === 'vocab' ? 'active' : ''}`}
+                onClick={() => { setDeckTab('vocab'); loadVocabList(); }}
+              >
+                <Book size={14} />
+                <span>Vocabulary</span>
+              </button>
+            </div>
+          </div>
+
+          {deckTab === 'tables' && (
             <div className="revision-sub-tabs">
               {['tables','squares','cubes','fractions','percentages'].map(st => (
                 <button
@@ -149,6 +147,52 @@ export function RevisionWorkspace({
                 </button>
               ))}
             </div>
+          )}
+
+          {deckTab === 'vocab' && (
+            <>
+              {/* Search + Add bar */}
+              <div className="vocab-add-bar">
+                <div className="vocab-search-bar vocab-search-flex">
+                  <Search size={18} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search word, synonym, antonym, idiom..."
+                    value={vocabSearch}
+                    onChange={(e) => setVocabSearch(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button className="btn-add-vocab" onClick={() => setVocabBulkModalOpen(true)} style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                    <Plus size={15} /> Bulk Import
+                  </button>
+                  <button className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
+                    <Plus size={15} /> Add New
+                  </button>
+                </div>
+              </div>
+
+              {/* Category tabs */}
+              <div className="revision-sub-tabs">
+                {['All','Word Power','Idioms & Phrases','One Word Substitution','Spelling Rules'].map(cat => (
+                  <button
+                    key={cat}
+                    className={`revision-sub-tab ${vocabCategory === cat ? 'active' : ''}`}
+                    onClick={() => setVocabCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="workspace-scrollable-content">
+
+        {/* ── TABLES & FRACTIONS TAB ── */}
+        {deckTab === 'tables' && (
+          <div>
 
             {/* Multiplication Tables — inline one-line-per-row */}
             {tableSubTab === 'tables' && (
@@ -273,41 +317,6 @@ export function RevisionWorkspace({
         {/* ── VOCABULARY TAB ── */}
         {deckTab === 'vocab' && (
           <div className="vocab-deck-container">
-
-            {/* Search + Add bar */}
-            <div className="vocab-add-bar">
-              <div className="vocab-search-bar vocab-search-flex">
-                <Search size={18} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search word, synonym, antonym, idiom..."
-                  value={vocabSearch}
-                  onChange={(e) => setVocabSearch(e.target.value)}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn-add-vocab" onClick={() => setVocabBulkModalOpen(true)} style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                  <Plus size={15} /> Bulk Import
-                </button>
-                <button className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
-                  <Plus size={15} /> Add New
-                </button>
-              </div>
-            </div>
-
-            {/* Category tabs */}
-            <div className="revision-sub-tabs">
-              {['All','Word Power','Idioms & Phrases','One Word Substitution','Spelling Rules'].map(cat => (
-                <button
-                  key={cat}
-                  className={`revision-sub-tab ${vocabCategory === cat ? 'active' : ''}`}
-                  onClick={() => setVocabCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
             {/* Vocab Cards Grid */}
             <div className="vocab-results-grid" style={{ minHeight: '60vh', alignContent: 'start', opacity: vocabListLoading ? 0.6 : 1, transition: 'opacity 0.2s ease' }}>
               {vocabListLoading && filteredVocabDB.length === 0 ? (
@@ -379,6 +388,7 @@ export function RevisionWorkspace({
             )}
           </div>
         )}
+        </div>
       </div>
 
       {/* ── ADD / EDIT VOCAB MODAL ── */}

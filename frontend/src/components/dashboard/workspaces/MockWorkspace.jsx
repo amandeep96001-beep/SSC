@@ -73,22 +73,26 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
 
   return (
     <div className="study-workspace">
-      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Full Mock Exams</h1>
-          <p>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
+      <div className="workspace-header-sticky">
+        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Full Mock Exams</h1>
+            <p>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
+          </div>
+          <button className="btn-create-topic" onClick={() => {
+            setShowAddForm(!showAddForm);
+            setFormError('');
+            setFormSuccess('');
+          }}>
+            <Plus size={16} />
+            {showAddForm ? 'View Mocks' : 'Add New Mock'}
+          </button>
         </div>
-        <button className="btn-create-topic" onClick={() => {
-          setShowAddForm(!showAddForm);
-          setFormError('');
-          setFormSuccess('');
-        }}>
-          <Plus size={16} />
-          {showAddForm ? 'View Mocks' : 'Add New Mock'}
-        </button>
+
+        {error && <div className="error-message" style={{ marginBottom: '20px' }}>{error}</div>}
       </div>
 
-      {error && <div className="error-message" style={{ marginBottom: '20px' }}>{error}</div>}
+      <div className="workspace-scrollable-content">
 
       {showAddForm ? (
         <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
@@ -212,6 +216,7 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
           )}
         </>
       )}
+      </div>
 
       {deleteConfirmOpen && (
         <div className="modal-overlay">

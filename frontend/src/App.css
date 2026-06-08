@@ -241,10 +241,12 @@ body {
   flex-grow: 1;
   padding: 40px;
   box-sizing: border-box;
-  overflow-y: auto;
+  overflow: hidden;
   max-width: calc(100% - 260px);
   height: 100vh;
   text-align: left;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Info Alert Banner */
@@ -693,7 +695,8 @@ body {
 }
 
 .subject-selection-card:hover {
-  border-color: var(--color-primary);
+  border-color: var(--border-color);
+  border-top: 2px solid var(--color-primary);
   transform: translateY(-2px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
@@ -1255,17 +1258,57 @@ body {
    Workspace Layout Stability & Loader Modifications
    ---------------------------------------------------- */
 .workspace-card-enclosure {
-  min-height: 520px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
   border-radius: 30px;
+  overflow: hidden;
+}
+
+.study-workspace,
+.drill-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workspace-header-sticky {
+  flex-shrink: 0;
+  padding-bottom: 10px;
+}
+
+.workspace-scrollable-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding-top: 10px; /* Prevents translateY/box-shadow clipping at the top boundary */
+  padding-right: 12px;
+  padding-bottom: 40px;
+}
+
+/* Custom Scrollbar for workspaces */
+.workspace-scrollable-content::-webkit-scrollbar {
+  width: 6px;
+}
+.workspace-scrollable-content::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 10px; /* Prevents scrollbar from hitting top-right rounded corner */
+  margin-bottom: 10px;
+}
+.workspace-scrollable-content::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 10px;
+}
+.workspace-scrollable-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
 }
 
 .absolute-loader-strip {
   position: absolute;
-  top: 20px;
-  right: 30px;
+  top: 12px;
+  right: 40px;
   background: rgba(59, 130, 246, 0.1);
   border: 1px solid rgba(59, 130, 246, 0.25);
   color: var(--color-primary);

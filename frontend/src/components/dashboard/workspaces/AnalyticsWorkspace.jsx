@@ -90,15 +90,18 @@ export function AnalyticsWorkspace({ user }) {
 
   return (
     <div className="study-workspace">
-      <div className="section-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 style={{ background: 'linear-gradient(90deg, #10b981, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
-            Insights & Analytics
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Visualize your study time, mock progression, and engagement scale.</p>
+      <div className="workspace-header-sticky">
+        <div className="section-header" style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{ background: 'linear-gradient(90deg, #10b981, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
+              Insights & Analytics
+            </h1>
+            <p style={{ color: 'var(--text-muted)' }}>Visualize your study time, mock progression, and engagement scale.</p>
+          </div>
         </div>
       </div>
 
+      <div className="workspace-scrollable-content">
       {/* Top Stats */}
       <div className="stats-row" style={{ marginBottom: '30px' }}>
         <div className="stat-box" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
@@ -210,6 +213,7 @@ export function AnalyticsWorkspace({ user }) {
             Not enough mock data to show progression.
           </div>
         )}
+      </div>
       </div>
     </div>
   );

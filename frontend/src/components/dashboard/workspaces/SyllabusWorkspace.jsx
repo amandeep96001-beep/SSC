@@ -27,12 +27,15 @@ export function SyllabusWorkspace({
       {/* --- VIEW: SUBJECT LISTS --- */}
       {activeView === 'subjects' && (
         <div className="study-workspace">
-          <div className="section-header">
-            <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Select Subject Area</h1>
-            <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+          <div className="workspace-header-sticky">
+            <div className="section-header">
+              <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Select Subject Area</h1>
+              <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+            </div>
           </div>
 
-          <div className="subjects-grid">
+          <div className="workspace-scrollable-content">
+            <div className="subjects-grid">
             {subjects.map((sub) => (
               <div 
                 key={sub}
@@ -49,6 +52,7 @@ export function SyllabusWorkspace({
                 <ChevronRight className="arrow-icon" size={18} />
               </div>
             ))}
+            </div>
           </div>
         </div>
       )}
@@ -56,23 +60,26 @@ export function SyllabusWorkspace({
       {/* --- VIEW: TOPICS/SYLLABUS OUTLINES WITH ACCURACY INDICATORS --- */}
       {activeView === 'topics' && (
         <div className="study-workspace">
-          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-            <div>
-              <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{selectedSubject} Syllabus</h1>
-              <p>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="btn-create-topic" onClick={() => setModalOpen(true)}>
-                <Plus size={16} />
-                <span>Add Custom Topic</span>
-              </button>
-              <button className="btn-back" onClick={() => setActiveView('subjects')}>
-                Back to Subjects
-              </button>
+          <div className="workspace-header-sticky">
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{selectedSubject} Syllabus</h1>
+                <p>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="btn-create-topic" onClick={() => setModalOpen(true)}>
+                  <Plus size={16} />
+                  <span>Add Custom Topic</span>
+                </button>
+                <button className="btn-back" onClick={() => setActiveView('subjects')}>
+                  Back to Subjects
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="topics-list-container">
+          <div className="workspace-scrollable-content">
+            <div className="topics-list-container">
             {topicsList.length > 0 ? (
               topicsList.map((topic) => {
                 // Look up topic accuracy indicators in user's profile
@@ -135,6 +142,7 @@ export function SyllabusWorkspace({
                 <p>No active topics are seeded under this subject yet.</p>
               </div>
             )}
+            </div>
           </div>
         </div>
       )}
@@ -142,34 +150,38 @@ export function SyllabusWorkspace({
       {/* --- VIEW: TOPIC REVISION NOTES & TEST STARTER --- */}
       {activeView === 'notes' && activeNotes && (
         <div className="study-workspace">
-          <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{activeNotes.name} Revision Sheet</h1>
-              <p>Read formulas, shortcut tricks, and concepts below.</p>
-            </div>
-            <button className="btn-back" onClick={() => setActiveView('topics')}>
-              Back to Topics
-            </button>
-          </div>
-
-          <div className="revision-notes-container">
-            <div className="notes-sheet">
-              <pre className="notes-display-pre">
-                {activeNotes.notes}
-              </pre>
+          <div className="workspace-header-sticky">
+            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>{activeNotes.name} Revision Sheet</h1>
+                <p>Read formulas, shortcut tricks, and concepts below.</p>
+              </div>
+              <button className="btn-back" onClick={() => setActiveView('topics')}>
+                Back to Topics
+              </button>
             </div>
 
-            <div className="take-test-strip">
+            <div className="take-test-strip" style={{ marginBottom: '15px' }}>
               <div className="strip-info">
                 <ClipboardList size={22} className="strip-icon" />
                 <div>
-                  <h4>Ready to test your speed?</h4>
-                  <p>Launches a real TCS iON simulated test for this topic.</p>
+                  <h4 style={{ margin: 0, color: '#f8fafc' }}>Ready to test your speed?</h4>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Launches a real TCS iON simulated test for this topic.</p>
                 </div>
               </div>
               <button className="btn-take-test" onClick={startTest}>
                 Take Topic Test
               </button>
+            </div>
+          </div>
+
+          <div className="workspace-scrollable-content">
+            <div className="revision-notes-container">
+            <div className="notes-sheet">
+              <pre className="notes-display-pre">
+                {activeNotes.notes}
+              </pre>
+            </div>
             </div>
           </div>
         </div>

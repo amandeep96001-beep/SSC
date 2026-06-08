@@ -29,7 +29,8 @@ export function PerformanceWorkspace({ user }) {
 
   return (
     <div className="study-workspace">
-      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="workspace-header-sticky">
+        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>
             Performance Analytics Dashboard
@@ -53,7 +54,9 @@ export function PerformanceWorkspace({ user }) {
           Full Mock Exams (100 Qs)
         </button>
       </div>
+      </div>
 
+      <div className="workspace-scrollable-content">
       {activeTab === 'syllabus' ? (
         <>
           <div className="stats-row">
@@ -233,6 +236,7 @@ export function PerformanceWorkspace({ user }) {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }

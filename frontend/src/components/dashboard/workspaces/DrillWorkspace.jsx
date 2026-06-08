@@ -26,79 +26,81 @@ export function DrillWorkspace({
 }) {
   return (
     <div className="drill-workspace">
-      <div className="section-header">
-        <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Practice Speed Drills</h1>
-        <p>Solve high-speed calculations and English vocab vocabulary drills.</p>
+      <div className="workspace-header-sticky">
+        <div className="section-header">
+          <h1 style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', marginBottom: '8px' }}>Practice Speed Drills</h1>
+          <p>Solve high-speed calculations and English vocab vocabulary drills.</p>
+        </div>
+        <div className="tabs-header">
+          <div className="drill-tabs">
+            <button
+              className={`drill-tab ${drillType === 'table' ? 'active' : ''}`}
+              onClick={() => changeDrillType('table')}
+            >
+              <Zap size={14} />
+              <span>Jumping Tables</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'fraction' ? 'active' : ''}`}
+              onClick={() => changeDrillType('fraction')}
+            >
+              <Percent size={14} />
+              <span>Fraction to %</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'percentage' ? 'active' : ''}`}
+              onClick={() => changeDrillType('percentage')}
+            >
+              <TrendingUp size={14} />
+              <span>% to Fraction</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'square' ? 'active' : ''}`}
+              onClick={() => changeDrillType('square')}
+            >
+              <Zap size={14} />
+              <span>Square Speed</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'cube' ? 'active' : ''}`}
+              onClick={() => changeDrillType('cube')}
+            >
+              <Zap size={14} />
+              <span>Cube Speed</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'vocab' ? 'active' : ''}`}
+              onClick={() => changeDrillType('vocab')}
+            >
+              <BookOpen size={14} />
+              <span>Vocabulary Builder</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="stats-row">
-        <div className="stat-box">
-          <span className="stat-label">Total Attempts</span>
-          <span className="stat-val">{drillStats.totalAsked}</span>
+      <div className="workspace-scrollable-content">
+        <div className="stats-row">
+          <div className="stat-box">
+            <span className="stat-label">Total Attempts</span>
+            <span className="stat-val">{drillStats.totalAsked}</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Correct Answers</span>
+            <span className="stat-val">{drillStats.score}</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Incorrect / Skips</span>
+            <span className="stat-val">{drillStats.totalAsked - drillStats.score}</span>
+          </div>
+          <div className="stat-box">
+            <span className="stat-label">Active Streak</span>
+            <span className="stat-val streak-val">
+              <Flame className="streak-icon" size={20} />
+              {drillStats.streak}
+            </span>
+          </div>
         </div>
-        <div className="stat-box">
-          <span className="stat-label">Correct Answers</span>
-          <span className="stat-val">{drillStats.score}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Incorrect / Skips</span>
-          <span className="stat-val">{drillStats.totalAsked - drillStats.score}</span>
-        </div>
-        <div className="stat-box">
-          <span className="stat-label">Active Streak</span>
-          <span className="stat-val streak-val">
-            <Flame className="streak-icon" size={20} />
-            {drillStats.streak}
-          </span>
-        </div>
-      </div>
-
-      <div className="tabs-header">
-        <div className="drill-tabs">
-          <button
-            className={`drill-tab ${drillType === 'table' ? 'active' : ''}`}
-            onClick={() => changeDrillType('table')}
-          >
-            <Zap size={14} />
-            <span>Jumping Tables</span>
-          </button>
-          <button
-            className={`drill-tab ${drillType === 'fraction' ? 'active' : ''}`}
-            onClick={() => changeDrillType('fraction')}
-          >
-            <Percent size={14} />
-            <span>Fraction to %</span>
-          </button>
-          <button
-            className={`drill-tab ${drillType === 'percentage' ? 'active' : ''}`}
-            onClick={() => changeDrillType('percentage')}
-          >
-            <TrendingUp size={14} />
-            <span>% to Fraction</span>
-          </button>
-          <button
-            className={`drill-tab ${drillType === 'square' ? 'active' : ''}`}
-            onClick={() => changeDrillType('square')}
-          >
-            <Zap size={14} />
-            <span>Square Speed</span>
-          </button>
-          <button
-            className={`drill-tab ${drillType === 'cube' ? 'active' : ''}`}
-            onClick={() => changeDrillType('cube')}
-          >
-            <Zap size={14} />
-            <span>Cube Speed</span>
-          </button>
-          <button
-            className={`drill-tab ${drillType === 'vocab' ? 'active' : ''}`}
-            onClick={() => changeDrillType('vocab')}
-          >
-            <BookOpen size={14} />
-            <span>Vocabulary Builder</span>
-          </button>
-        </div>
-      </div>
 
       {['table', 'square', 'cube'].includes(drillType) && (
         <div className="drill-config-card">
@@ -245,6 +247,7 @@ export function DrillWorkspace({
           <p>Generating drill question...</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
