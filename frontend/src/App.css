@@ -2,7 +2,8 @@
    Core Theme Colors & Root Tokens (Professional Slate)
    ---------------------------------------------------- */
 :root {
-  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+  --font-sans:
+    "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --font-display: "Outfit", system-ui, -apple-system, sans-serif;
 
   --bg-main: #09090b;
@@ -88,8 +89,17 @@ body {
   min-height: 100vh;
   width: 100vw;
   background-color: var(--bg-main);
-  background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-                    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
+  background-image:
+    radial-gradient(
+      circle at top right,
+      rgba(59, 130, 246, 0.08) 0%,
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at bottom left,
+      rgba(139, 92, 246, 0.05) 0%,
+      transparent 40%
+    );
   background-attachment: fixed;
 }
 
@@ -1941,7 +1951,6 @@ body {
   max-width: 130px;
 }
 
-
 .vocab-synonyms {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -2367,4 +2376,3 @@ body {
     font-size: 1.4rem;
   }
 }
-

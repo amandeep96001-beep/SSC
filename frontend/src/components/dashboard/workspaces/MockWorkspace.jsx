@@ -46,6 +46,14 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
       return;
     }
 
+    // Ensure all options are strings to prevent Mongoose CastError on nested arrays
+    parsedQuestions = parsedQuestions.map(q => {
+      if (Array.isArray(q.o)) {
+        q.o = q.o.map(opt => typeof opt === 'string' ? opt : JSON.stringify(opt));
+      }
+      return q;
+    });
+
     const payload = {
       title,
       year,

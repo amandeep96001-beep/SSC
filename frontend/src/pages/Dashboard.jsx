@@ -298,6 +298,8 @@ export function Dashboard() {
             setTopicAddError(`Invalid MCQ object at index ${i}! Check structure: { q, o: [...], a, e }`);
             return;
           }
+          // Ensure all options are strings
+          q.o = q.o.map(opt => typeof opt === 'string' ? opt : JSON.stringify(opt));
         }
       } catch (err) {
         setTopicAddError("Invalid MCQ JSON syntax! Please check parsing: " + err.message);

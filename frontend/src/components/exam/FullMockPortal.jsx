@@ -15,7 +15,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   const [globalIndex, setGlobalIndex] = useState(0); // 0 to 99
   
   const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [questionStatuses, setQuestionStatuses] = useState({}); // 'not-visited', 'visited', 'answered', 'marked'
+  const [questionStatuses, setQuestionStatuses] = useState({}); // 'not-visited', 'not-answered', 'answered', 'marked'
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const [sectionTimes, setSectionTimes] = useState({
@@ -43,7 +43,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
           
           // Pre-populate visited for the first question
           if (testData.questions && testData.questions.length > 0) {
-            setQuestionStatuses(prev => ({ ...prev, 0: 'visited' }));
+            setQuestionStatuses(prev => ({ ...prev, 0: 'not-answered' }));
             
             // Set first section based on the first question
             if (testData.questions[0].section) {
@@ -97,7 +97,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
       setCurrentSection(section);
     }
     if (!questionStatuses[idx]) {
-      setQuestionStatuses(prev => ({ ...prev, [idx]: 'visited' }));
+      setQuestionStatuses(prev => ({ ...prev, [idx]: 'not-answered' }));
     }
   };
 
@@ -113,7 +113,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
       delete next[globalIndex];
       return next;
     });
-    setQuestionStatuses(prev => ({ ...prev, [globalIndex]: 'visited' }));
+    setQuestionStatuses(prev => ({ ...prev, [globalIndex]: 'not-answered' }));
   };
 
   const markForReview = () => {
