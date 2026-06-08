@@ -61,12 +61,12 @@ export function SyllabusWorkspace({
       {activeView === 'topics' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ paddingRight: '20px' }}>
+            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '250px', paddingRight: '20px' }}>
                 <h1 style={{ margin: '0 0 6px 0' }}>{selectedSubject} Syllabus</h1>
                 <p style={{ margin: 0 }}>Browse core revision concepts mapped for CGL/CHSL candidates.</p>
               </div>
-              <div style={{ display: 'flex', gap: '10px', flexShrink: 0, alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: '10px', flexShrink: 0, alignItems: 'flex-start', marginLeft: 'auto' }}>
                 <button className="btn-create-topic" onClick={() => setModalOpen(true)}>
                   <Plus size={16} />
                   <span>Add Custom Topic</span>
@@ -151,12 +151,12 @@ export function SyllabusWorkspace({
       {activeView === 'notes' && activeNotes && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h1>{activeNotes.name} Revision Sheet</h1>
-                <p>Read formulas, shortcut tricks, and concepts below.</p>
+            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
+                <h1 style={{ margin: '0 0 6px 0' }}>{activeNotes.name} Revision Sheet</h1>
+                <p style={{ margin: 0 }}>Read formulas, shortcut tricks, and concepts below.</p>
               </div>
-              <button className="btn-back" onClick={() => setActiveView('topics')}>
+              <button className="btn-back" style={{ marginLeft: 'auto' }} onClick={() => setActiveView('topics')}>
                 Back to Topics
               </button>
             </div>

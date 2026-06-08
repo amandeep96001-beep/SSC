@@ -138,6 +138,11 @@ textarea,
   padding: 32px !important;
 }
 
+.workspace-card-enclosure {
+  border-radius: 24px !important;
+  overflow: hidden;
+}
+
 /* 4. Elegant Modals */
 .modal-content-card {
   border-top: 3px solid var(--color-primary) !important;

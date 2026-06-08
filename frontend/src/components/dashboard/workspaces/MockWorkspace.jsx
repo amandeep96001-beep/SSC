@@ -82,12 +82,12 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
   return (
     <div className="study-workspace">
       <div className="workspace-header-sticky">
-        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h1>Full Mock Exams</h1>
-            <p>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
+        <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
+          <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
+            <h1 style={{ margin: '0 0 6px 0' }}>Full Mock Exams</h1>
+            <p style={{ margin: 0 }}>Create and take full-length 100 question mock tests in a 60-minute simulated environment.</p>
           </div>
-          <button className="btn-create-topic" onClick={() => {
+          <button className="btn-create-topic" style={{ marginLeft: 'auto' }} onClick={() => {
             setShowAddForm(!showAddForm);
             setFormError('');
             setFormSuccess('');
