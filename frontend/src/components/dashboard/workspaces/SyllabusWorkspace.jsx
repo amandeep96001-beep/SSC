@@ -32,13 +32,17 @@ export function SyllabusWorkspace({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
-  const [localNotesHtml, setLocalNotesHtml] = useState(activeNotes?.notes || '');
+  const [localNotesHtml, setLocalNotesHtml] = useState(() => {
+    if (!activeNotes) return '';
+    return localStorage.getItem(`ssc_notes_${activeNotes.id}`) || activeNotes.notes || '';
+  });
   const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
   const notesRef = useRef(null);
 
   if (activeNotes !== prevActiveNotes) {
     setPrevActiveNotes(activeNotes);
-    setLocalNotesHtml(activeNotes?.notes || '');
+    const stored = activeNotes ? localStorage.getItem(`ssc_notes_${activeNotes.id}`) : null;
+    setLocalNotesHtml(stored || activeNotes?.notes || '');
   }
 
   const handleEditToggle = () => {
@@ -49,6 +53,7 @@ export function SyllabusWorkspace({
     if (!notesRef.current) return;
     setIsSaving(true);
     const newHtml = notesRef.current.innerHTML;
+    localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
     const res = await updateCustomTopic(activeNotes.id, {
       name: activeNotes.name,
       notes: newHtml,
@@ -77,6 +82,7 @@ export function SyllabusWorkspace({
       // Auto-save the highlight
       if (notesRef.current) {
         const newHtml = notesRef.current.innerHTML;
+        localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
         const res = await updateCustomTopic(activeNotes.id, {
           name: activeNotes.name,
           notes: newHtml,
@@ -115,6 +121,7 @@ export function SyllabusWorkspace({
       // Auto-save the un-highlight
       if (notesRef.current) {
         const newHtml = notesRef.current.innerHTML;
+        localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
         const res = await updateCustomTopic(activeNotes.id, {
           name: activeNotes.name,
           notes: newHtml,
