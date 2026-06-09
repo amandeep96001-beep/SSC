@@ -817,14 +817,15 @@
 }
 
 .notes-sheet {
-  background: var(--bg-main);
-  border: none;
-  border-left: 2px solid var(--border-focus);
-  border-radius: 0;
-  padding: 10px 0 10px 30px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--color-primary);
+  border-radius: 8px;
+  padding: 40px;
   max-width: 800px;
   width: 100%;
-  box-shadow: none;
+  min-height: calc(100vh - 150px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -1334,10 +1335,10 @@
 .notes-display-pre {
   white-space: pre-wrap;
   font-family: var(--font-sans);
-  font-size: 1.05rem;
-  line-height: 1.8;
-  color: #e2e8f0;
-  letter-spacing: 0.2px;
+  font-size: clamp(1.15rem, 2vw + 0.8rem, 1.4rem);
+  line-height: 1.9;
+  color: #1e293b;
+  letter-spacing: 0.3px;
   margin: 0;
   padding: 0;
   background: transparent;
@@ -2469,7 +2470,7 @@
 }
 
 /* In-text Highlights */
-mark.hl-yellow { background-color: rgba(234, 179, 8, 0.25); color: #fde047; border-radius: 3px; padding: 0 4px; }
-mark.hl-green { background-color: rgba(34, 197, 94, 0.25); color: #86efac; border-radius: 3px; padding: 0 4px; }
-mark.hl-pink { background-color: rgba(236, 72, 153, 0.25); color: #f9a8d4; border-radius: 3px; padding: 0 4px; }
-mark.hl-blue { background-color: rgba(59, 130, 246, 0.25); color: #93c5fd; border-radius: 3px; padding: 0 4px; }
+mark.hl-yellow { background-color: rgba(253, 224, 71, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-green { background-color: rgba(134, 239, 172, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-pink { background-color: rgba(249, 168, 212, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
