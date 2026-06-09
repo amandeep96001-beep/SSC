@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback} from 'react';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -32,7 +32,14 @@ export function SyllabusWorkspace({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [localNotesHtml, setLocalNotesHtml] = useState(activeNotes?.notes || '');
+  const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
   const notesRef = useRef(null);
+
+  if (activeNotes !== prevActiveNotes) {
+    setPrevActiveNotes(activeNotes);
+    setLocalNotesHtml(activeNotes?.notes || '');
+  }
 
   const handleEditToggle = () => {
     setIsEditingNotes(prev => !prev);
@@ -49,7 +56,7 @@ export function SyllabusWorkspace({
     });
     setIsSaving(false);
     if (res.success) {
-      activeNotes.notes = newHtml;
+      setLocalNotesHtml(newHtml);
       setIsEditingNotes(false);
     } else {
       alert(res.message || "Failed to save notes");
@@ -76,7 +83,7 @@ export function SyllabusWorkspace({
           questions: []
         });
         if (res.success) {
-          activeNotes.notes = newHtml;
+          setLocalNotesHtml(newHtml);
         }
       }
     } catch {
@@ -114,7 +121,7 @@ export function SyllabusWorkspace({
           questions: []
         });
         if (res.success) {
-          activeNotes.notes = newHtml;
+          setLocalNotesHtml(newHtml);
         }
       }
     } else {
@@ -301,7 +308,7 @@ export function SyllabusWorkspace({
                   id="notes-content-view"
                   contentEditable={isEditingNotes}
                   suppressContentEditableWarning
-                  dangerouslySetInnerHTML={{ __html: activeNotes.notes }}
+                  dangerouslySetInnerHTML={{ __html: localNotesHtml }}
                 />
               </div>
             </div>
