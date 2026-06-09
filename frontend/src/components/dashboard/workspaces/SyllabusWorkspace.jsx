@@ -31,6 +31,7 @@ export function SyllabusWorkspace({
 }) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const notesRef = useRef(null);
 
   const handleEditToggle = () => {
@@ -129,7 +130,7 @@ export function SyllabusWorkspace({
           <div className="workspace-header-sticky">
             <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
               <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0' }}>Select Subject Area</h1>
+                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>Select Subject Area</h1>
                 <p style={{ margin: 0 }}>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
               </div>
             </div>
@@ -159,7 +160,7 @@ export function SyllabusWorkspace({
           <div className="workspace-header-sticky">
             <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
               <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0' }}>{selectedSubject} — Topics</h1>
+                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>{selectedSubject} — Topics</h1>
                 <p style={{ margin: 0 }}>Select a topic to read revision notes and take a speed test.</p>
               </div>
               <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
@@ -247,44 +248,47 @@ export function SyllabusWorkspace({
           <div className="workspace-header-sticky">
             <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
               <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0' }}>{activeNotes.name} Revision Sheet</h1>
+                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>{activeNotes.name} Revision Sheet</h1>
                 <p style={{ margin: 0 }}>Read formulas, shortcut tricks, and concepts below.</p>
               </div>
-              <button className="btn-back" style={{ marginLeft: 'auto' }} onClick={() => { setIsEditingNotes(false); setActiveView('topics'); }}>
-                Back to Topics
-              </button>
-            </div>
-
-            {/* Notes Toolbar — Highlight + Edit + Test */}
-            <div className="notes-toolbar-strip">
-              <div className="notes-toolbar-left">
-                <div className="highlight-palette">
-                  <span className="palette-label"><Highlighter size={14} /> Highlight:</span>
-                  <button className="hl-btn" style={{ color: '#eab308', background: 'rgba(234,179,8,0.15)' }} onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
-                  <button className="hl-btn" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.15)' }} onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
-                  <button className="hl-btn" style={{ color: '#ec4899', background: 'rgba(236,72,153,0.15)' }} onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
-                  <button className="hl-btn" style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.15)' }} onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
-                  <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }}></div>
-                  <button className="hl-btn" style={{ color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }} onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
-                </div>
-
-                <button className={`notes-action-btn ${isEditingNotes ? 'active' : ''}`} onClick={handleEditToggle}>
-                  {isEditingNotes ? <X size={16} /> : <Pencil size={16} />}
-                  {isEditingNotes ? 'Stop Editing' : 'Edit Notes'}
+              <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', position: 'relative' }}>
+                <button className="btn-add" style={{ display: 'flex', alignItems: 'center' }} onClick={() => setShowActionsMenu(!showActionsMenu)}>
+                  Actions <ChevronRight size={16} style={{ transform: showActionsMenu ? 'rotate(90deg)' : 'rotate(0deg)', transition: '0.2s', marginLeft: '4px' }} />
+                </button>
+                <button className="btn-back" onClick={() => { setIsEditingNotes(false); setActiveView('topics'); setShowActionsMenu(false); }}>
+                  Back to Topics
                 </button>
 
-                {isEditingNotes && (
-                  <button className="notes-action-btn save" onClick={handleSaveNotes} disabled={isSaving}>
-                    <Save size={16} />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </button>
+                {showActionsMenu && (
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', zIndex: 10, minWidth: '220px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                    <button className={`notes-action-btn ${isEditingNotes ? 'active' : ''}`} style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => { handleEditToggle(); }}>
+                      {isEditingNotes ? <X size={16} /> : <Pencil size={16} />}
+                      {isEditingNotes ? 'Stop Editing' : 'Edit Notes'}
+                    </button>
+                    {isEditingNotes && (
+                      <button className="notes-action-btn save" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={handleSaveNotes} disabled={isSaving}>
+                        <Save size={16} />
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    )}
+                    <button className="btn-take-test" style={{ width: '100%', justifyContent: 'flex-start' }} onClick={() => { startTest(); setShowActionsMenu(false); }}>
+                      <ClipboardList size={16} />
+                      Take Topic Test
+                    </button>
+
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Highlighter Tools</span>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button className="hl-btn" style={{ color: '#eab308', background: 'rgba(234,179,8,0.15)' }} onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
+                        <button className="hl-btn" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.15)' }} onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
+                        <button className="hl-btn" style={{ color: '#ec4899', background: 'rgba(236,72,153,0.15)' }} onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
+                        <button className="hl-btn" style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.15)' }} onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
+                        <button className="hl-btn" style={{ color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }} onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
-
-              <button className="btn-take-test" onClick={startTest}>
-                <ClipboardList size={16} />
-                Take Topic Test
-              </button>
             </div>
           </div>
 
