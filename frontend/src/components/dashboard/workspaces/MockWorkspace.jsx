@@ -30,7 +30,7 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
       return;
     }
 
-    let parsedQuestions = [];
+    let parsedQuestions;
     try {
       parsedQuestions = JSON.parse(jsonInput);
       if (!Array.isArray(parsedQuestions)) {
