@@ -1050,14 +1050,20 @@
 }
 
 #exam-portal .opt-label input {
-  margin-right: 12px;
-  cursor: pointer;
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  margin-right: 12px !important;
+  cursor: pointer !important;
+  transform: none !important;
 }
 
 #exam-portal .opt-label.active {
   background: #d4e6f1;
   border-color: #2980b9;
-  font-weight: bold;
+  font-weight: normal !important;
+  transform: none !important;
 }
 
 #exam-portal .footer-buttons {

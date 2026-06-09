@@ -151,7 +151,7 @@ textarea,
 }
 
 /* 5. Clean inputs */
-input,
+input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
   background: rgba(255, 255, 255, 0.03) !important;
