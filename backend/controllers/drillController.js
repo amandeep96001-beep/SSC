@@ -125,9 +125,9 @@ export const getNextDrill = async (req, res, next) => {
             correctAnswer = (wordData.synonyms || [])[0] || wordData.definition;
             wrongPool = [
               ...(wordData.antonyms || []),
-              ...(wordData.synonyms || []).slice(1),
               ...(wordData.options || [])
             ];
+            wrongPool = wrongPool.filter(w => !(wordData.synonyms || []).includes(w) && w !== wordData.definition && w !== correctAnswer);
           }
         }
 
