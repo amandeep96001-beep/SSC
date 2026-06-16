@@ -8,7 +8,9 @@ import {
   XCircle,
   RefreshCw,
   Brain,
-  FileText
+  FileText,
+  Calculator,
+  Cpu
 } from 'lucide-react';
 import '../../../pages/Dashboard.css';
 
@@ -91,6 +93,20 @@ export function DrillWorkspace({
               <FileText size={14} />
               <span>English MCQ</span>
             </button>
+            <button
+              className={`drill-tab ${drillType === 'maths-mcq' ? 'active' : ''}`}
+              onClick={() => changeDrillType('maths-mcq')}
+            >
+              <Calculator size={14} />
+              <span>Maths MCQ</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'reasoning-mcq' ? 'active' : ''}`}
+              onClick={() => changeDrillType('reasoning-mcq')}
+            >
+              <Cpu size={14} />
+              <span>Reasoning MCQ</span>
+            </button>
           </div>
         </div>
       </div>
@@ -161,11 +177,13 @@ export function DrillWorkspace({
                 {['square', 'cube'].includes(drillType) && <><Zap size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Roots & Powers</>}
                 {drillType === 'gk' && <><Brain size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> GK Blast — {currentDrill.category}</>}
                 {drillType === 'english-mcq' && <><FileText size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> English MCQ — {currentDrill.category}</>}
+                {drillType === 'maths-mcq' && <><Calculator size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Maths MCQ — {currentDrill.category}</>}
+                {drillType === 'reasoning-mcq' && <><Cpu size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Reasoning MCQ — {currentDrill.category}</>}
               </h3>
               <p>Enter correct answer or select options.</p>
             </div>
 
-            <div className="question-text-box">
+            <div className={`question-text-box ${['gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(drillType) ? 'mcq-question-box' : ''}`}>
               <h2>{currentDrill.question}</h2>
               {drillType === 'vocab' && currentDrill.definition && (
                 <div className="pos-definition">
@@ -199,7 +217,7 @@ export function DrillWorkspace({
                         )}
                       </div>
                     )}
-                    {['gk', 'english-mcq'].includes(drillType) && currentDrill.explanation && (
+                    {['gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(drillType) && currentDrill.explanation && (
                       <div className="drill-error-vocab-details">
                         <div className="drill-error-vocab-row"><strong>Explanation:</strong> {currentDrill.explanation}</div>
                       </div>
@@ -216,7 +234,7 @@ export function DrillWorkspace({
               </div>
             ) : (
               <form onSubmit={submitDrillAnswer} className="submit-form">
-                {['vocab', 'gk', 'english-mcq'].includes(drillType) && currentDrill.options ? (
+                {['vocab', 'gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(drillType) && currentDrill.options ? (
                   <div className="options-selector-grid">
                     {currentDrill.options.map((opt) => (
                       <button
@@ -250,7 +268,7 @@ export function DrillWorkspace({
                   >
                     Skip Drill
                   </button>
-                  {!['vocab', 'gk', 'english-mcq'].includes(drillType) && (
+                  {!['vocab', 'gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(drillType) && (
                     <button
                       type="submit"
                       disabled={!userAnswer.trim()}

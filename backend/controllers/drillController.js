@@ -159,8 +159,14 @@ export const getNextDrill = async (req, res, next) => {
 
 
       case 'gk':
-      case 'english-mcq': {
-        const subject = type === 'gk' ? 'GK' : 'English';
+      case 'english-mcq':
+      case 'maths-mcq':
+      case 'reasoning-mcq': {
+        let subject = 'GK';
+        if (type === 'english-mcq') subject = 'English';
+        else if (type === 'maths-mcq') subject = 'Maths';
+        else if (type === 'reasoning-mcq') subject = 'Reasoning';
+
         const tcsQ = await TCSQuestionRepository.getRandomBySubject(subject);
         if (!tcsQ) {
           return res.status(404).json({ status: 'error', message: `No ${subject} questions found in database.` });

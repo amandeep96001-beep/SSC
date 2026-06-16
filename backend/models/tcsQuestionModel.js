@@ -8,7 +8,7 @@ const TCSQuestionSchema = new mongoose.Schema({
   subject: {
     type: String,
     required: true,
-    enum: ['GK', 'English']
+    enum: ['GK', 'English', 'Maths', 'Reasoning']
   },
   category: { type: String, required: true },        // e.g. 'History', 'Grammar', 'Idioms'
   year: { type: Number, default: null },             // SSC shift year

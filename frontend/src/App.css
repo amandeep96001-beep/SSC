@@ -439,7 +439,7 @@
 
 .drill-interactive-card {
   width: 100%;
-  max-width: 600px;
+  max-width: 100%;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 16px;
@@ -485,6 +485,18 @@
   color: #fff;
   margin: 0;
   letter-spacing: -0.5px;
+}
+
+.mcq-question-box {
+  text-align: left !important;
+  margin: 20px 0 !important;
+}
+
+.mcq-question-box h2 {
+  font-size: 1.35rem !important;
+  font-weight: 600 !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0 !important;
 }
 
 .pos-definition {
