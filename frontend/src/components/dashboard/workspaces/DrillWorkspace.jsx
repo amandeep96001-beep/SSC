@@ -84,7 +84,7 @@ export function DrillWorkspace({
               onClick={() => changeDrillType('gk')}
             >
               <Brain size={14} />
-              <span>GK Blast</span>
+              <span>GK Quiz</span>
             </button>
             <button
               className={`drill-tab ${drillType === 'english-mcq' ? 'active' : ''}`}
