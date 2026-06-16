@@ -4,13 +4,13 @@ import {
   Percent, 
   TrendingUp, 
   BookOpen, 
-  CheckCircle, 
-  XCircle, 
+  CheckCircle,
+  XCircle,
   RefreshCw,
-  Puzzle
+  Brain,
+  FileText
 } from 'lucide-react';
 import '../../../pages/Dashboard.css';
-import { VocabMatchGame } from './VocabMatchGame';
 
 export function DrillWorkspace({
   drillType,
@@ -78,11 +78,18 @@ export function DrillWorkspace({
               <span>Vocabulary Builder</span>
             </button>
             <button
-              className={`drill-tab ${drillType === 'vocab-match' ? 'active' : ''}`}
-              onClick={() => changeDrillType('vocab-match')}
+              className={`drill-tab ${drillType === 'gk' ? 'active' : ''}`}
+              onClick={() => changeDrillType('gk')}
             >
-              <Puzzle size={14} />
-              <span>Vocab Match Game</span>
+              <Brain size={14} />
+              <span>GK Blast</span>
+            </button>
+            <button
+              className={`drill-tab ${drillType === 'english-mcq' ? 'active' : ''}`}
+              onClick={() => changeDrillType('english-mcq')}
+            >
+              <FileText size={14} />
+              <span>English MCQ</span>
             </button>
           </div>
         </div>
@@ -138,11 +145,6 @@ export function DrillWorkspace({
       )}
 
       {currentDrill ? (
-        drillType === 'vocab-match' ? (
-          <div className="drill-card-viewport">
-            <VocabMatchGame currentDrill={currentDrill} onComplete={() => loadNextDrill('vocab-match')} />
-          </div>
-        ) : (
         <div className="drill-card-viewport">
           <div className={`drill-interactive-card ${
             drillFeedback.isChecked 
@@ -157,6 +159,8 @@ export function DrillWorkspace({
                 {drillType === 'vocab' && <><BookOpen size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Vocab Drill</>}
                 {['fraction', 'percentage'].includes(drillType) && <><Percent size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Value Conversion</>}
                 {['square', 'cube'].includes(drillType) && <><Zap size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> Roots & Powers</>}
+                {drillType === 'gk' && <><Brain size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> GK Blast — {currentDrill.category}</>}
+                {drillType === 'english-mcq' && <><FileText size={18} style={{ verticalAlign: 'text-bottom', marginRight: '6px' }} /> English MCQ — {currentDrill.category}</>}
               </h3>
               <p>Enter correct answer or select options.</p>
             </div>
@@ -195,6 +199,11 @@ export function DrillWorkspace({
                         )}
                       </div>
                     )}
+                    {['gk', 'english-mcq'].includes(drillType) && currentDrill.explanation && (
+                      <div className="drill-error-vocab-details">
+                        <div className="drill-error-vocab-row"><strong>Explanation:</strong> {currentDrill.explanation}</div>
+                      </div>
+                    )}
                     <button 
                       className="btn btn-save btn-drill-next" 
                       onClick={() => loadNextDrill(drillType)}
@@ -207,7 +216,7 @@ export function DrillWorkspace({
               </div>
             ) : (
               <form onSubmit={submitDrillAnswer} className="submit-form">
-                {drillType === 'vocab' && currentDrill.options ? (
+                {['vocab', 'gk', 'english-mcq'].includes(drillType) && currentDrill.options ? (
                   <div className="options-selector-grid">
                     {currentDrill.options.map((opt) => (
                       <button
@@ -241,7 +250,7 @@ export function DrillWorkspace({
                   >
                     Skip Drill
                   </button>
-                  {drillType !== 'vocab' && (
+                  {!['vocab', 'gk', 'english-mcq'].includes(drillType) && (
                     <button
                       type="submit"
                       disabled={!userAnswer.trim()}
@@ -255,7 +264,6 @@ export function DrillWorkspace({
             )}
           </div>
         </div>
-        )
       ) : (
         <div className="loading-state">
           <RefreshCw className="spin-icon" size={32} />

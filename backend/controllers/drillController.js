@@ -1,4 +1,5 @@
 import vocabRepository from '../repositories/vocabRepository.js';
+import TCSQuestionRepository from '../repositories/tcsQuestionRepository.js';
 
 function shuffleArray(arr) {
   const newArr = [...arr];
@@ -156,27 +157,23 @@ export const getNextDrill = async (req, res, next) => {
         break;
       }
 
-      case 'vocab-match': {
-        const pairs = [];
-        const seenIds = new Set();
-        
-        while (pairs.length < 4) {
-          const wordData = await vocabRepository.getRandomWord();
-          if (!seenIds.has(wordData._id?.toString())) {
-            seenIds.add(wordData._id?.toString());
-            pairs.push({
-              id: wordData._id || Math.random().toString(),
-              word: wordData.word,
-              definition: wordData.definition,
-              category: wordData.category,
-              isImportant: wordData.isImportant || false
-            });
-          }
+
+      case 'gk':
+      case 'english-mcq': {
+        const subject = type === 'gk' ? 'GK' : 'English';
+        const tcsQ = await TCSQuestionRepository.getRandomBySubject(subject);
+        if (!tcsQ) {
+          return res.status(404).json({ status: 'error', message: `No ${subject} questions found in database.` });
         }
-        
         drillData = {
           type,
-          pairs
+          question: tcsQ.question,
+          options: tcsQ.options,
+          correctAnswer: tcsQ.options[tcsQ.correctAnswer],
+          explanation: tcsQ.explanation,
+          category: tcsQ.category,
+          year: tcsQ.year,
+          isImportant: tcsQ.isImportant || false
         };
         break;
       }
@@ -184,7 +181,7 @@ export const getNextDrill = async (req, res, next) => {
       default:
         return res.status(400).json({
           status: 'error',
-          message: `Unknown drill type: ${type}. Choose from 'table', 'fraction', 'percentage', 'vocab', or 'vocab-match'`
+          message: `Unknown drill type: ${type}.`
         });
     }
 
