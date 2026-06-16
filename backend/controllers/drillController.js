@@ -156,10 +156,35 @@ export const getNextDrill = async (req, res, next) => {
         break;
       }
 
+      case 'vocab-match': {
+        const pairs = [];
+        const seenIds = new Set();
+        
+        while (pairs.length < 4) {
+          const wordData = await vocabRepository.getRandomWord();
+          if (!seenIds.has(wordData._id?.toString())) {
+            seenIds.add(wordData._id?.toString());
+            pairs.push({
+              id: wordData._id || Math.random().toString(),
+              word: wordData.word,
+              definition: wordData.definition,
+              category: wordData.category,
+              isImportant: wordData.isImportant || false
+            });
+          }
+        }
+        
+        drillData = {
+          type,
+          pairs
+        };
+        break;
+      }
+
       default:
         return res.status(400).json({
           status: 'error',
-          message: `Unknown drill type: ${type}. Choose from 'table', 'fraction', 'percentage', or 'vocab'`
+          message: `Unknown drill type: ${type}. Choose from 'table', 'fraction', 'percentage', 'vocab', or 'vocab-match'`
         });
     }
 

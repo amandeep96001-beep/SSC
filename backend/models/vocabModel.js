@@ -11,6 +11,7 @@ const VocabSchema = new mongoose.Schema({
     required: true,
     enum: ['Word Power', 'Idioms & Phrases', 'One Word Substitution', 'Spelling Rules']
   },
+  isImportant: { type: Boolean, default: false },
   createdBy: { type: String, default: 'system' }
 });
 

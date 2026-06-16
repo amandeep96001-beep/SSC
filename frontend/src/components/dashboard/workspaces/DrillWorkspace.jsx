@@ -6,9 +6,11 @@ import {
   BookOpen, 
   CheckCircle, 
   XCircle, 
-  RefreshCw 
+  RefreshCw,
+  Puzzle
 } from 'lucide-react';
 import '../../../pages/Dashboard.css';
+import { VocabMatchGame } from './VocabMatchGame';
 
 export function DrillWorkspace({
   drillType,
@@ -75,6 +77,13 @@ export function DrillWorkspace({
               <BookOpen size={14} />
               <span>Vocabulary Builder</span>
             </button>
+            <button
+              className={`drill-tab ${drillType === 'vocab-match' ? 'active' : ''}`}
+              onClick={() => changeDrillType('vocab-match')}
+            >
+              <Puzzle size={14} />
+              <span>Vocab Match Game</span>
+            </button>
           </div>
         </div>
       </div>
@@ -129,6 +138,11 @@ export function DrillWorkspace({
       )}
 
       {currentDrill ? (
+        drillType === 'vocab-match' ? (
+          <div className="drill-card-viewport">
+            <VocabMatchGame currentDrill={currentDrill} onComplete={() => loadNextDrill('vocab-match')} />
+          </div>
+        ) : (
         <div className="drill-card-viewport">
           <div className={`drill-interactive-card ${
             drillFeedback.isChecked 
@@ -241,6 +255,7 @@ export function DrillWorkspace({
             )}
           </div>
         </div>
+        )
       ) : (
         <div className="loading-state">
           <RefreshCw className="spin-icon" size={32} />

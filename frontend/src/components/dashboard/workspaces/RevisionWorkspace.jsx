@@ -325,7 +325,10 @@ export function RevisionWorkspace({
                 filteredVocabDB.map((item) => (
                   <div key={item._id || item.word} className="vocab-term-card">
                     <div className="vocab-term-header">
-                      <h3>{item.word}</h3>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {item.word}
+                        {item.isImportant && <span className="pos-badge" style={{ fontSize: '0.65rem', background: '#eab308', color: '#000' }}>★ IMP</span>}
+                      </h3>
                       <span className="pos-badge">{item.category || item.pos}</span>
                     </div>
                     <p className="vocab-def">"{item.definition}"</p>
