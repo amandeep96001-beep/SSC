@@ -637,7 +637,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #6ee7b7;
   text-transform: uppercase;
@@ -648,18 +648,18 @@
 /* Related questions table */
 .related-questions-table-wrap {
   overflow-x: auto;
-  max-height: 350px;
+  max-height: 450px;
   overflow-y: auto;
 }
 .related-questions-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
 }
 .related-questions-table thead th {
   text-align: left;
-  padding: 8px 10px;
-  font-size: 0.72rem;
+  padding: 10px 12px;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
@@ -668,7 +668,7 @@
   white-space: nowrap;
 }
 .related-questions-table thead th:first-child {
-  width: 32px;
+  width: 36px;
   text-align: center;
 }
 .related-questions-table thead th:last-child {
@@ -682,46 +682,46 @@
   background: rgba(16, 185, 129, 0.06);
 }
 .related-q-row td {
-  padding: 9px 10px;
+  padding: 12px 12px;
   color: #cbd5e1;
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
-  line-height: 1.45;
+  line-height: 1.55;
   vertical-align: top;
 }
 .related-q-num {
   text-align: center;
-  color: #64748b;
+  color: #94a3b8;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 }
 .related-q-text {
-  color: #e2e8f0;
+  color: #f8fafc;
 }
 .related-q-answer strong {
   color: #4ade80;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
 }
 
 /* Expandable explanation row */
 .related-q-explanation-row td {
-  padding: 0 10px 10px 10px;
+  padding: 0 12px 12px 12px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
 }
 .related-q-explanation {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: #7dd3fc;
   background: rgba(14, 165, 233, 0.06);
   border-left: 2px solid #0ea5e9;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 0 6px 6px 0;
-  line-height: 1.5;
+  line-height: 1.55;
   animation: fadeIn 0.15s ease-out;
 }
 
 .related-empty-text {
   margin: 0;
   color: #64748b;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   text-align: center;
   padding: 20px 0;
 }

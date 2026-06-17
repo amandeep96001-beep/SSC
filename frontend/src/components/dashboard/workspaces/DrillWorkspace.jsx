@@ -289,7 +289,7 @@ function WrongQuestionCard({ wq }) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    fontSize: '0.72rem',
+                    fontSize: '0.8rem',
                     fontWeight: '700',
                     padding: '2px 6px',
                     borderRadius: '4px',
