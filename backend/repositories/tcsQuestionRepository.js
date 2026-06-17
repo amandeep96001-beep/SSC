@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import TCSQuestion from '../models/tcsQuestionModel.js';
 
 class TCSQuestionRepository {
@@ -20,29 +21,32 @@ class TCSQuestionRepository {
    * Get up to `limit` related questions from the same category.
    * Falls back to same subject if category has too few.
    */
-  static async getRelatedQuestions({ subject, category, excludeQuestion, limit = 10 }) {
+  static async getRelatedQuestions({ subject, category, excludeIds = [], excludeQuestion, limit = 10 }) {
     const filter = { subject };
     if (category) filter.category = category;
-    if (excludeQuestion) filter.question = { $ne: excludeQuestion };
 
-    let questions = await TCSQuestion.find(filter)
-      .limit(limit)
-      .select('question options correctAnswer explanation category')
-      .lean();
-
-    // If category gave too few results, backfill from same subject
-    if (questions.length < limit && category) {
-      const ids = questions.map(q => q._id);
-      const backfill = await TCSQuestion.find({
-        subject,
-        _id: { $nin: ids },
-        ...(excludeQuestion ? { question: { $ne: excludeQuestion } } : {})
-      })
-        .limit(limit - questions.length)
-        .select('question options correctAnswer explanation category')
-        .lean();
-      questions = [...questions, ...backfill];
+    const andConditions = [];
+    if (excludeQuestion) {
+      andConditions.push({ question: { $ne: excludeQuestion } });
     }
+    if (excludeIds && excludeIds.length > 0) {
+      const objectIds = excludeIds
+        .filter(id => mongoose.Types.ObjectId.isValid(id))
+        .map(id => new mongoose.Types.ObjectId(id));
+      if (objectIds.length > 0) {
+        andConditions.push({ _id: { $nin: objectIds } });
+      }
+    }
+
+    if (andConditions.length > 0) {
+      filter.$and = andConditions;
+    }
+
+    let questions = await TCSQuestion.aggregate([
+      { $match: filter },
+      { $sample: { size: limit } },
+      { $project: { _id: 1, question: 1, options: 1, correctAnswer: 1, explanation: 1, category: 1 } }
+    ]);
 
     return questions;
   }

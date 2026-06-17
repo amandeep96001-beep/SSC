@@ -1,5 +1,7 @@
 import vocabRepository from '../repositories/vocabRepository.js';
 import TCSQuestionRepository from '../repositories/tcsQuestionRepository.js';
+import { Vocab } from '../models/vocabModel.js';
+import mongoose from 'mongoose';
 
 function shuffleArray(arr) {
   const newArr = [...arr];
@@ -224,7 +226,61 @@ export const verifyDrill = async (req, res, next) => {
 
 export const getRelatedQuestions = async (req, res, next) => {
   try {
-    const { category, type, excludeQuestion } = req.query;
+    const { category, type, excludeQuestion, excludeIds } = req.query;
+
+    let idsArray = [];
+    if (excludeIds) {
+      if (typeof excludeIds === 'string') {
+        idsArray = excludeIds.split(',').filter(Boolean);
+      } else if (Array.isArray(excludeIds)) {
+        idsArray = excludeIds;
+      }
+    }
+
+    if (type === 'vocab') {
+      const filter = {};
+      if (category) filter.category = category;
+
+      const andConditions = [];
+      if (excludeQuestion) {
+        const matchQuote = excludeQuestion.match(/"([^"]+)"/);
+        const wordToExclude = matchQuote ? matchQuote[1] : excludeQuestion;
+        andConditions.push({ word: { $ne: wordToExclude } });
+      }
+      if (idsArray.length > 0) {
+        const objectIds = idsArray
+          .filter(id => mongoose.Types.ObjectId.isValid(id))
+          .map(id => new mongoose.Types.ObjectId(id));
+        if (objectIds.length > 0) {
+          andConditions.push({ _id: { $nin: objectIds } });
+        }
+      }
+      if (andConditions.length > 0) {
+        filter.$and = andConditions;
+      }
+
+      const words = await Vocab.aggregate([
+        { $match: filter },
+        { $sample: { size: 10 } }
+      ]);
+
+      const formatted = words.map(w => {
+        const isIdiom = w.category === 'Idioms & Phrases';
+        const questionText = isIdiom 
+          ? `What is the meaning of the idiom: "${w.word}"?`
+          : `What is the meaning of "${w.word}"?`;
+        
+        return {
+          _id: w._id ? w._id.toString() : '',
+          question: questionText,
+          correctAnswer: w.definition,
+          explanation: `Synonyms: ${w.synonyms?.join(', ') || 'None'} | Antonyms: ${w.antonyms?.join(', ') || 'None'}`,
+          category: w.category
+        };
+      });
+
+      return res.json({ status: 'success', data: formatted });
+    }
 
     // Map drill type to TCS subject
     const subjectMap = {
@@ -239,11 +295,13 @@ export const getRelatedQuestions = async (req, res, next) => {
       subject,
       category: category || null,
       excludeQuestion: excludeQuestion || null,
+      excludeIds: idsArray,
       limit: 10
     });
 
     // Format: resolve correctAnswer index to actual text
     const formatted = questions.map(q => ({
+      _id: q._id ? q._id.toString() : '',
       question: q.question,
       correctAnswer: q.options[q.correctAnswer],
       explanation: q.explanation || '',
