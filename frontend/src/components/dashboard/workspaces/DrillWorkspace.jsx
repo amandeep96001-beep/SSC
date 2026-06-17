@@ -27,8 +27,14 @@ const formatAIText = (text) => {
   });
 };
 
-// ── Re-Attempt + AI Card ──────────────────────────────────────────────────────
+// ── Re-Attempt + Related Questions Card ───────────────────────────────────────
 function WrongQuestionCard({ wq }) {
+  const [relatedQs, setRelatedQs]       = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedOpen, setRelatedOpen]    = useState(false);
+  const [relatedError, setRelatedError]  = useState('');
+
+  // AI states
   const [aiText, setAiText]       = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError]     = useState('');
@@ -40,6 +46,22 @@ function WrongQuestionCard({ wq }) {
   const [retryResult, setRetryResult] = useState(null); // null | 'correct' | 'wrong'
 
   const isMCQ = Array.isArray(wq.options) && wq.options.length > 0;
+  const isTCSType = ['gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(wq.type);
+
+  const handleRelated = useCallback(async () => {
+    if (relatedQs.length > 0) { setRelatedOpen(o => !o); return; }
+    setRelatedLoading(true); setRelatedError(''); setRelatedOpen(true);
+    try {
+      const params = new URLSearchParams({
+        type: wq.type,
+        ...(wq.category ? { category: wq.category } : {}),
+        excludeQuestion: wq.question
+      });
+      const res = await apiService.get(`/drill/related?${params}`);
+      setRelatedQs(res.data || []);
+    } catch { setRelatedError('Could not load related questions.'); }
+    finally { setRelatedLoading(false); }
+  }, [relatedQs, wq]);
 
   const handleAI = useCallback(async () => {
     if (aiText) { setAiOpen(o => !o); return; }
@@ -154,18 +176,69 @@ function WrongQuestionCard({ wq }) {
         </div>
       )}
 
-      {/* ── AI FULL CONCEPT ──────────────────────────────────────────────── */}
-      <button className="btn-ai-explain" onClick={handleAI} disabled={aiLoading}>
-        {aiLoading
-          ? <><Loader2 size={14} className="spin-inline" /> Generating AI Concept...</>
-          : aiText
-            ? <>{aiOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} AI Concept {aiOpen ? 'Hide' : 'View'}</>
-            : <><Sparkles size={14} /> Explain Full Concept with AI</>
-        }
-      </button>
+      {/* ── ACTION BUTTONS ──────────────────────────────────────────────── */}
+      {isTCSType && (
+        <div className="wrong-q-actions-row" style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+          <button className="btn-ai-explain" onClick={handleAI} disabled={aiLoading}>
+            {aiLoading
+              ? <><Loader2 size={14} className="spin-inline" /> Generating AI Concept...</>
+              : aiText
+                ? <>{aiOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} AI Concept {aiOpen ? 'Hide' : 'View'}</>
+                : <><Sparkles size={14} /> Explain Concept with AI</>
+          }
+          </button>
 
+          <button className="btn-related-questions" onClick={handleRelated} disabled={relatedLoading}>
+            {relatedLoading
+              ? <><Loader2 size={14} className="spin-inline" /> Loading Related Questions...</>
+              : relatedQs.length > 0
+                ? <>{relatedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Related Questions {relatedOpen ? 'Hide' : 'View'}</>
+                : <><BookOpen size={14} /> Show Related TCS Questions</>
+            }
+          </button>
+        </div>
+      )}
+
+      {/* ── RELATED TCS QUESTIONS TABLE ──────────────────────────────────── */}
+      {isTCSType && relatedOpen && (
+        <div className="related-questions-panel">
+          {relatedLoading && (
+            <div className="ai-loading-row">
+              <Loader2 size={16} className="spin-inline" />
+              <span>Fetching related questions from database...</span>
+            </div>
+          )}
+          {relatedError && <p className="ai-error-text">{relatedError}</p>}
+          {relatedQs.length > 0 && !relatedLoading && (
+            <div className="related-questions-table-wrap">
+              <div className="related-questions-badge">
+                <BookOpen size={12} /> {relatedQs.length} Related TCS PYQs — {wq.category || wq.type}
+              </div>
+              <table className="related-questions-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Question</th>
+                    <th>Answer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {relatedQs.map((rq, idx) => (
+                    <RelatedQuestionRow key={idx} rq={rq} idx={idx} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {relatedQs.length === 0 && !relatedLoading && !relatedError && (
+            <p className="related-empty-text">No related questions found in the database for this category.</p>
+          )}
+        </div>
+      )}
+
+      {/* ── AI CONCEPT EXPLANATION PANEL ─────────────────────────────────── */}
       {aiOpen && (
-        <div className="ai-explanation-panel">
+        <div className="ai-explanation-panel" style={{ marginTop: '10px' }}>
           {aiLoading && (
             <div className="ai-loading-row">
               <Loader2 size={16} className="spin-inline" />
@@ -184,6 +257,28 @@ function WrongQuestionCard({ wq }) {
     </div>
   );
 }
+
+// ── Expandable Related Question Row ───────────────────────────────────────────
+function RelatedQuestionRow({ rq, idx }) {
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  return (
+    <>
+      <tr className="related-q-row" onClick={() => rq.explanation && setShowExplanation(o => !o)} style={rq.explanation ? { cursor: 'pointer' } : {}}>
+        <td className="related-q-num">{idx + 1}</td>
+        <td className="related-q-text">{rq.question}</td>
+        <td className="related-q-answer"><strong>{rq.correctAnswer}</strong></td>
+      </tr>
+      {showExplanation && rq.explanation && (
+        <tr className="related-q-explanation-row">
+          <td></td>
+          <td colSpan="2" className="related-q-explanation">{rq.explanation}</td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 
 // ── Main DrillWorkspace ───────────────────────────────────────────────────────
 const MCQ_TYPES = ['vocab', 'gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'];

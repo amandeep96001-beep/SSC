@@ -221,3 +221,37 @@ export const verifyDrill = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getRelatedQuestions = async (req, res, next) => {
+  try {
+    const { category, type, excludeQuestion } = req.query;
+
+    // Map drill type to TCS subject
+    const subjectMap = {
+      'gk': 'GK',
+      'english-mcq': 'English',
+      'maths-mcq': 'Maths',
+      'reasoning-mcq': 'Reasoning'
+    };
+    const subject = subjectMap[type] || 'GK';
+
+    const questions = await TCSQuestionRepository.getRelatedQuestions({
+      subject,
+      category: category || null,
+      excludeQuestion: excludeQuestion || null,
+      limit: 10
+    });
+
+    // Format: resolve correctAnswer index to actual text
+    const formatted = questions.map(q => ({
+      question: q.question,
+      correctAnswer: q.options[q.correctAnswer],
+      explanation: q.explanation || '',
+      category: q.category
+    }));
+
+    res.json({ status: 'success', data: formatted });
+  } catch (error) {
+    next(error);
+  }
+};
