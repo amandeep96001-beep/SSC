@@ -515,7 +515,7 @@ export function DrillWorkspace({
                       {drillType === 'vocab'         && <><BookOpen size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> Vocab Drill</>}
                       {['fraction','percentage'].includes(drillType) && <><Percent size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> Value Conversion</>}
                       {['square','cube'].includes(drillType)         && <><Zap size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> Roots &amp; Powers</>}
-                      {drillType === 'gk'            && <><Brain size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> GK Blast — {currentDrill.category}</>}
+                      {drillType === 'gk'            && <><Brain size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> GK — {currentDrill.category}</>}
                       {drillType === 'english-mcq'   && <><FileText size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> English MCQ — {currentDrill.category}</>}
                       {drillType === 'maths-mcq'     && <><Calculator size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> Maths MCQ — {currentDrill.category}</>}
                       {drillType === 'reasoning-mcq' && <><Cpu size={18} style={{verticalAlign:'text-bottom',marginRight:'6px'}} /> Reasoning MCQ — {currentDrill.category}</>}
