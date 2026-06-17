@@ -8,6 +8,14 @@ import TCSQuestion from '../models/tcsQuestionModel.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
+function normalizeQuestionText(text) {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function seed() {
   try {
     const uri = process.env.MONGODB_URI;
@@ -39,6 +47,12 @@ async function seed() {
 
     console.log(`Loaded ${data.length} questions from new.json.`);
 
+    // Fetch existing questions and index their normalized versions in a Set
+    const existingQuestions = await TCSQuestion.find({}, { question: 1 }).lean();
+    const seenNormalized = new Set(
+      existingQuestions.map(q => normalizeQuestionText(q.question))
+    );
+
     let insertedCount = 0;
     let skippedCount = 0;
 
@@ -50,10 +64,20 @@ async function seed() {
         continue;
       }
 
-      // Check duplicate
-      const exists = await TCSQuestion.findOne({ question: q.question });
-      if (!exists) {
+      // Clean and trim the inputs
+      q.question = q.question.trim().replace(/\r\n/g, '\n');
+      if (q.explanation) {
+        q.explanation = q.explanation.trim().replace(/\r\n/g, '\n');
+      }
+      if (Array.isArray(q.options)) {
+        q.options = q.options.map(opt => typeof opt === 'string' ? opt.trim() : opt);
+      }
+
+      const normalized = normalizeQuestionText(q.question);
+
+      if (!seenNormalized.has(normalized)) {
         await TCSQuestion.create(q);
+        seenNormalized.add(normalized);
         insertedCount++;
       } else {
         skippedCount++;
@@ -73,3 +97,4 @@ async function seed() {
 }
 
 seed();
+
