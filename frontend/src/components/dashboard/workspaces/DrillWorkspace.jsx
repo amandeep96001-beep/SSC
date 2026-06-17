@@ -33,6 +33,8 @@ function WrongQuestionCard({ wq }) {
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedOpen, setRelatedOpen]    = useState(false);
   const [relatedError, setRelatedError]  = useState('');
+  const [loadMoreLoading, setLoadMoreLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // AI states
   const [aiText, setAiText]       = useState('');
@@ -46,11 +48,11 @@ function WrongQuestionCard({ wq }) {
   const [retryResult, setRetryResult] = useState(null); // null | 'correct' | 'wrong'
 
   const isMCQ = Array.isArray(wq.options) && wq.options.length > 0;
-  const isTCSType = ['gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'].includes(wq.type);
+  const isTCSType = ['gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq', 'vocab'].includes(wq.type);
 
   const handleRelated = useCallback(async () => {
     if (relatedQs.length > 0) { setRelatedOpen(o => !o); return; }
-    setRelatedLoading(true); setRelatedError(''); setRelatedOpen(true);
+    setRelatedLoading(true); setRelatedError(''); setRelatedOpen(true); setHasMore(true);
     try {
       const params = new URLSearchParams({
         type: wq.type,
@@ -58,10 +60,58 @@ function WrongQuestionCard({ wq }) {
         excludeQuestion: wq.question
       });
       const res = await apiService.get(`/drill/related?${params}`);
-      setRelatedQs(res.data || []);
+      const data = res.data || [];
+      setRelatedQs(data);
+      if (data.length < 10) {
+        setHasMore(false);
+      }
     } catch { setRelatedError('Could not load related questions.'); }
     finally { setRelatedLoading(false); }
   }, [relatedQs, wq]);
+
+  const handleShuffleRelated = useCallback(async (e) => {
+    if (e) e.stopPropagation();
+    setRelatedLoading(true); setRelatedError(''); setRelatedOpen(true); setHasMore(true);
+    try {
+      const params = new URLSearchParams({
+        type: wq.type,
+        ...(wq.category ? { category: wq.category } : {}),
+        excludeQuestion: wq.question
+      });
+      const res = await apiService.get(`/drill/related?${params}`);
+      const data = res.data || [];
+      setRelatedQs(data);
+      if (data.length < 10) {
+        setHasMore(false);
+      }
+    } catch { setRelatedError('Could not shuffle related questions.'); }
+    finally { setRelatedLoading(false); }
+  }, [wq]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadMoreLoading) return;
+    setLoadMoreLoading(true); setRelatedError('');
+    try {
+      const excludeIds = relatedQs.map(q => q._id).filter(Boolean).join(',');
+      const params = new URLSearchParams({
+        type: wq.type,
+        ...(wq.category ? { category: wq.category } : {}),
+        excludeQuestion: wq.question,
+        ...(excludeIds ? { excludeIds } : {})
+      });
+      const res = await apiService.get(`/drill/related?${params}`);
+      const data = res.data || [];
+      if (data.length === 0) {
+        setHasMore(false);
+      } else {
+        setRelatedQs(prev => [...prev, ...data]);
+        if (data.length < 10) {
+          setHasMore(false);
+        }
+      }
+    } catch { setRelatedError('Could not load more questions.'); }
+    finally { setLoadMoreLoading(false); }
+  }, [relatedQs, wq, loadMoreLoading]);
 
   const handleAI = useCallback(async () => {
     if (aiText) { setAiOpen(o => !o); return; }
@@ -113,6 +163,14 @@ function WrongQuestionCard({ wq }) {
 
       {/* Official explanation */}
       {wq.explanation && <div className="wrong-q-hint">{wq.explanation}</div>}
+
+      {wq.type === 'vocab' && (wq.revealDefinition || (wq.revealSynonyms && wq.revealSynonyms.length > 0) || (wq.revealAntonyms && wq.revealAntonyms.length > 0)) && (
+        <div className="wrong-q-hint" style={{ color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.07)', borderColor: '#8b5cf6', padding: '10px', borderRadius: '6px', borderLeft: '3px solid #8b5cf6', marginTop: '10px' }}>
+          {wq.revealDefinition && <div style={{ marginBottom: '4px' }}><strong>Definition:</strong> {wq.revealDefinition}</div>}
+          {wq.revealSynonyms && wq.revealSynonyms.length > 0 && <div style={{ marginBottom: '4px' }}><strong>Synonyms:</strong> {Array.isArray(wq.revealSynonyms) ? wq.revealSynonyms.join(', ') : wq.revealSynonyms}</div>}
+          {wq.revealAntonyms && wq.revealAntonyms.length > 0 && <div><strong>Antonyms:</strong> {Array.isArray(wq.revealAntonyms) ? wq.revealAntonyms.join(', ') : wq.revealAntonyms}</div>}
+        </div>
+      )}
 
       {/* ── RE-ATTEMPT SECTION ───────────────────────────────────────────── */}
       {!attempting && retryResult !== 'correct' && (
@@ -179,21 +237,23 @@ function WrongQuestionCard({ wq }) {
       {/* ── ACTION BUTTONS ──────────────────────────────────────────────── */}
       {isTCSType && (
         <div className="wrong-q-actions-row" style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
-          <button className="btn-ai-explain" onClick={handleAI} disabled={aiLoading}>
-            {aiLoading
-              ? <><Loader2 size={14} className="spin-inline" /> Generating AI Concept...</>
-              : aiText
-                ? <>{aiOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} AI Concept {aiOpen ? 'Hide' : 'View'}</>
-                : <><Sparkles size={14} /> Explain Concept with AI</>
-          }
-          </button>
+          {wq.type !== 'vocab' && (
+            <button className="btn-ai-explain" onClick={handleAI} disabled={aiLoading}>
+              {aiLoading
+                ? <><Loader2 size={14} className="spin-inline" /> Generating AI Concept...</>
+                : aiText
+                  ? <>{aiOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} AI Concept {aiOpen ? 'Hide' : 'View'}</>
+                  : <><Sparkles size={14} /> Explain Concept with AI</>
+              }
+            </button>
+          )}
 
           <button className="btn-related-questions" onClick={handleRelated} disabled={relatedLoading}>
             {relatedLoading
               ? <><Loader2 size={14} className="spin-inline" /> Loading Related Questions...</>
               : relatedQs.length > 0
                 ? <>{relatedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Related Questions {relatedOpen ? 'Hide' : 'View'}</>
-                : <><BookOpen size={14} /> Show Related TCS Questions</>
+                : <><BookOpen size={14} /> {wq.type === 'vocab' ? 'Show Related Vocab Words' : 'Show Related TCS Questions'}</>
             }
           </button>
         </div>
@@ -211,8 +271,36 @@ function WrongQuestionCard({ wq }) {
           {relatedError && <p className="ai-error-text">{relatedError}</p>}
           {relatedQs.length > 0 && !relatedLoading && (
             <div className="related-questions-table-wrap">
-              <div className="related-questions-badge">
-                <BookOpen size={12} /> {relatedQs.length} Related TCS PYQs — {wq.category || wq.type}
+              <div className="related-questions-badge" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <BookOpen size={12} />
+                  <span>{relatedQs.length} Related TCS PYQs — {wq.category || wq.type}</span>
+                </div>
+                <button
+                  type="button"
+                  className="btn-shuffle-related"
+                  onClick={handleShuffleRelated}
+                  title="Shuffle / Get new questions"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#6ee7b7',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '0.72rem',
+                    fontWeight: '700',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    transition: 'background 0.2s',
+                    textTransform: 'uppercase'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(110, 231, 183, 0.1)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                >
+                  <RefreshCw size={12} /> Shuffle
+                </button>
               </div>
               <table className="related-questions-table">
                 <thead>
@@ -228,6 +316,54 @@ function WrongQuestionCard({ wq }) {
                   ))}
                 </tbody>
               </table>
+              {hasMore && (
+                <div className="load-more-container" style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    className="btn-load-more"
+                    onClick={handleLoadMore}
+                    disabled={loadMoreLoading}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 16px',
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: '20px',
+                      color: '#6ee7b7',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      if (!loadMoreLoading) {
+                        e.currentTarget.style.background = 'rgba(16, 185, 129, 0.2)';
+                        e.currentTarget.style.borderColor = '#10b981';
+                        e.currentTarget.style.transform = 'translateY(1px)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                      e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                      e.currentTarget.style.transform = 'none';
+                    }}
+                  >
+                    {loadMoreLoading ? (
+                      <>
+                        <Loader2 size={12} className="spin-inline" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={14} />
+                        Load More
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
           {relatedQs.length === 0 && !relatedLoading && !relatedError && (

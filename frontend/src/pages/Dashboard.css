@@ -648,6 +648,8 @@
 /* Related questions table */
 .related-questions-table-wrap {
   overflow-x: auto;
+  max-height: 350px;
+  overflow-y: auto;
 }
 .related-questions-table {
   width: 100%;

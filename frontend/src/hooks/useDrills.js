@@ -18,7 +18,22 @@ export function useDrills() {
   });
 
   // Wrong questions log — { question, correctAnswer, explanation, category, type, wrongCount }
-  const [wrongQuestions, setWrongQuestions] = useState([]);
+  const [wrongQuestions, setWrongQuestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('wrongQuestions');
+      return saved ? JSON.parse(saved).slice(0, 20) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wrongQuestions', JSON.stringify(wrongQuestions));
+    } catch (e) {
+      console.error('Error saving wrongQuestions to localStorage', e);
+    }
+  }, [wrongQuestions]);
 
   // Micro-feedback states for card glow animations
   const [feedback, setFeedback] = useState({
@@ -76,29 +91,31 @@ export function useDrills() {
       if (!isCorrect && currentDrill) {
         setWrongQuestions((prev) => {
           const existingIdx = prev.findIndex((wq) => wq.question === currentDrill.question);
+          let updated;
           if (existingIdx >= 0) {
-            const updated = [...prev];
+            updated = [...prev];
             updated[existingIdx] = { ...updated[existingIdx], wrongCount: updated[existingIdx].wrongCount + 1 };
-            return updated;
+          } else {
+            updated = [
+              {
+                question: currentDrill.question,
+                correctAnswer: currentDrill.correctAnswer,
+                options: currentDrill.options || null,
+                placeholder: currentDrill.placeholder || null,
+                explanation: currentDrill.explanation || null,
+                category: currentDrill.category || null,
+                type: currentDrill.type,
+                // vocab-specific reveal fields
+                revealDefinition: currentDrill.revealDefinition || null,
+                revealSynonyms: currentDrill.revealSynonyms || null,
+                revealAntonyms: currentDrill.revealAntonyms || null,
+                pos: currentDrill.pos || null,
+                wrongCount: 1
+              },
+              ...prev
+            ];
           }
-          return [
-            {
-              question: currentDrill.question,
-              correctAnswer: currentDrill.correctAnswer,
-              options: currentDrill.options || null,
-              placeholder: currentDrill.placeholder || null,
-              explanation: currentDrill.explanation || null,
-              category: currentDrill.category || null,
-              type: currentDrill.type,
-              // vocab-specific reveal fields
-              revealDefinition: currentDrill.revealDefinition || null,
-              revealSynonyms: currentDrill.revealSynonyms || null,
-              revealAntonyms: currentDrill.revealAntonyms || null,
-              pos: currentDrill.pos || null,
-              wrongCount: 1
-            },
-            ...prev
-          ];
+          return updated.slice(0, 20);
         });
       }
 
