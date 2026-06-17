@@ -4,6 +4,7 @@ import drillRoutes from './drillRoutes.js';
 import studyRoutes from './studyRoutes.js';
 import authRoutes from './authRoutes.js';
 import mockTestRoutes from './mockTestRoutes.js';
+import aiRoutes from './aiRoutes.js';
 
 const router = express.Router();
 
@@ -13,5 +14,6 @@ router.use('/drill', drillRoutes);
 router.use('/study', studyRoutes);
 router.use('/auth', authRoutes);
 router.use('/mock', mockTestRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;

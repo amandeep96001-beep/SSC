@@ -34,6 +34,8 @@ export function Dashboard() {
     feedback: drillFeedback,
     loading: drillLoading,
     error: drillError,
+    wrongQuestions,
+    clearWrongLog,
     changeDrillType,
     submitAnswer: submitDrillAnswer,
     skipQuestion: skipDrillQuestion,
@@ -487,6 +489,8 @@ export function Dashboard() {
               setMaxTableBase={setMaxTableBase}
               drillStats={drillStats}
               drillFeedback={drillFeedback}
+              wrongQuestions={wrongQuestions}
+              clearWrongLog={clearWrongLog}
               changeDrillType={changeDrillType}
               submitDrillAnswer={submitDrillAnswer}
               skipDrillQuestion={skipDrillQuestion}

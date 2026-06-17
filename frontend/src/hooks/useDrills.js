@@ -17,6 +17,9 @@ export function useDrills() {
     streak: 0
   });
 
+  // Wrong questions log — { question, correctAnswer, explanation, category, type, wrongCount }
+  const [wrongQuestions, setWrongQuestions] = useState([]);
+
   // Micro-feedback states for card glow animations
   const [feedback, setFeedback] = useState({
     isChecked: false,
@@ -69,6 +72,36 @@ export function useDrills() {
         streak: isCorrect ? prev.streak + 1 : 0
       }));
 
+      // Track wrong answers in the log
+      if (!isCorrect && currentDrill) {
+        setWrongQuestions((prev) => {
+          const existingIdx = prev.findIndex((wq) => wq.question === currentDrill.question);
+          if (existingIdx >= 0) {
+            const updated = [...prev];
+            updated[existingIdx] = { ...updated[existingIdx], wrongCount: updated[existingIdx].wrongCount + 1 };
+            return updated;
+          }
+          return [
+            {
+              question: currentDrill.question,
+              correctAnswer: currentDrill.correctAnswer,
+              options: currentDrill.options || null,
+              placeholder: currentDrill.placeholder || null,
+              explanation: currentDrill.explanation || null,
+              category: currentDrill.category || null,
+              type: currentDrill.type,
+              // vocab-specific reveal fields
+              revealDefinition: currentDrill.revealDefinition || null,
+              revealSynonyms: currentDrill.revealSynonyms || null,
+              revealAntonyms: currentDrill.revealAntonyms || null,
+              pos: currentDrill.pos || null,
+              wrongCount: 1
+            },
+            ...prev
+          ];
+        });
+      }
+
       if (isCorrect) {
         // Automatically load next drill after a short delay for correct answers
         setTimeout(() => {
@@ -105,6 +138,8 @@ export function useDrills() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const clearWrongLog = () => setWrongQuestions([]);
+
   return {
     drillType,
     currentDrill,
@@ -114,6 +149,8 @@ export function useDrills() {
     setMaxTableBase,
     stats,
     feedback,
+    wrongQuestions,
+    clearWrongLog,
     loading: nextDrillApi.loading || verifyApi.loading,
     error: nextDrillApi.error || verifyApi.error,
     changeDrillType,
