@@ -7,7 +7,8 @@ import {
   Book, 
   Trophy,
   Activity,
-  PieChart
+  PieChart,
+  Swords
 } from 'lucide-react';
 import { useRef } from 'react';
 import gsap from 'gsap';
@@ -87,7 +88,10 @@ export function Sidebar({
       <nav className="sidebar-nav">
         <button 
           className={`nav-item ${activeView === 'drill' ? 'active' : ''}`}
-          onClick={() => setActiveView('drill')}
+          onClick={() => {
+            setActiveView('drill');
+            setIsMobileOpen(false);
+          }}
         >
           <Zap className="nav-icon" size={18} />
           <span>Speed Drills</span>
@@ -95,7 +99,10 @@ export function Sidebar({
         
         <button 
           className={`nav-item ${['subjects', 'topics', 'notes'].includes(activeView) ? 'active' : ''}`}
-          onClick={() => skipToSubjects()}
+          onClick={() => {
+            skipToSubjects();
+            setIsMobileOpen(false);
+          }}
         >
           <BookMarked className="nav-icon" size={18} />
           <span>Syllabus & Notes</span>
@@ -103,7 +110,10 @@ export function Sidebar({
 
         <button 
           className={`nav-item ${activeView === 'revision' ? 'active' : ''}`}
-          onClick={() => setActiveView('revision')}
+          onClick={() => {
+            setActiveView('revision');
+            setIsMobileOpen(false);
+          }}
         >
           <Book className="nav-icon" size={18} />
           <span>Revision Deck</span>
@@ -111,7 +121,10 @@ export function Sidebar({
 
         <button 
           className={`nav-item ${activeView === 'mock' ? 'active' : ''}`}
-          onClick={() => setActiveView('mock')}
+          onClick={() => {
+            setActiveView('mock');
+            setIsMobileOpen(false);
+          }}
         >
           <Activity className="nav-icon" size={18} />
           <span>Full Mocks</span>
@@ -119,7 +132,10 @@ export function Sidebar({
 
         <button 
           className={`nav-item ${activeView === 'performance' ? 'active' : ''}`}
-          onClick={() => setActiveView('performance')}
+          onClick={() => {
+            setActiveView('performance');
+            setIsMobileOpen(false);
+          }}
         >
           <Trophy className="nav-icon" size={18} />
           <span>Performance Tracker</span>
@@ -127,10 +143,24 @@ export function Sidebar({
 
         <button 
           className={`nav-item ${activeView === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveView('analytics')}
+          onClick={() => {
+            setActiveView('analytics');
+            setIsMobileOpen(false);
+          }}
         >
           <PieChart className="nav-icon" size={18} />
           <span>Insights & Analytics</span>
+        </button>
+
+        <button 
+          className={`nav-item competition-nav-item ${activeView === 'competition' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveView('competition');
+            setIsMobileOpen(false);
+          }}
+        >
+          <Swords className="nav-icon" size={18} />
+          <span>MCQ Battle</span>
         </button>
       </nav>
 

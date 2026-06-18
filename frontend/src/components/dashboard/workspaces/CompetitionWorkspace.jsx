@@ -1,0 +1,458 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { 
+  Swords, Trophy, Target, Zap, Clock, CheckCircle2, XCircle, 
+  SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer
+} from 'lucide-react';
+import { apiService } from '../../../services/apiService';
+
+const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'];
+const QUESTION_LIMIT = 10;
+const TIME_PER_QUESTION = 45; // seconds
+
+const SUBJECT_COLORS = {
+  Mixed:     { primary: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
+  GK:        { primary: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
+  English:   { primary: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
+  Maths:     { primary: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
+  Reasoning: { primary: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' }
+};
+
+// ── Screen States ─────────────────────────────────────────────────
+// 'start' → 'loading' → 'quiz' → 'submitting' → 'result'
+
+export function CompetitionWorkspace({ user }) {
+  const [screen, setScreen]           = useState('start');
+  const [selectedSubject, setSelectedSubject] = useState('Mixed');
+  const [questions, setQuestions]     = useState([]);
+  const [currentIdx, setCurrentIdx]   = useState(0);
+  const [userAnswers, setUserAnswers]  = useState([]); // array of chosen option index or null
+  const [timeLeft, setTimeLeft]        = useState(TIME_PER_QUESTION);
+  const [totalTimeTaken, setTotalTimeTaken] = useState(0);
+  const [resultData, setResultData]    = useState(null);
+  const [leaderboard, setLeaderboard]  = useState([]);
+  const [loadingLeader, setLoadingLeader] = useState(false);
+  const [error, setError]              = useState('');
+  const [answered, setAnswered]        = useState(false); // show feedback on current question
+
+  const timerRef   = useRef(null);
+  const startTimeRef = useRef(null);
+
+  // ── Timer Logic ───────────────────────────────────────────────────
+  const clearTimer = () => { if (timerRef.current) clearInterval(timerRef.current); };
+
+  const startTimer = useCallback(() => {
+    clearTimer();
+    setTimeLeft(TIME_PER_QUESTION);
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          handleAutoSkip();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [currentIdx]); // eslint-disable-line
+
+  useEffect(() => {
+    if (screen === 'quiz') startTimer();
+    return clearTimer;
+  }, [screen, currentIdx]); // eslint-disable-line
+
+  useEffect(() => { return clearTimer; }, []);
+
+  // ── Auto-skip when timer hits 0 ───────────────────────────────────
+  const handleAutoSkip = useCallback(() => {
+    setUserAnswers(prev => {
+      const updated = [...prev];
+      if (updated[currentIdx] === undefined) updated[currentIdx] = null; // null = skipped/timed-out
+      return updated;
+    });
+    setAnswered(true);
+    setTimeout(() => moveToNext(), 1000);
+  }, [currentIdx]); // eslint-disable-line
+
+  // ── Start Competition ─────────────────────────────────────────────
+  const startBattle = async () => {
+    setError('');
+    setScreen('loading');
+    try {
+      const res = await apiService.get(`/competition/questions?subject=${selectedSubject}&limit=${QUESTION_LIMIT}`);
+      if (res.status === 'success' && res.data.length > 0) {
+        setQuestions(res.data);
+        setUserAnswers(new Array(res.data.length).fill(undefined));
+        setCurrentIdx(0);
+        setAnswered(false);
+        setTotalTimeTaken(0);
+        startTimeRef.current = Date.now();
+        setScreen('quiz');
+      } else {
+        throw new Error('Questions load nahi hue. Database me TCS PYQs seed karo pehle.');
+      }
+    } catch (err) {
+      setError(err.message || 'Server se connect nahi ho paya.');
+      setScreen('start');
+    }
+  };
+
+  // ── Answer Selection ──────────────────────────────────────────────
+  const handleAnswer = (optionIdx) => {
+    if (answered) return;
+    clearTimer();
+    setUserAnswers(prev => {
+      const updated = [...prev];
+      updated[currentIdx] = optionIdx;
+      return updated;
+    });
+    setAnswered(true);
+    // Auto-advance after 1.2s so user sees correct answer highlight
+    setTimeout(() => moveToNext(), 1200);
+  };
+
+  // ── Move to next question or finish ──────────────────────────────
+  const moveToNext = useCallback(() => {
+    setAnswered(false);
+    if (currentIdx + 1 >= questions.length) {
+      finishBattle();
+    } else {
+      setCurrentIdx(prev => prev + 1);
+    }
+  }, [currentIdx, questions.length]); // eslint-disable-line
+
+  // ── Compute results & submit ──────────────────────────────────────
+  const finishBattle = useCallback(() => {
+    clearTimer();
+    const taken = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setTotalTimeTaken(taken);
+
+    setUserAnswers(prev => {
+      const finalAnswers = [...prev];
+      // fill any remaining unanswered as null
+      for (let i = 0; i < questions.length; i++) {
+        if (finalAnswers[i] === undefined) finalAnswers[i] = null;
+      }
+
+      const correct = questions.filter((q, i) => finalAnswers[i] === q.correctAnswer).length;
+      const wrong   = questions.filter((q, i) => finalAnswers[i] !== null && finalAnswers[i] !== q.correctAnswer).length;
+      const skipped = questions.filter((q, i) => finalAnswers[i] === null).length;
+      const accuracy = Math.round((correct / questions.length) * 100);
+      const score = correct;
+
+      submitScore({ correct, wrong, skipped, accuracy, score, timeTaken: taken, answers: finalAnswers });
+      return finalAnswers;
+    });
+
+    setScreen('submitting');
+  }, [questions]); // eslint-disable-line
+
+  // ── POST score to backend ─────────────────────────────────────────
+  const submitScore = async ({ correct, wrong, skipped, accuracy, score, timeTaken, answers }) => {
+    try {
+      const res = await apiService.post('/competition/submit', {
+        username: user.username,
+        subject: selectedSubject,
+        score, correct, wrong, skipped, accuracy, timeTaken
+      });
+
+      if (res.status === 'success') {
+        setResultData({ ...res.data, correct, wrong, skipped, accuracy, score, timeTaken, answers });
+        fetchLeaderboard();
+        setScreen('result');
+      }
+    } catch (err) {
+      // Even if submission fails, show result locally
+      setResultData({ correct, wrong, skipped, accuracy, score, timeTaken, answers, rank: null });
+      setScreen('result');
+    }
+  };
+
+  // ── Fetch Leaderboard ─────────────────────────────────────────────
+  const fetchLeaderboard = useCallback(async () => {
+    setLoadingLeader(true);
+    try {
+      const res = await apiService.get(`/competition/leaderboard?subject=${selectedSubject}`);
+      if (res.status === 'success') setLeaderboard(res.data);
+    } catch { /* silent fail */ }
+    finally { setLoadingLeader(false); }
+  }, [selectedSubject]);
+
+  // ── Reset to start ────────────────────────────────────────────────
+  const resetToStart = () => {
+    clearTimer();
+    setScreen('start');
+    setQuestions([]);
+    setCurrentIdx(0);
+    setUserAnswers([]);
+    setAnswered(false);
+    setResultData(null);
+    setLeaderboard([]);
+    setError('');
+  };
+
+  const color = SUBJECT_COLORS[selectedSubject] || SUBJECT_COLORS.Mixed;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER: START SCREEN
+  // ═══════════════════════════════════════════════════════════════════
+  if (screen === 'start') {
+    return (
+      <div className="competition-start-screen">
+        <div className="competition-hero">
+          <div className="competition-hero-icon"><Swords size={40} /></div>
+          <h1 className="competition-hero-title">MCQ Battle Mode</h1>
+          <p className="competition-hero-sub">
+            {QUESTION_LIMIT} questions · {TIME_PER_QUESTION}s per question · Fastest wins
+          </p>
+        </div>
+
+        {error && (
+          <div className="competition-error-banner">
+            <XCircle size={16} /> <span>{error}</span>
+          </div>
+        )}
+
+        <div className="competition-subject-selector">
+          <p className="competition-label">Subject choose karo:</p>
+          <div className="competition-subject-grid">
+            {SUBJECTS.map(sub => (
+              <button
+                key={sub}
+                className={`competition-subject-btn ${selectedSubject === sub ? 'selected' : ''}`}
+                style={selectedSubject === sub ? { borderColor: SUBJECT_COLORS[sub].primary, background: SUBJECT_COLORS[sub].bg, color: SUBJECT_COLORS[sub].primary } : {}}
+                onClick={() => setSelectedSubject(sub)}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button className="competition-start-btn" onClick={startBattle}
+          style={{ background: `linear-gradient(135deg, ${color.primary}, #6366f1)` }}>
+          <Swords size={20} /> Start Battle
+        </button>
+
+        <div className="competition-stats-row">
+          <div className="competition-stat-box"><Target size={18} /><span>{QUESTION_LIMIT} Questions</span></div>
+          <div className="competition-stat-box"><Clock size={18} /><span>{TIME_PER_QUESTION}s per Q</span></div>
+          <div className="competition-stat-box"><Trophy size={18} /><span>Live Leaderboard</span></div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER: LOADING
+  // ═══════════════════════════════════════════════════════════════════
+  if (screen === 'loading' || screen === 'submitting') {
+    return (
+      <div className="competition-loading-screen">
+        <RefreshCw className="spin-icon" size={36} />
+        <p>{screen === 'loading' ? 'Questions load ho rahe hain...' : 'Score save ho raha hai...'}</p>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER: QUIZ SCREEN
+  // ═══════════════════════════════════════════════════════════════════
+  if (screen === 'quiz' && questions.length > 0) {
+    const q = questions[currentIdx];
+    const timerPct = (timeLeft / TIME_PER_QUESTION) * 100;
+    const timerColor = timeLeft > 15 ? '#10b981' : timeLeft > 7 ? '#f59e0b' : '#ef4444';
+
+    return (
+      <div className="competition-quiz-screen">
+        {/* ── Header bar ── */}
+        <div className="battle-header">
+          <div className="battle-progress-info">
+            <span className="battle-q-counter">Q {currentIdx + 1} / {questions.length}</span>
+            <span className="battle-subject-badge" style={{ background: color.bg, color: color.primary }}>
+              {q.subject}
+            </span>
+          </div>
+          <div className="battle-timer-display" style={{ color: timerColor }}>
+            <Timer size={16} />
+            <span className="battle-timer-number">{timeLeft}s</span>
+          </div>
+        </div>
+
+        {/* ── Timer bar ── */}
+        <div className="battle-timer-track">
+          <div 
+            className="battle-timer-fill"
+            style={{ width: `${timerPct}%`, background: timerColor, transition: 'width 1s linear, background 0.5s ease' }}
+          />
+        </div>
+
+        {/* ── Question card ── */}
+        <div className="battle-question-card">
+          <p className="battle-question-category">{q.category}</p>
+          <h2 className="battle-question-text">{q.question}</h2>
+
+          <div className="battle-options-grid">
+            {q.options.map((opt, idx) => {
+              let cls = 'battle-option-btn';
+              if (answered) {
+                if (idx === q.correctAnswer) cls += ' correct';
+                else if (idx === userAnswers[currentIdx] && idx !== q.correctAnswer) cls += ' wrong';
+              }
+              return (
+                <button key={idx} className={cls} onClick={() => handleAnswer(idx)} disabled={answered}>
+                  <span className="option-label">{String.fromCharCode(65 + idx)}</span>
+                  <span className="option-text">{opt}</span>
+                  {answered && idx === q.correctAnswer && <CheckCircle2 size={16} className="option-check" />}
+                  {answered && idx === userAnswers[currentIdx] && idx !== q.correctAnswer && <XCircle size={16} className="option-x" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {answered && q.explanation && (
+            <div className="battle-explanation-box">
+              <span className="battle-exp-label">Explanation:</span> {q.explanation}
+            </div>
+          )}
+        </div>
+
+        {/* ── Bottom bar ── */}
+        <div className="battle-bottom-bar">
+          <div className="battle-score-live">
+            <CheckCircle2 size={15} className="live-correct-icon" />
+            <span>{questions.slice(0, currentIdx).filter((q2, i) => userAnswers[i] === q2.correctAnswer).length} Correct</span>
+          </div>
+          {!answered && (
+            <button className="battle-skip-btn" onClick={() => { clearTimer(); handleAutoSkip(); }}>
+              <SkipForward size={15} /> Skip
+            </button>
+          )}
+          {answered && currentIdx + 1 < questions.length && (
+            <button className="battle-next-btn" onClick={moveToNext}
+              style={{ background: color.primary }}>
+              Next <ChevronRight size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER: RESULT SCREEN
+  // ═══════════════════════════════════════════════════════════════════
+  if (screen === 'result' && resultData) {
+    const { correct, wrong, skipped, accuracy, score, timeTaken, rank } = resultData;
+    const isPerfect = correct === QUESTION_LIMIT;
+    const mins = Math.floor(timeTaken / 60);
+    const secs = timeTaken % 60;
+
+    return (
+      <div className="competition-result-screen">
+        {/* ── Score card ── */}
+        <div className="battle-result-card" style={{ borderTop: `4px solid ${color.primary}` }}>
+          <div className="result-trophy-icon" style={{ color: color.primary }}>
+            {isPerfect ? <Crown size={40} /> : <Trophy size={40} />}
+          </div>
+          <h2 className="result-title">{isPerfect ? '🎯 Perfect Score!' : 'Battle Complete!'}</h2>
+          <div className="result-score-display" style={{ color: color.primary }}>
+            {score} <span className="result-score-total">/ {QUESTION_LIMIT}</span>
+          </div>
+
+          <div className="result-stats-grid">
+            <div className="result-stat correct-stat">
+              <CheckCircle2 size={18} />
+              <span className="rs-val">{correct}</span>
+              <span className="rs-label">Correct</span>
+            </div>
+            <div className="result-stat wrong-stat">
+              <XCircle size={18} />
+              <span className="rs-val">{wrong}</span>
+              <span className="rs-label">Wrong</span>
+            </div>
+            <div className="result-stat skip-stat">
+              <SkipForward size={18} />
+              <span className="rs-val">{skipped}</span>
+              <span className="rs-label">Skipped</span>
+            </div>
+            <div className="result-stat time-stat">
+              <Clock size={18} />
+              <span className="rs-val">{mins > 0 ? `${mins}m ${secs}s` : `${secs}s`}</span>
+              <span className="rs-label">Time</span>
+            </div>
+            <div className="result-stat acc-stat">
+              <Target size={18} />
+              <span className="rs-val">{accuracy}%</span>
+              <span className="rs-label">Accuracy</span>
+            </div>
+            {rank && (
+              <div className="result-stat rank-stat" style={{ color: color.primary }}>
+                <Medal size={18} />
+                <span className="rs-val">#{rank}</span>
+                <span className="rs-label">Your Rank</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Leaderboard ── */}
+        <div className="leaderboard-section">
+          <h3 className="leaderboard-title"><Trophy size={18} /> {selectedSubject} Leaderboard — Top 10</h3>
+          {loadingLeader ? (
+            <div className="competition-loading-screen" style={{ padding: '20px' }}>
+              <RefreshCw className="spin-icon" size={20} />
+            </div>
+          ) : leaderboard.length === 0 ? (
+            <p className="leaderboard-empty">Abhi koi score nahi hai. Tum pehle ho!</p>
+          ) : (
+            <div className="leaderboard-table-wrapper">
+              <table className="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Username</th>
+                    <th>Score</th>
+                    <th>Accuracy</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((entry, i) => {
+                    const isMe = entry.username === user.username;
+                    const t = entry.bestTimeTaken || 0;
+                    const tm = Math.floor(t / 60);
+                    const ts = t % 60;
+                    return (
+                      <tr key={entry.username} className={`leaderboard-row ${isMe ? 'my-row' : ''}`}>
+                        <td className="rank-cell">
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                        </td>
+                        <td className="username-cell">{entry.username}{isMe ? ' (You)' : ''}</td>
+                        <td className="score-cell">{entry.bestScore}/{QUESTION_LIMIT}</td>
+                        <td>{entry.bestAccuracy}%</td>
+                        <td>{tm > 0 ? `${tm}m ${ts}s` : `${ts}s`}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ── Action buttons ── */}
+        <div className="result-actions">
+          <button className="battle-again-btn" onClick={startBattle}
+            style={{ background: `linear-gradient(135deg, ${color.primary}, #6366f1)` }}>
+            <Swords size={18} /> Battle Again
+          </button>
+          <button className="battle-home-btn" onClick={resetToStart}>
+            Change Subject
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}

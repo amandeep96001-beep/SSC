@@ -5,6 +5,7 @@ import studyRoutes from './studyRoutes.js';
 import authRoutes from './authRoutes.js';
 import mockTestRoutes from './mockTestRoutes.js';
 import aiRoutes from './aiRoutes.js';
+import competitionRoutes from './competitionRoutes.js';
 
 const router = express.Router();
 
@@ -15,5 +16,6 @@ router.use('/study', studyRoutes);
 router.use('/auth', authRoutes);
 router.use('/mock', mockTestRoutes);
 router.use('/ai', aiRoutes);
+router.use('/competition', competitionRoutes);
 
 export default router;

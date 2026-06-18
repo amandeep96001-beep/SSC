@@ -21,6 +21,7 @@ import { AnalyticsWorkspace } from '../components/dashboard/workspaces/Analytics
 import { MockWorkspace } from '../components/dashboard/workspaces/MockWorkspace';
 import { FullMockPortal } from '../components/exam/FullMockPortal';
 import { useMockTests } from '../hooks/useMockTests';
+import { CompetitionWorkspace } from '../components/dashboard/workspaces/CompetitionWorkspace';
 
 export function Dashboard() {
   const {
@@ -568,6 +569,10 @@ export function Dashboard() {
               vocabTotalPages={vocabTotalPages}
               handleVocabPageChange={handleVocabPageChange}
             />
+          )}
+
+          {activeView === 'competition' && (
+            <CompetitionWorkspace user={user} />
           )}
         </div>
       </main>
