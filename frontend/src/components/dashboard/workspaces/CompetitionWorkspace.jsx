@@ -259,8 +259,20 @@ export function CompetitionWorkspace({ user }) {
   // ═══════════════════════════════════════════════════════════════════
   if (screen === 'quiz' && questions.length > 0) {
     const q = questions[currentIdx];
+
+    // Safety guard: async state transition ke waqt currentIdx temporarily out-of-bounds ho sakta hai
+    if (!q) {
+      return (
+        <div className="competition-loading-screen">
+          <RefreshCw className="spin-icon" size={36} />
+          <p>Loading next question...</p>
+        </div>
+      );
+    }
+
     const timerPct = (timeLeft / TIME_PER_QUESTION) * 100;
     const timerColor = timeLeft > 15 ? '#10b981' : timeLeft > 7 ? '#f59e0b' : '#ef4444';
+
 
     return (
       <div className="competition-quiz-screen">
