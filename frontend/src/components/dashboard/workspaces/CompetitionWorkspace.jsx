@@ -6,7 +6,7 @@ import {
 import { apiService } from '../../../services/apiService';
 
 const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'];
-const QUESTION_LIMIT = 10;
+const QUESTION_LIMIT = 20;
 const TIME_PER_QUESTION = 45; // seconds
 
 const SUBJECT_COLORS = {
@@ -36,10 +36,152 @@ export function CompetitionWorkspace({ user }) {
 
   const timerRef   = useRef(null);
   const startTimeRef = useRef(null);
+  const nextTimeoutRef = useRef(null);
+  const userAnswersRef = useRef([]);
+
+  const clearNextTimeout = () => {
+    if (nextTimeoutRef.current) {
+      clearTimeout(nextTimeoutRef.current);
+      nextTimeoutRef.current = null;
+    }
+  };
 
   // ── Timer Logic ───────────────────────────────────────────────────
   const clearTimer = () => { if (timerRef.current) clearInterval(timerRef.current); };
 
+  // ── Fetch Leaderboard ─────────────────────────────────────────────
+  const fetchLeaderboard = useCallback(async () => {
+    setLoadingLeader(true);
+    try {
+      const res = await apiService.get(`/competition/leaderboard?subject=${selectedSubject}`);
+      if (res.status === 'success') setLeaderboard(res.data);
+    } catch { /* silent fail */ }
+    finally { setLoadingLeader(false); }
+  }, [selectedSubject]);
+
+  // ── POST score to backend ─────────────────────────────────────────
+  const submitScore = useCallback(async ({ correct, wrong, skipped, accuracy, score, timeTaken, answers }) => {
+    try {
+      const res = await apiService.post('/competition/submit', {
+        username: user?.username || 'Guest',
+        subject: selectedSubject,
+        score, correct, wrong, skipped, accuracy, timeTaken
+      });
+
+      if (res.status === 'success') {
+        setResultData({ ...res.data, correct, wrong, skipped, accuracy, score, timeTaken, answers });
+        fetchLeaderboard();
+        setScreen('result');
+      } else {
+        throw new Error(res.message || 'Score submission failed on the server.');
+      }
+    } catch (err) {
+      setError(err.message || 'Could not save score to leaderboard. Displaying results offline.');
+      // Even if submission fails, show result locally
+      setResultData({ correct, wrong, skipped, accuracy, score, timeTaken, answers, rank: null });
+      setScreen('result');
+    }
+  }, [user, selectedSubject, fetchLeaderboard]);
+
+  // ── Compute results & submit ──────────────────────────────────────
+  const finishBattle = useCallback(() => {
+    clearTimer();
+    clearNextTimeout();
+    const taken = Math.round((Date.now() - startTimeRef.current) / 1000);
+    setTotalTimeTaken(taken);
+
+    const finalAnswers = [...userAnswersRef.current];
+    // fill any remaining unanswered as null
+    for (let i = 0; i < questions.length; i++) {
+      if (finalAnswers[i] === undefined) finalAnswers[i] = null;
+    }
+
+    const correct = questions.filter((q, i) => finalAnswers[i] === q.correctAnswer).length;
+    const wrong   = questions.filter((q, i) => finalAnswers[i] !== null && finalAnswers[i] !== q.correctAnswer).length;
+    const skipped = questions.filter((q, i) => finalAnswers[i] === null).length;
+    
+    let accuracy = 0;
+    if (questions.length > 0) {
+      accuracy = Math.round((correct / questions.length) * 100);
+    }
+    if (isNaN(accuracy)) accuracy = 0;
+
+    const score = correct;
+
+    setUserAnswers(finalAnswers);
+    setScreen('submitting');
+    submitScore({ correct, wrong, skipped, accuracy, score, timeTaken: taken, answers: finalAnswers });
+  }, [questions, submitScore]);
+
+  // ── Move to next question or finish ──────────────────────────────
+  const moveToNext = useCallback(() => {
+    clearNextTimeout();
+    setAnswered(false);
+
+    setCurrentIdx(prev => {
+      if (prev + 1 >= questions.length) {
+        setTimeout(() => finishBattle(), 0);
+        return prev;
+      }
+      return prev + 1;
+    });
+  }, [questions.length, finishBattle]);
+
+  // ── Auto-skip when timer hits 0 ───────────────────────────────────
+  const handleAutoSkip = useCallback(() => {
+    setUserAnswers(prev => {
+      const updated = [...prev];
+      if (updated[currentIdx] === undefined) updated[updated.length - 1 < currentIdx ? updated.length : currentIdx] = null; // null = skipped/timed-out
+      userAnswersRef.current = updated;
+      return updated;
+    });
+    setAnswered(true);
+    clearNextTimeout();
+    nextTimeoutRef.current = setTimeout(() => moveToNext(), 1000);
+  }, [currentIdx, moveToNext]);
+
+  // ── Start Competition ─────────────────────────────────────────────
+  const startBattle = async () => {
+    setError('');
+    clearNextTimeout();
+    setScreen('loading');
+    try {
+      const res = await apiService.get(`/competition/questions?subject=${selectedSubject}&limit=${QUESTION_LIMIT}`);
+      if (res.status === 'success' && res.data.length > 0) {
+        const initialAnswers = new Array(res.data.length).fill(undefined);
+        setQuestions(res.data);
+        setUserAnswers(initialAnswers);
+        userAnswersRef.current = initialAnswers;
+        setCurrentIdx(0);
+        setAnswered(false);
+        setTotalTimeTaken(0);
+        startTimeRef.current = Date.now();
+        setScreen('quiz');
+      } else {
+        throw new Error('Unable to load questions. Please ensure the database has been seeded with TCS PYQ questions.');
+      }
+    } catch (err) {
+      setError(err.message || 'Could not connect to the server. Please verify if the backend is running.');
+      setScreen('start');
+    }
+  };
+
+  // ── Answer Selection ──────────────────────────────────────────────
+  const handleAnswer = (optionIdx) => {
+    if (answered) return;
+    clearTimer();
+    setUserAnswers(prev => {
+      const updated = [...prev];
+      updated[currentIdx] = optionIdx;
+      userAnswersRef.current = updated;
+      return updated;
+    });
+    setAnswered(true);
+    clearNextTimeout();
+    nextTimeoutRef.current = setTimeout(() => moveToNext(), 1200);
+  };
+
+  // ── Timer Logic ───────────────────────────────────────────────────
   const startTimer = useCallback(() => {
     clearTimer();
     setTimeLeft(TIME_PER_QUESTION);
@@ -53,137 +195,24 @@ export function CompetitionWorkspace({ user }) {
         return prev - 1;
       });
     }, 1000);
-  }, [currentIdx]); // eslint-disable-line
+  }, [handleAutoSkip]);
 
   useEffect(() => {
     if (screen === 'quiz') startTimer();
     return clearTimer;
-  }, [screen, currentIdx]); // eslint-disable-line
+  }, [screen, currentIdx, startTimer]);
 
-  useEffect(() => { return clearTimer; }, []);
-
-  // ── Auto-skip when timer hits 0 ───────────────────────────────────
-  const handleAutoSkip = useCallback(() => {
-    setUserAnswers(prev => {
-      const updated = [...prev];
-      if (updated[currentIdx] === undefined) updated[currentIdx] = null; // null = skipped/timed-out
-      return updated;
-    });
-    setAnswered(true);
-    setTimeout(() => moveToNext(), 1000);
-  }, [currentIdx]); // eslint-disable-line
-
-  // ── Start Competition ─────────────────────────────────────────────
-  const startBattle = async () => {
-    setError('');
-    setScreen('loading');
-    try {
-      const res = await apiService.get(`/competition/questions?subject=${selectedSubject}&limit=${QUESTION_LIMIT}`);
-      if (res.status === 'success' && res.data.length > 0) {
-        setQuestions(res.data);
-        setUserAnswers(new Array(res.data.length).fill(undefined));
-        setCurrentIdx(0);
-        setAnswered(false);
-        setTotalTimeTaken(0);
-        startTimeRef.current = Date.now();
-        setScreen('quiz');
-      } else {
-        throw new Error('Questions load nahi hue. Database me TCS PYQs seed karo pehle.');
-      }
-    } catch (err) {
-      setError(err.message || 'Server se connect nahi ho paya.');
-      setScreen('start');
-    }
-  };
-
-  // ── Answer Selection ──────────────────────────────────────────────
-  const handleAnswer = (optionIdx) => {
-    if (answered) return;
-    clearTimer();
-    setUserAnswers(prev => {
-      const updated = [...prev];
-      updated[currentIdx] = optionIdx;
-      return updated;
-    });
-    setAnswered(true);
-    // Auto-advance after 1.2s so user sees correct answer highlight
-    setTimeout(() => moveToNext(), 1200);
-  };
-
-  // ── Move to next question or finish ──────────────────────────────
-  const moveToNext = useCallback(() => {
-    setAnswered(false);
-    if (currentIdx + 1 >= questions.length) {
-      finishBattle();
-    } else {
-      setCurrentIdx(prev => prev + 1);
-    }
-  }, [currentIdx, questions.length]); // eslint-disable-line
-
-  // ── Compute results & submit ──────────────────────────────────────
-  const finishBattle = useCallback(() => {
-    clearTimer();
-    const taken = Math.round((Date.now() - startTimeRef.current) / 1000);
-    setTotalTimeTaken(taken);
-
-    setUserAnswers(prev => {
-      const finalAnswers = [...prev];
-      // fill any remaining unanswered as null
-      for (let i = 0; i < questions.length; i++) {
-        if (finalAnswers[i] === undefined) finalAnswers[i] = null;
-      }
-
-      const correct = questions.filter((q, i) => finalAnswers[i] === q.correctAnswer).length;
-      const wrong   = questions.filter((q, i) => finalAnswers[i] !== null && finalAnswers[i] !== q.correctAnswer).length;
-      const skipped = questions.filter((q, i) => finalAnswers[i] === null).length;
-      const accuracy = Math.round((correct / questions.length) * 100);
-      const score = correct;
-
-      submitScore({ correct, wrong, skipped, accuracy, score, timeTaken: taken, answers: finalAnswers });
-      return finalAnswers;
-    });
-
-    setScreen('submitting');
-  }, [questions]); // eslint-disable-line
-
-  // ── POST score to backend ─────────────────────────────────────────
-  const submitScore = async ({ correct, wrong, skipped, accuracy, score, timeTaken, answers }) => {
-    try {
-      const res = await apiService.post('/competition/submit', {
-        username: user.username,
-        subject: selectedSubject,
-        score, correct, wrong, skipped, accuracy, timeTaken
-      });
-
-      if (res.status === 'success') {
-        setResultData({ ...res.data, correct, wrong, skipped, accuracy, score, timeTaken, answers });
-        fetchLeaderboard();
-        setScreen('result');
-      }
-    } catch (err) {
-      // Even if submission fails, show result locally
-      setResultData({ correct, wrong, skipped, accuracy, score, timeTaken, answers, rank: null });
-      setScreen('result');
-    }
-  };
-
-  // ── Fetch Leaderboard ─────────────────────────────────────────────
-  const fetchLeaderboard = useCallback(async () => {
-    setLoadingLeader(true);
-    try {
-      const res = await apiService.get(`/competition/leaderboard?subject=${selectedSubject}`);
-      if (res.status === 'success') setLeaderboard(res.data);
-    } catch { /* silent fail */ }
-    finally { setLoadingLeader(false); }
-  }, [selectedSubject]);
+  useEffect(() => { return () => { clearTimer(); clearNextTimeout(); }; }, []);
 
   // ── Reset to start ────────────────────────────────────────────────
   const resetToStart = () => {
     clearTimer();
+    clearNextTimeout();
     setScreen('start');
     setQuestions([]);
     setCurrentIdx(0);
     setUserAnswers([]);
+    userAnswersRef.current = [];
     setAnswered(false);
     setResultData(null);
     setLeaderboard([]);
@@ -213,7 +242,7 @@ export function CompetitionWorkspace({ user }) {
         )}
 
         <div className="competition-subject-selector">
-          <p className="competition-label">Subject choose karo:</p>
+          <p className="competition-label">Choose your subject:</p>
           <div className="competition-subject-grid">
             {SUBJECTS.map(sub => (
               <button
@@ -243,13 +272,22 @@ export function CompetitionWorkspace({ user }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // RENDER: LOADING
+  // RENDER: LOADING / SUBMITTING
   // ═══════════════════════════════════════════════════════════════════
   if (screen === 'loading' || screen === 'submitting') {
     return (
       <div className="competition-loading-screen">
-        <RefreshCw className="spin-icon" size={36} />
-        <p>{screen === 'loading' ? 'Questions load ho rahe hain...' : 'Score save ho raha hai...'}</p>
+        <div className="loader-glowing-ring">
+          <Swords className="loader-center-icon" size={28} />
+        </div>
+        <h3 className="loading-text">
+          {screen === 'loading' ? 'Preparing Battle Arena...' : 'Analyzing Battle Performance...'}
+        </h3>
+        <p className="loading-subtext">
+          {screen === 'loading' 
+            ? 'Fetching matching TCS PYQs from database...' 
+            : 'Submitting your score to the global leaderboard...'}
+        </p>
       </div>
     );
   }
@@ -264,8 +302,10 @@ export function CompetitionWorkspace({ user }) {
     if (!q) {
       return (
         <div className="competition-loading-screen">
-          <RefreshCw className="spin-icon" size={36} />
-          <p>Loading next question...</p>
+          <div className="loader-glowing-ring">
+            <Swords className="loader-center-icon" size={28} />
+          </div>
+          <h3 className="loading-text">Preparing next question...</h3>
         </div>
       );
     }
@@ -415,7 +455,7 @@ export function CompetitionWorkspace({ user }) {
               <RefreshCw className="spin-icon" size={20} />
             </div>
           ) : leaderboard.length === 0 ? (
-            <p className="leaderboard-empty">Abhi koi score nahi hai. Tum pehle ho!</p>
+            <p className="leaderboard-empty">No scores recorded yet. Be the first to claim the top spot!</p>
           ) : (
             <div className="leaderboard-table-wrapper">
               <table className="leaderboard-table">

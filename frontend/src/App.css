@@ -2662,11 +2662,75 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 60px 0;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
+  gap: 24px;
+  padding: 80px 24px;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  text-align: center;
+  max-width: 500px;
+  margin: 40px auto;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  animation: fadeIn 0.4s ease-out;
 }
+
+.loader-glowing-ring {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-glowing-ring::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: #8b5cf6;
+  border-bottom-color: #ec4899;
+  animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loader-glowing-ring .loader-center-icon {
+  color: #8b5cf6;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loading-text {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f1f5f9, #cbd5e1);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.loading-subtext {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: -12px 0 0 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
 
 /* ── Quiz Screen ── */
 .competition-quiz-screen {

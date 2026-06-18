@@ -13,9 +13,16 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
+  // Default timeout of 10 seconds (10000ms)
+  const { timeout = 10000, ...restOptions } = options;
+
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
   const config = {
-    ...options,
+    ...restOptions,
     headers,
+    signal: controller.signal,
   };
 
   if (config.body && typeof config.body === 'object') {
@@ -24,7 +31,17 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
-    const result = await response.json();
+    clearTimeout(id);
+
+    // Safeguard response parsing (avoid crashing on HTML/non-JSON pages)
+    const contentType = response.headers.get('content-type');
+    let result;
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json();
+    } else {
+      const text = await response.text();
+      result = { message: text || `Request failed with status ${response.status}` };
+    }
 
     if (!response.ok) {
       throw new Error(result.message || `Request failed with status ${response.status}`);
@@ -32,6 +49,10 @@ async function request(endpoint, options = {}) {
 
     return result;
   } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timed out. Please check if the backend server is running.');
+    }
     console.error(`[API Service Error] ${endpoint}:`, error.message);
     throw error;
   }
