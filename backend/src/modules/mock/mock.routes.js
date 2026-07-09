@@ -1,5 +1,5 @@
 import express from 'express';
-import { createMockTest, getMockTests, getMockTestById, deleteMockTest } from '../controllers/mockTestController.js';
+import { createMockTest, getMockTests, getMockTestById, deleteMockTest } from './mock.controller.js';
 
 const router = express.Router();
 

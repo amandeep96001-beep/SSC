@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
-import { apiService } from '../../../services/apiService';
+import { apiService } from '@/shared/services/apiService';
 import {
   Flame, Zap, Percent, TrendingUp, BookOpen,
   CheckCircle, XCircle, RefreshCw, Brain, FileText,
   Calculator, Cpu, AlertTriangle, Trash2, Sparkles,
   ChevronDown, ChevronUp, Loader2, RotateCcw, Send
 } from 'lucide-react';
-import '../../../pages/Dashboard.css';
+import '@/features/dashboard/Dashboard.css';
 
 // ── Markdown Formatter ────────────────────────────────────────────────────────
 const formatAIText = (text) => {

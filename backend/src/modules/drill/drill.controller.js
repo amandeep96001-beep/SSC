@@ -1,16 +1,8 @@
-import vocabRepository from '../repositories/vocabRepository.js';
-import TCSQuestionRepository from '../repositories/tcsQuestionRepository.js';
-import { Vocab } from '../models/vocabModel.js';
+import vocabRepository from '../study/vocab.repository.js';
+import TCSQuestionRepository from '../questions/tcs-question.repository.js';
+import { Vocab } from '../study/vocab.model.js';
+import { shuffle as shuffleArray } from '../../shared/utils/shuffle.js';
 import mongoose from 'mongoose';
-
-function shuffleArray(arr) {
-  const newArr = [...arr];
-  for (let i = newArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-  }
-  return newArr;
-}
 
 export const getNextDrill = async (req, res, next) => {
   try {

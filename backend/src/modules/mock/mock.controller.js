@@ -1,4 +1,4 @@
-import MockTest from '../models/mockTestModel.js';
+import MockTest from './mock-test.model.js';
 
 // @desc    Add a new full mock test
 // @route   POST /api/mock

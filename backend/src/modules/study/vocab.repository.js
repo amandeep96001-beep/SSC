@@ -1,4 +1,4 @@
-import VocabModel, { Vocab } from '../models/vocabModel.js';
+import VocabModel, { Vocab } from './vocab.model.js';
 
 class VocabRepository {
   async findAll(query = {}, skip = 0, limit = 30) {

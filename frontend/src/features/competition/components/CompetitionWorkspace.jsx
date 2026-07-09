@@ -3,7 +3,7 @@ import {
   Swords, Trophy, Target, Zap, Clock, CheckCircle2, XCircle, 
   SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer
 } from 'lucide-react';
-import { apiService } from '../../../services/apiService';
+import { apiService } from '@/shared/services/apiService';
 
 const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'];
 const QUESTION_LIMIT = 20;

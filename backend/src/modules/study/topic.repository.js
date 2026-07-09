@@ -1,4 +1,4 @@
-import Topic from '../models/topicModel.js';
+import Topic from './topic.model.js';
 
 class TopicRepository {
   async findBySubjectName(subjectName) {

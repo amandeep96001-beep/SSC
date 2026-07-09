@@ -11,7 +11,7 @@ import {
   addVocab,
   updateVocab,
   addVocabBulk
-} from '../controllers/studyController.js';
+} from './study.controller.js';
 
 const router = express.Router();
 

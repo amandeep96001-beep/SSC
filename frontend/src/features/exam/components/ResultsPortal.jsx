@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-import '../../pages/Dashboard.css';
+import '@/features/dashboard/Dashboard.css';
 
 export function ResultsPortal({
   testSummary,

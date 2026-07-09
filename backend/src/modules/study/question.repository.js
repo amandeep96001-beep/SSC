@@ -1,4 +1,4 @@
-import Question from '../models/questionModel.js';
+import Question from './question.model.js';
 
 class QuestionRepository {
   async findByTopicId(topicId) {

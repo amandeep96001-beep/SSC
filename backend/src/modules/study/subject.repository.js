@@ -1,4 +1,4 @@
-import Subject from '../models/subjectModel.js';
+import Subject from './subject.model.js';
 
 class SubjectRepository {
   async findAll(fields = null) {

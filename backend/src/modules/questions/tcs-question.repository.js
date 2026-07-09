@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import TCSQuestion from '../models/tcsQuestionModel.js';
+import TCSQuestion from './tcs-question.model.js';
 
 class TCSQuestionRepository {
   static async getRandomBySubject(subject) {

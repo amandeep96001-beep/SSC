@@ -1,22 +1,11 @@
-import subjectRepository from '../repositories/subjectRepository.js';
-import topicRepository from '../repositories/topicRepository.js';
-import questionRepository from '../repositories/questionRepository.js';
-import vocabRepository from '../repositories/vocabRepository.js';
-import { Vocab } from '../models/vocabModel.js';
-import TopicDto from '../dtos/topicDto.js';
-import VocabDto from '../dtos/vocabDto.js';
-
-/**
- * Helper to shuffle an array
- */
-function shuffle(arr) {
-  const newArr = [...arr];
-  for (let i = newArr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
-  }
-  return newArr;
-}
+import subjectRepository from './subject.repository.js';
+import topicRepository from './topic.repository.js';
+import questionRepository from './question.repository.js';
+import vocabRepository from './vocab.repository.js';
+import { Vocab } from './vocab.model.js';
+import TopicDto from './topic.dto.js';
+import VocabDto from './vocab.dto.js';
+import { shuffle } from '../../shared/utils/shuffle.js';
 
 export const getSubjects = async (req, res, next) => {
   try {

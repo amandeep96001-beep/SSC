@@ -1,5 +1,5 @@
 import express from 'express';
-import { getNextDrill, verifyDrill, getRelatedQuestions } from '../controllers/drillController.js';
+import { getNextDrill, verifyDrill, getRelatedQuestions } from './drill.controller.js';
 
 const router = express.Router();
 

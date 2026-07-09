@@ -1,4 +1,4 @@
-import PrepModel from '../models/prepModel.js';
+import PrepModel from './prep.model.js';
 
 class PrepRepository {
   async getAllNotes() {

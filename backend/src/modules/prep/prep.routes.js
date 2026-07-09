@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStatus, getNotes, createNote, deleteNote } from '../controllers/prepController.js';
+import { getStatus, getNotes, createNote, deleteNote } from './prep.controller.js';
 
 const router = express.Router();
 

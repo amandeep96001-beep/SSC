@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Vocab } from '../models/vocabModel.js';
+import { Vocab } from '../modules/study/vocab.model.js';
 
 let isDbConnected = false;
 

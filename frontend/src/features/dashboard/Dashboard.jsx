@@ -2,26 +2,25 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { useDrills } from '../hooks/useDrills';
-import { useStudy } from '../hooks/useStudy';
+import { useDrills } from '@/features/drills/hooks/useDrills';
+import { useStudy } from '@/features/study/hooks/useStudy';
 import { RefreshCw, XCircle, X, Menu } from 'lucide-react';
-import { apiService } from '../services/apiService';
+import { apiService } from '@/shared/services/apiService';
 import './Dashboard.css';
 
-// Import newly modularized components
-import { AuthPanel } from '../components/auth/AuthPanel';
-import { ExamPortal } from '../components/exam/ExamPortal';
-import { ResultsPortal } from '../components/exam/ResultsPortal';
-import { Sidebar } from '../components/dashboard/Sidebar';
-import { DrillWorkspace } from '../components/dashboard/workspaces/DrillWorkspace';
-import { SyllabusWorkspace } from '../components/dashboard/workspaces/SyllabusWorkspace';
-import { RevisionWorkspace } from '../components/dashboard/workspaces/RevisionWorkspace';
-import { PerformanceWorkspace } from '../components/dashboard/workspaces/PerformanceWorkspace';
-import { AnalyticsWorkspace } from '../components/dashboard/workspaces/AnalyticsWorkspace';
-import { MockWorkspace } from '../components/dashboard/workspaces/MockWorkspace';
-import { FullMockPortal } from '../components/exam/FullMockPortal';
-import { useMockTests } from '../hooks/useMockTests';
-import { CompetitionWorkspace } from '../components/dashboard/workspaces/CompetitionWorkspace';
+import { AuthPanel } from '@/features/auth/components/AuthPanel';
+import { ExamPortal } from '@/features/exam/components/ExamPortal';
+import { ResultsPortal } from '@/features/exam/components/ResultsPortal';
+import { Sidebar } from './Sidebar';
+import { DrillWorkspace } from '@/features/drills/components/DrillWorkspace';
+import { SyllabusWorkspace } from '@/features/study/components/SyllabusWorkspace';
+import { RevisionWorkspace } from '@/features/study/components/RevisionWorkspace';
+import { PerformanceWorkspace } from '@/features/analytics/components/PerformanceWorkspace';
+import { AnalyticsWorkspace } from '@/features/analytics/components/AnalyticsWorkspace';
+import { MockWorkspace } from '@/features/mock-tests/components/MockWorkspace';
+import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal';
+import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
+import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
 
 export function Dashboard() {
   const {

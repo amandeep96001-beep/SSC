@@ -1,0 +1,20 @@
+import express from 'express';
+import authRoutes from '../modules/auth/auth.routes.js';
+import prepRoutes from '../modules/prep/prep.routes.js';
+import studyRoutes from '../modules/study/study.routes.js';
+import drillRoutes from '../modules/drill/drill.routes.js';
+import mockRoutes from '../modules/mock/mock.routes.js';
+import aiRoutes from '../modules/ai/ai.routes.js';
+import competitionRoutes from '../modules/competition/competition.routes.js';
+
+const router = express.Router();
+
+router.use('/auth', authRoutes);
+router.use('/prep', prepRoutes);
+router.use('/study', studyRoutes);
+router.use('/drill', drillRoutes);
+router.use('/mock', mockRoutes);
+router.use('/ai', aiRoutes);
+router.use('/competition', competitionRoutes);
+
+export default router;

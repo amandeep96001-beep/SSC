@@ -1,6 +1,6 @@
-import prepRepository from '../repositories/prepRepository.js';
-import NoteDto from '../dtos/noteDto.js';
-import { getDBStatus } from '../config/db.config.js';
+import prepRepository from './prep.repository.js';
+import NoteDto from './note.dto.js';
+import { getDBStatus } from '../../config/db.config.js';
 
 export const getStatus = async (req, res, next) => {
   try {

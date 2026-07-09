@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiService } from '../services/apiService';
-import { useApi } from './useApi';
+import { apiService } from '@/shared/services/apiService';
+import { useApi } from '@/shared/hooks/useApi';
 
 export function useStudy() {
   const [activeView, setActiveView] = useState('drill'); // drill, subjects, topics, notes, test, results, revision

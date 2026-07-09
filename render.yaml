@@ -1,5 +1,5 @@
 services:
-  # Backend API Web Service
+  # Backend API — deployed on Render
   - type: web
     name: ssc-backend
     runtime: node
@@ -11,19 +11,7 @@ services:
       - key: PORT
         value: 5000
       - key: MONGODB_URI
-        sync: false # Set manually on Render dashboard to connect to your MongoDB database
-
-  # Frontend React/Vite Static Site
-  - type: web
-    name: ssc-frontend
-    runtime: static
-    plan: free
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: ssc-backend
-          envVarKey: RENDER_EXTERNAL_URL
+        sync: false
+      # Optional: your Vercel frontend URL for tighter CORS (e.g. https://your-app.vercel.app)
+      - key: FRONTEND_URL
+        sync: false

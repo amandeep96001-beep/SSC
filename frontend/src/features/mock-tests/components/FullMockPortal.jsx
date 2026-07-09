@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
-import '../../pages/Dashboard.css';
-import { apiService } from '../../services/apiService';
+import '@/features/dashboard/Dashboard.css';
+import { apiService } from '@/shared/services/apiService';
 
 const SECTIONS = ['English', 'GK', 'Quant', 'Reasoning'];
 

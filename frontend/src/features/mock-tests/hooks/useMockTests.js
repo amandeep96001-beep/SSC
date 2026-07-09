@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { apiService } from '../services/apiService';
-import { useApi } from './useApi';
+import { apiService } from '@/shared/services/apiService';
+import { useApi } from '@/shared/hooks/useApi';
 
 export function useMockTests() {
   const [mockTests, setMockTests] = useState([]);

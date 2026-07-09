@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import Subject from '../models/subjectModel.js';
-import Question from '../models/questionModel.js';
+import Subject from '../src/modules/study/subject.model.js';
+import Question from '../src/modules/study/question.model.js';
 
 // Load config
 dotenv.config();
