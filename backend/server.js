@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import { connectDB, getDBStatus } from './src/config/db.config.js';
-import { validateEnv, getEnvHealth } from './src/config/env.config.js';
+import { validateEnv } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 
 dotenv.config();
@@ -19,15 +19,6 @@ async function start() {
   }
 
   const app = createApp();
-
-  app.get('/health', (req, res) => {
-    res.json({
-      status: getDBStatus() ? 'ok' : 'degraded',
-      uptime: process.uptime(),
-      db: getDBStatus() ? 'connected' : 'disconnected',
-      env: getEnvHealth(),
-    });
-  });
 
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);

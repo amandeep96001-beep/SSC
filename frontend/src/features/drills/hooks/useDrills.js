@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 
@@ -42,19 +42,23 @@ export function useDrills(isAuthenticated = false) {
     showAnswer: false
   });
 
-  const nextDrillApi = useApi(useCallback(({ type, maxBase }) => apiService.get(`/drill/next?type=${type}&maxBase=${maxBase}`), []));
-  const verifyApi = useApi(useCallback((body) => apiService.post('/drill/verify', body), []));
+  const { execute: fetchNextDrill, loading: nextDrillLoading, error: nextDrillError } = useApi(
+    useCallback(({ type, maxBase }) => apiService.get(`/drill/next?type=${type}&maxBase=${maxBase}`), [])
+  );
+  const { execute: verifyDrill, loading: verifyLoading, error: verifyError } = useApi(
+    useCallback((body) => apiService.post('/drill/verify', body), [])
+  );
 
   // Load next question
   const loadNextDrill = useCallback(async (typeToLoad = drillType, baseLimit = maxTableBase) => {
     setUserAnswer('');
     setFeedback({ isChecked: false, isCorrect: false, showAnswer: false });
     
-    const result = await nextDrillApi.execute({ type: typeToLoad, maxBase: baseLimit });
+    const result = await fetchNextDrill({ type: typeToLoad, maxBase: baseLimit });
     if (result.success && result.data.data) {
       setCurrentDrill(result.data.data);
     }
-  }, [nextDrillApi, drillType, maxTableBase]);
+  }, [fetchNextDrill, drillType, maxTableBase]);
 
   // Submit Answer
   const submitAnswer = useCallback(async (e, directAnswer = null) => {
@@ -70,7 +74,7 @@ export function useDrills(isAuthenticated = false) {
       correctAnswer: currentDrill.correctAnswer
     };
 
-    const result = await verifyApi.execute(payload);
+    const result = await verifyDrill(payload);
     if (result.success && result.data.data) {
       const isCorrect = result.data.data.isCorrect;
       
@@ -126,7 +130,7 @@ export function useDrills(isAuthenticated = false) {
         }, 1200);
       }
     }
-  }, [currentDrill, userAnswer, verifyApi, loadNextDrill, drillType]);
+  }, [currentDrill, userAnswer, verifyDrill, loadNextDrill, drillType]);
 
   // Skip Question
   const skipQuestion = useCallback(() => {
@@ -148,11 +152,18 @@ export function useDrills(isAuthenticated = false) {
     loadNextDrill(newType);
   }, [loadNextDrill]);
 
-  // Load first drill after sign-in
+  const initialDrillLoadedRef = useRef(false);
+
+  // Load first drill once after sign-in (changeDrillType handles type switches)
   useEffect(() => {
-    if (!isAuthenticated) return;
-    loadNextDrill(drillType);
-  }, [isAuthenticated, drillType, loadNextDrill]);
+    if (!isAuthenticated) {
+      initialDrillLoadedRef.current = false;
+      return;
+    }
+    if (initialDrillLoadedRef.current) return;
+    initialDrillLoadedRef.current = true;
+    loadNextDrill();
+  }, [isAuthenticated, loadNextDrill]);
 
   const clearWrongLog = () => setWrongQuestions([]);
 
@@ -167,8 +178,8 @@ export function useDrills(isAuthenticated = false) {
     feedback,
     wrongQuestions,
     clearWrongLog,
-    loading: nextDrillApi.loading || verifyApi.loading,
-    error: nextDrillApi.error || verifyApi.error,
+    loading: nextDrillLoading || verifyLoading,
+    error: nextDrillError || verifyError,
     changeDrillType,
     submitAnswer,
     skipQuestion,

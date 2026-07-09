@@ -36,7 +36,9 @@ export function useStudy() {
   const startTimeRef = useRef(null);
 
   // APIs
-  const getSubjectsApi = useApi(useCallback(() => apiService.get('/study/subjects'), []));
+  const { execute: fetchSubjectsApi, loading: subjectsLoading, error: subjectsError } = useApi(
+    useCallback(() => apiService.get('/study/subjects'), [])
+  );
   const getTopicsApi = useApi(useCallback((subName) => apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics`), []));
   const getNotesApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/notes`), []));
   const getTestApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/test`), []));
@@ -51,9 +53,9 @@ export function useStudy() {
 
   // Load all subjects on mount
   const fetchSubjects = useCallback(async () => {
-    const result = await getSubjectsApi.execute();
+    const result = await fetchSubjectsApi();
     setSubjects(getListFromResponse(result));
-  }, [getSubjectsApi]);
+  }, [fetchSubjectsApi]);
 
   // Auth helper methods
   const persistUser = (userData) => {
@@ -452,11 +454,19 @@ export function useStudy() {
     return { success: false, message: deleteTopicApi.error || 'Failed to delete topic.' };
   }, [selectedSubject, deleteTopicApi, getTopicsApi]);
 
-  // Fetch subjects only when signed in
+  const subjectsLoadedForRef = useRef(null);
+
+  // Fetch subjects once per login (stable id — not whole user object)
   useEffect(() => {
-    if (!user) return;
+    const userKey = user?.id ?? user?.username ?? null;
+    if (!userKey) {
+      subjectsLoadedForRef.current = null;
+      return;
+    }
+    if (subjectsLoadedForRef.current === userKey) return;
+    subjectsLoadedForRef.current = userKey;
     fetchSubjects();
-  }, [user, fetchSubjects]);
+  }, [user?.id, user?.username, fetchSubjects]);
 
   return {
     activeView,
@@ -473,8 +483,8 @@ export function useStudy() {
     timer,
     testSummary,
     user,
-    loading: getSubjectsApi.loading || getTopicsApi.loading || getNotesApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading,
-    error: getSubjectsApi.error || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error,
+    loading: subjectsLoading || getTopicsApi.loading || getNotesApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading,
+    error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error,
     skipToSubjects,
     selectSubject,
     selectTopic,

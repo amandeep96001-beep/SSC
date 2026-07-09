@@ -6,6 +6,8 @@ import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
 import morgan from 'morgan';
 import apiRouter from './routes/index.js';
+import { getDBStatus } from './config/db.config.js';
+import { getEnvHealth } from './config/env.config.js';
 import { notFound, errorHandler } from './shared/middleware/error.middleware.js';
 import { mongoSanitize } from './shared/middleware/sanitize.middleware.js';
 
@@ -58,6 +60,17 @@ export function createApp() {
       status: 'ok',
       message: 'SSC Exam Prep API',
       version: '1.0.0'
+    });
+  });
+
+  // Public health check (load balancers, frontend status dot)
+  app.get('/health', (req, res) => {
+    const dbOk = getDBStatus();
+    res.status(dbOk ? 200 : 503).json({
+      status: dbOk ? 'ok' : 'degraded',
+      uptime: process.uptime(),
+      db: dbOk ? 'connected' : 'disconnected',
+      env: getEnvHealth(),
     });
   });
 

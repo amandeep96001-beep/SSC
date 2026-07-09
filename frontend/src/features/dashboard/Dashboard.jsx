@@ -24,25 +24,6 @@ import { CompetitionWorkspace } from '@/features/competition/components/Competit
 
 export function Dashboard() {
   const {
-    drillType,
-    currentDrill,
-    userAnswer,
-    setUserAnswer,
-    maxTableBase,
-    setMaxTableBase,
-    stats: drillStats,
-    feedback: drillFeedback,
-    loading: drillLoading,
-    error: drillError,
-    wrongQuestions,
-    clearWrongLog,
-    changeDrillType,
-    submitAnswer: submitDrillAnswer,
-    skipQuestion: skipDrillQuestion,
-    loadNextDrill
-  } = useDrills(!!user);
-
-  const {
     activeView,
     setActiveView,
     subjects,
@@ -77,6 +58,25 @@ export function Dashboard() {
     deleteCustomTopic,
     cancelTest
   } = useStudy();
+
+  const {
+    drillType,
+    currentDrill,
+    userAnswer,
+    setUserAnswer,
+    maxTableBase,
+    setMaxTableBase,
+    stats: drillStats,
+    feedback: drillFeedback,
+    loading: drillLoading,
+    error: drillError,
+    wrongQuestions,
+    clearWrongLog,
+    changeDrillType,
+    submitAnswer: submitDrillAnswer,
+    skipQuestion: skipDrillQuestion,
+    loadNextDrill
+  } = useDrills(!!user);
 
   const mockTestsHooks = useMockTests();
   const [activeMockTestId, setActiveMockTestId] = useState(null);
@@ -138,8 +138,8 @@ export function Dashboard() {
 
   const checkApiHealth = useCallback(async () => {
     try {
-      const apiRoot = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
-      const res = await fetch(`${apiRoot}/health`, { signal: AbortSignal.timeout(5000) });
+      const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+      const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(5000) });
       const data = await res.json();
       setApiOnline(res.ok && data.db === 'connected');
     } catch {

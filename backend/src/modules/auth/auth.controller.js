@@ -17,7 +17,14 @@ function publicUserPayload(user, progress = [], mockProgress = [], token = null)
 export const register = async (req, res, next) => {
   try {
     const { username, password } = req.body;
-    const trimmedUsername = username.trim();
+    if (!username || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Username and password are required.'
+      });
+    }
+
+    const trimmedUsername = String(username).trim();
 
     const existingUser = await User.findOne({ username: trimmedUsername }).lean();
     if (existingUser) {
@@ -47,7 +54,15 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
-    const user = await User.findOne({ username: username.trim() });
+    if (!username || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Username and password are required.'
+      });
+    }
+
+    const trimmedUsername = String(username).trim();
+    const user = await User.findOne({ username: trimmedUsername });
 
     if (!user) {
       return res.status(401).json({
@@ -69,8 +84,17 @@ export const login = async (req, res, next) => {
       await user.save();
     }
 
-    const mockProgress = await MockProgress.find({ username: user.username }).lean();
-    const progress = await Progress.find({ username: user.username }).lean();
+    let progress = [];
+    let mockProgress = [];
+    try {
+      [mockProgress, progress] = await Promise.all([
+        MockProgress.find({ username: user.username }).lean(),
+        Progress.find({ username: user.username }).lean()
+      ]);
+    } catch (progressErr) {
+      console.error('[login] Progress load failed:', progressErr.message);
+    }
+
     const token = signToken(user);
 
     res.json({
