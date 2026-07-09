@@ -1,9 +1,9 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import Subject from '../src/modules/study/subject.model.js';
+import Topic from '../src/modules/study/topic.model.js';
 import Question from '../src/modules/study/question.model.js';
 
-// Load config
 dotenv.config();
 
 const studyData = [
@@ -648,34 +648,41 @@ const seedDB = async () => {
 
     // Delete existing
     await Subject.deleteMany({});
+    await Topic.deleteMany({});
     await Question.deleteMany({});
-    console.log('🗑️ Cleared existing Subjects and Questions collections.');
+    console.log('🗑️ Cleared subjects, topics, and questions.');
 
-    // Prepare separate data for subjects and questions
     const subjectsToInsert = [];
+    const topicsToInsert = [];
     const questionsToInsert = [];
 
     for (const subjectData of studyData) {
-      const topicsToInsert = [];
+      subjectsToInsert.push({ name: subjectData.name });
+
       for (const topicData of subjectData.topics) {
         const { questions, ...topicInfo } = topicData;
-        topicsToInsert.push(topicInfo);
-        
-        if (questions && questions.length > 0) {
-          questions.forEach(q => {
+        topicsToInsert.push({
+          id: topicInfo.id,
+          subjectName: subjectData.name,
+          name: topicInfo.name,
+          syllabus: topicInfo.syllabus || '',
+          notes: topicInfo.notes || ''
+        });
+
+        if (questions?.length) {
+          questions.forEach((q) => {
             questionsToInsert.push({ ...q, topicId: topicInfo.id });
           });
         }
       }
-      subjectsToInsert.push({ ...subjectData, topics: topicsToInsert });
     }
 
-    // Insert
     await Subject.insertMany(subjectsToInsert);
+    await Topic.insertMany(topicsToInsert);
     if (questionsToInsert.length > 0) {
       await Question.insertMany(questionsToInsert);
     }
-    console.log(`✅ Seeded subjects and ${questionsToInsert.length} questions successfully!`);
+    console.log(`✅ Seeded ${subjectsToInsert.length} subjects, ${topicsToInsert.length} topics, ${questionsToInsert.length} questions.`);
     
     mongoose.connection.close();
     console.log('🔌 Connection closed.');

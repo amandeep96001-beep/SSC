@@ -59,8 +59,8 @@ export function Sidebar({
       <div className="sidebar-brand">
         <GraduationCap className="brand-icon" size={28} />
         <div className="brand-text">
-          <h2>ExamPrep Portal</h2>
-          <span>CGL & CHSL Speed Engine</span>
+          <h2>SSC Prep</h2>
+          <span>CGL · CHSL · MTS</span>
         </div>
       </div>
 
@@ -165,7 +165,7 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <span className="version-label">v1.4.0 Tracking Enabled</span>
+        <span className="version-label">SSC Prep v2.0</span>
       </div>
     </aside>
     </>

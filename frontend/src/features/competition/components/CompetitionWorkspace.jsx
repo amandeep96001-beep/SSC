@@ -10,11 +10,11 @@ const QUESTION_LIMIT = 20;
 const TIME_PER_QUESTION = 45; // seconds
 
 const SUBJECT_COLORS = {
-  Mixed:     { primary: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
-  GK:        { primary: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
-  English:   { primary: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
-  Maths:     { primary: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
-  Reasoning: { primary: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' }
+  Mixed:     { primary: '#0071e3', bg: 'rgba(0, 113, 227, 0.1)' },
+  GK:        { primary: '#34c759', bg: 'rgba(52, 199, 89, 0.1)' },
+  English:   { primary: '#5856d6', bg: 'rgba(88, 86, 214, 0.1)' },
+  Maths:     { primary: '#ff9f0a', bg: 'rgba(255, 159, 10, 0.1)' },
+  Reasoning: { primary: '#bf4800', bg: 'rgba(191, 72, 0, 0.08)' }
 };
 
 // ── Screen States ─────────────────────────────────────────────────
@@ -258,7 +258,7 @@ export function CompetitionWorkspace({ user }) {
         </div>
 
         <button className="competition-start-btn" onClick={startBattle}
-          style={{ background: `linear-gradient(135deg, ${color.primary}, #6366f1)` }}>
+          style={{ background: color.primary }}>
           <Swords size={20} /> Start Battle
         </button>
 
@@ -381,7 +381,7 @@ export function CompetitionWorkspace({ user }) {
           )}
           {answered && currentIdx + 1 < questions.length && (
             <button className="battle-next-btn" onClick={moveToNext}
-              style={{ background: color.primary }}>
+              style={{ background: color.primary, color: '#fff' }}>
               Next <ChevronRight size={16} />
             </button>
           )}
@@ -495,7 +495,7 @@ export function CompetitionWorkspace({ user }) {
         {/* ── Action buttons ── */}
         <div className="result-actions">
           <button className="battle-again-btn" onClick={startBattle}
-            style={{ background: `linear-gradient(135deg, ${color.primary}, #6366f1)` }}>
+            style={{ background: color.primary }}>
             <Swords size={18} /> Battle Again
           </button>
           <button className="battle-home-btn" onClick={resetToStart}>

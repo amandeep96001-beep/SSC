@@ -1,104 +1,151 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { GraduationCap, User, Lock, XCircle } from 'lucide-react';
+import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import '../auth.css';
 
 export function AuthPanel({ loginUser, registerUser }) {
-  const [authMode, setAuthMode] = useState('login'); // login, register
+  const [authMode, setAuthMode] = useState('login');
   const [authUsername, setAuthUsername] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const switchMode = (mode) => {
+    setAuthMode(mode);
+    setAuthError('');
+    setAuthUsername('');
+    setAuthPassword('');
+  };
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
+    setIsSubmitting(true);
 
-    if (!authUsername.trim() || !authPassword) {
-      setAuthError("Please fill in all required fields.");
-      return;
-    }
+    try {
+      if (!authUsername.trim() || !authPassword) {
+        setAuthError('Please fill in all required fields.');
+        return;
+      }
 
-    if (authMode === 'login') {
-      const res = await loginUser(authUsername, authPassword);
+      if (authMode === 'register' && authPassword.length < 8) {
+        setAuthError('Password must be at least 8 characters with letters and numbers.');
+        return;
+      }
+
+      const action = authMode === 'login' ? loginUser : registerUser;
+      const res = await action(authUsername, authPassword);
+
       if (res.success) {
         setAuthUsername('');
         setAuthPassword('');
       } else {
-        setAuthError(res.message || "Login failed. Please check your credentials.");
+        setAuthError(res.message || 'Authentication failed. Please try again.');
       }
-    } else {
-      const res = await registerUser(authUsername, authPassword);
-      if (res.success) {
-        setAuthUsername('');
-        setAuthPassword('');
-      } else {
-        setAuthError(res.message || "Registration failed. Please try again.");
-      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="auth-fullscreen-layout">
-      <Helmet><title>Login | ExamPrep Pro</title></Helmet>
+    <div className="auth-page">
+      <Helmet>
+        <title>{authMode === 'login' ? 'Sign In' : 'Register'} | SSC Prep</title>
+      </Helmet>
+
       <div className="auth-card">
         <div className="auth-brand">
-          <GraduationCap className="brand-logo" size={36} />
-          <h1 style={{ margin: '0 0 5px 0', fontSize: '2rem', color: '#fafafa', fontWeight: 600, letterSpacing: '-0.02em' }}>ExamPrep Pro</h1>
-          <p>Master tables, vocab, reasoning, and mock tests</p>
+          <div className="auth-brand-icon">
+            <GraduationCap size={32} />
+          </div>
+          <h1>SSC Prep</h1>
+          <p>{authMode === 'login' ? 'Sign in to your account' : 'Create your account'}</p>
         </div>
 
-        <div className="auth-mode-selector">
-          <button 
+        <div className="auth-mode-selector" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authMode === 'login'}
             className={authMode === 'login' ? 'active' : ''}
-            onClick={() => { setAuthMode('login'); setAuthError(''); setAuthUsername(''); setAuthPassword(''); }}
+            onClick={() => switchMode('login')}
           >
-            Log In
+            Sign In
           </button>
-          <button 
+          <button
+            type="button"
+            role="tab"
+            aria-selected={authMode === 'register'}
             className={authMode === 'register' ? 'active' : ''}
-            onClick={() => { setAuthMode('register'); setAuthError(''); setAuthUsername(''); setAuthPassword(''); }}
+            onClick={() => switchMode('register')}
           >
-            Sign Up
+            Register
           </button>
         </div>
 
-        <form onSubmit={handleAuthSubmit} className="auth-form">
+        <form onSubmit={handleAuthSubmit} className="auth-form" noValidate>
           {authError && (
-            <div className="alert-message error">
+            <div className="alert-message error" role="alert">
               <XCircle size={16} />
               <span>{authError}</span>
             </div>
           )}
 
           <div className="form-group">
-            <label>Candidate Username</label>
+            <label htmlFor="username">Username</label>
             <div className="input-with-icon">
-              <User size={16} className="field-icon" />
+              <User size={16} className="field-icon" aria-hidden />
               <input
+                id="username"
                 type="text"
+                autoComplete="username"
                 placeholder="Enter username"
                 value={authUsername}
                 onChange={(e) => setAuthUsername(e.target.value)}
+                disabled={isSubmitting}
                 required
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label>Password</label>
+            <label htmlFor="password">Password</label>
             <div className="input-with-icon">
-              <Lock size={16} className="field-icon" />
+              <Lock size={16} className="field-icon" aria-hidden />
               <input
-                type="password"
-                placeholder="••••••••"
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                placeholder="Enter password"
                 value={authPassword}
                 onChange={(e) => setAuthPassword(e.target.value)}
+                disabled={isSubmitting}
                 required
               />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
+            {authMode === 'register' && (
+              <p className="field-hint">Minimum 8 characters with letters and numbers</p>
+            )}
           </div>
 
-          <button type="submit" className="btn-auth-submit">
-            {authMode === 'login' ? 'Access Portal' : 'Register New Account'}
+          <button type="submit" className="btn-auth-submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 size={18} className="spin-icon" />
+                <span>Please wait…</span>
+              </>
+            ) : (
+              authMode === 'login' ? 'Sign In' : 'Create Account'
+            )}
           </button>
         </form>
       </div>

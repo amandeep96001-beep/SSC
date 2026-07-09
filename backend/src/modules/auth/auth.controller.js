@@ -1,40 +1,43 @@
-import User, { hashPassword } from './user.model.js';
+import User from './user.model.js';
 import MockProgress from './mock-progress.model.js';
 import Progress from './progress.model.js';
+import { hashPassword, verifyPassword, isLegacyHash } from './password.util.js';
+import { signToken } from './token.util.js';
+
+function publicUserPayload(user, progress = [], mockProgress = [], token = null) {
+  const payload = {
+    username: user.username,
+    progress,
+    mockProgress
+  };
+  if (token) payload.token = token;
+  return payload;
+}
 
 export const register = async (req, res, next) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Username and password are required fields.'
-      });
-    }
-
     const trimmedUsername = username.trim();
+
     const existingUser = await User.findOne({ username: trimmedUsername }).lean();
     if (existingUser) {
-      return res.status(400).json({
+      return res.status(409).json({
         status: 'error',
-        message: 'Username is already taken, choose another.'
+        message: 'Username is already taken. Choose another.'
       });
     }
 
-    const newUser = new User({
+    const hashed = await hashPassword(password);
+    const newUser = await User.create({
       username: trimmedUsername,
-      password: hashPassword(password)
+      password: hashed
     });
 
-    await newUser.save();
+    const token = signToken(newUser);
 
     res.status(201).json({
       status: 'success',
-      data: {
-        username: newUser.username,
-        progress: [],
-        mockProgress: []
-      }
+      data: publicUserPayload(newUser, [], [], token)
     });
   } catch (error) {
     next(error);
@@ -44,39 +47,35 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Username and password are required.'
-      });
-    }
-
     const user = await User.findOne({ username: username.trim() });
+
     if (!user) {
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid username credentials.'
+        message: 'Invalid username or password.'
       });
     }
 
-    const matched = user.password === hashPassword(password);
+    const matched = await verifyPassword(password, user.password);
     if (!matched) {
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid password credentials.'
+        message: 'Invalid username or password.'
       });
     }
 
-    const mockProgress = await MockProgress.find({ username: user.username }).lean() || [];
-    const progress = await Progress.find({ username: user.username }).lean() || [];
+    if (isLegacyHash(user.password)) {
+      user.password = await hashPassword(password);
+      await user.save();
+    }
+
+    const mockProgress = await MockProgress.find({ username: user.username }).lean();
+    const progress = await Progress.find({ username: user.username }).lean();
+    const token = signToken(user);
 
     res.json({
       status: 'success',
-      data: {
-        username: user.username,
-        progress,
-        mockProgress
-      }
+      data: publicUserPayload(user, progress, mockProgress, token)
     });
   } catch (error) {
     next(error);
@@ -85,34 +84,18 @@ export const login = async (req, res, next) => {
 
 export const saveProgress = async (req, res, next) => {
   try {
-    const { username, topicId, score, maxScore, elapsedTime } = req.body;
-    if (!username || !topicId || score === undefined) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Username, topicId, and score are required.'
-      });
-    }
-
-    const user = await User.findOne({ username: username.trim() });
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User profile not found.'
-      });
-    }
+    const { topicId, score, maxScore, elapsedTime } = req.body;
+    const username = req.user.username;
 
     let status = 'red';
     const dynamicMaxScore = maxScore || 50;
-    if (score >= (dynamicMaxScore * 0.8)) {
-      status = 'green';
-    } else if (score >= (dynamicMaxScore * 0.4)) {
-      status = 'yellow';
-    }
+    if (score >= (dynamicMaxScore * 0.8)) status = 'green';
+    else if (score >= (dynamicMaxScore * 0.4)) status = 'yellow';
 
-    const existingCount = await Progress.countDocuments({ username: user.username, topicId });
+    const existingCount = await Progress.countDocuments({ username, topicId });
 
     await Progress.create({
-      username: user.username,
+      username,
       topicId,
       score,
       maxScore: dynamicMaxScore,
@@ -122,12 +105,8 @@ export const saveProgress = async (req, res, next) => {
       timestamp: new Date()
     });
 
-    const updatedProgress = await Progress.find({ username: user.username }).lean();
-
-    res.json({
-      status: 'success',
-      data: updatedProgress
-    });
+    const updatedProgress = await Progress.find({ username }).lean();
+    res.json({ status: 'success', data: updatedProgress });
   } catch (error) {
     next(error);
   }
@@ -135,26 +114,13 @@ export const saveProgress = async (req, res, next) => {
 
 export const saveMockProgress = async (req, res, next) => {
   try {
-    const { username, mockTestId, title, score, correct, wrong, blank, accuracy, elapsedTime, sectionTimes } = req.body;
-    if (!username || !mockTestId || !title || score === undefined || correct === undefined || wrong === undefined || blank === undefined || accuracy === undefined) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'All parameters (username, mockTestId, title, score, correct, wrong, blank, accuracy) are required.'
-      });
-    }
+    const { mockTestId, title, score, correct, wrong, blank, accuracy, elapsedTime, sectionTimes } = req.body;
+    const username = req.user.username;
 
-    const user = await User.findOne({ username: username.trim() });
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User profile not found.'
-      });
-    }
-
-    const existingCount = await MockProgress.countDocuments({ username: user.username, mockTestId });
+    const existingCount = await MockProgress.countDocuments({ username, mockTestId });
 
     await MockProgress.create({
-      username: user.username,
+      username,
       mockTestId,
       title,
       score,
@@ -168,11 +134,24 @@ export const saveMockProgress = async (req, res, next) => {
       timestamp: new Date()
     });
 
-    const updatedMockProgress = await MockProgress.find({ username: user.username }).lean();
+    const updatedMockProgress = await MockProgress.find({ username }).lean();
+    res.json({ status: 'success', data: updatedMockProgress });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMe = async (req, res, next) => {
+  try {
+    const username = req.user.username;
+    const [progress, mockProgress] = await Promise.all([
+      Progress.find({ username }).lean(),
+      MockProgress.find({ username }).lean()
+    ]);
 
     res.json({
       status: 'success',
-      data: updatedMockProgress
+      data: publicUserPayload({ username }, progress, mockProgress)
     });
   } catch (error) {
     next(error);

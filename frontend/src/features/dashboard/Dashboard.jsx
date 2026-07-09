@@ -92,7 +92,14 @@ export function Dashboard() {
       );
 
       // 2. Premium staggered cascade for all inner interactive cards and headers
-      const cards = workspaceRef.current.querySelectorAll('.section-header, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html');
+      const cards = workspaceRef.current.querySelectorAll('.stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html');
+      const header = workspaceRef.current.querySelector('.workspace-header-sticky');
+      if (header) {
+        gsap.fromTo(header,
+          { opacity: 0 },
+          { opacity: 1, duration: 0.3, ease: 'power1.out', clearProps: 'opacity' }
+        );
+      }
       if (cards.length > 0) {
         gsap.fromTo(cards, 
           { opacity: 0, y: 12 }, 
@@ -127,6 +134,22 @@ export function Dashboard() {
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [apiOnline, setApiOnline] = useState(true);
+
+  const checkApiHealth = useCallback(async () => {
+    try {
+      await apiService.get('/prep/status', { timeout: 5000 });
+      setApiOnline(true);
+    } catch {
+      setApiOnline(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkApiHealth();
+    const interval = setInterval(checkApiHealth, 60000);
+    return () => clearInterval(interval);
+  }, [checkApiHealth]);
 
   const [deckTab, setDeckTab] = useState('tables');
   const [tableSubTab, setTableSubTab] = useState('tables');
@@ -173,23 +196,24 @@ export function Dashboard() {
     }
   }, []);
 
-  // Effect to load on mount and when category changes
+  // Effect to load vocab only when revision deck is open
   useEffect(() => {
-    setVocabPage(1); // reset to page 1 on category change
+    if (activeView !== 'revision') return;
+    setVocabPage(1);
     loadVocabList(1, vocabSearch, vocabCategory);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vocabCategory]);
+  }, [activeView, vocabCategory]);
 
-  // Debounced search effect
+  // Debounced search — only while on revision deck
   useEffect(() => {
+    if (activeView !== 'revision') return;
     const delayDebounceFn = setTimeout(() => {
-      setVocabPage(1); // reset to page 1 on search change
+      setVocabPage(1);
       loadVocabList(1, vocabSearch, vocabCategory);
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vocabSearch]);
+  }, [vocabSearch, activeView]);
 
   const handleVocabPageChange = (newPage) => {
     if (newPage >= 1 && newPage <= vocabTotalPages) {
@@ -280,8 +304,8 @@ export function Dashboard() {
   };
 
   const globalLoading = drillLoading || studyLoading;
-  const globalError = drillError || studyError;
-  const isOnline = !globalError;
+  const globalError = studyError;
+  const isOnline = apiOnline;
 
   const handleOpenEditModal = async (e, topic) => {
     e.stopPropagation();
@@ -474,7 +498,13 @@ export function Dashboard() {
         {globalError && (
           <div className="alert-banner error">
             <XCircle size={16} />
-            <span>Connection Issue: {globalError}</span>
+            <span>{globalError}</span>
+          </div>
+        )}
+        {drillError && activeView === 'drill' && (
+          <div className="alert-banner error">
+            <XCircle size={16} />
+            <span>{drillError}</span>
           </div>
         )}
 
@@ -677,7 +707,7 @@ export function Dashboard() {
               <div className="form-group">
                 <label>
                   Inject Bulk MCQs (JSON Array format)
-                  <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 'normal', marginTop: '4px' }}>
+                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
                     Paste a valid JSON array here to append MCQs to this topic. Example: <br/>
                     <code>{`[ { "q": "Question", "o": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"], "a": 1, "e": "Explanation" } ]`}</code>
                   </span>
@@ -687,7 +717,7 @@ export function Dashboard() {
                   value={editTopicQuestionsJson} 
                   onChange={e => setEditTopicQuestionsJson(e.target.value)} 
                   placeholder="Paste JSON Array of questions here..."
-                  style={{ fontFamily: 'monospace', fontSize: '12px', background: '#1e293b' }}
+                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
                 />
               </div>
 

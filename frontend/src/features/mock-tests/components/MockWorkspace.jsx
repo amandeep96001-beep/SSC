@@ -142,11 +142,11 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
 
           {/* Hint Side Panel */}
           <div className="mock-glass-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ color: '#e2e8f0', display: 'flex', alignItems: 'center' }}>
-              <BookOpen size={18} style={{ marginRight: '8px', color: '#a855f7' }}/> 
+            <h3 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center' }}>
+              <BookOpen size={18} style={{ marginRight: '8px', color: 'var(--color-primary)' }}/> 
               Format Hint
             </h3>
-            <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '12px 0' }}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0' }}>
               Your JSON must be an array of objects. Valid sections are: English, GK, Quant, Reasoning.
             </p>
             <pre className="mock-hint-pre" style={{ flex: 1 }}>
@@ -170,30 +170,26 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
       ) : (
         <>
           {mockTests.length === 0 && !loading ? (
-            <div style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              padding: '60px 20px', background: 'rgba(30, 41, 59, 0.4)', borderRadius: '16px',
-              border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center', marginTop: '20px'
-            }}>
-              <Inbox size={48} style={{ color: '#6366f1', marginBottom: '20px', opacity: 0.8 }} />
-              <h2 style={{ color: '#f8fafc', fontSize: '1.5rem', marginBottom: '10px' }}>No Mock Tests Found</h2>
-              <p style={{ color: '#94a3b8', maxWidth: '400px', lineHeight: '1.6', marginBottom: '25px' }}>
-                You haven't added any full mock tests yet. Get started by creating your first TCS-style 100 question mock exam.
+            <div className="empty-state-card">
+              <Inbox size={44} className="empty-state-icon" />
+              <h2>No Mock Tests Yet</h2>
+              <p>
+                Mock tests from your database will appear here. Add one using the button above, or run <code>npm run seed</code> in the backend if you use a fresh database.
               </p>
-              <button className="btn-premium-mock" onClick={() => setShowAddForm(true)}>
-                <Plus size={18} style={{ marginRight: '8px' }} />
-                Create Your First Mock
+              <button className="btn-create-topic" onClick={() => setShowAddForm(true)}>
+                <Plus size={16} />
+                Add Mock Test
               </button>
             </div>
           ) : (
             <div className="syllabus-grid">
-              {loading && mockTests.length === 0 && <p style={{ color: '#94a3b8' }}>Loading secure mock tests...</p>}
+              {loading && mockTests.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Loading secure mock tests...</p>}
           
           {mockTests.map((test) => (
             <div key={test._id} className="mock-glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.2rem' }}>{test.title}</h3>
+                  <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.2rem' }}>{test.title}</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span className="mock-badge">{test.questionsCount || 0} Qs</span>
                     <button 
@@ -205,9 +201,9 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
                     </button>
                   </div>
                 </div>
-                {test.year && <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0' }}>Year: {test.year}</p>}
-                {test.date && <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0' }}>Date: {test.date}</p>}
-                {test.shift && <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: '4px 0' }}>Shift: {test.shift}</p>}
+                {test.year && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0' }}>Year: {test.year}</p>}
+                {test.date && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0' }}>Date: {test.date}</p>}
+                {test.shift && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0' }}>Shift: {test.shift}</p>}
               </div>
               
               <button 

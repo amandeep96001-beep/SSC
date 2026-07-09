@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
+import { getListFromResponse } from '@/shared/utils/apiResponse';
 
 export function useStudy() {
   const [activeView, setActiveView] = useState('drill'); // drill, subjects, topics, notes, test, results, revision
@@ -51,18 +52,21 @@ export function useStudy() {
   // Load all subjects on mount
   const fetchSubjects = useCallback(async () => {
     const result = await getSubjectsApi.execute();
-    if (result.success && result.data.data) {
-      setSubjects(result.data.data);
-    }
+    setSubjects(getListFromResponse(result));
   }, [getSubjectsApi]);
 
   // Auth helper methods
+  const persistUser = (userData) => {
+    const { token, ...profile } = userData;
+    if (token) localStorage.setItem('ssc_token', token);
+    localStorage.setItem('ssc_user', JSON.stringify(profile));
+    setUser(profile);
+  };
+
   const loginUser = useCallback(async (username, password) => {
     const res = await loginApi.execute({ username, password });
     if (res.success && res.data?.data) {
-      const userData = res.data.data;
-      setUser(userData);
-      localStorage.setItem('ssc_user', JSON.stringify(userData));
+      persistUser(res.data.data);
       return { success: true };
     }
     return { success: false, message: loginApi.error || 'Login verification failed.' };
@@ -71,9 +75,7 @@ export function useStudy() {
   const registerUser = useCallback(async (username, password) => {
     const res = await registerApi.execute({ username, password });
     if (res.success && res.data?.data) {
-      const userData = res.data.data;
-      setUser(userData);
-      localStorage.setItem('ssc_user', JSON.stringify(userData));
+      persistUser(res.data.data);
       return { success: true };
     }
     return { success: false, message: registerApi.error || 'Sign up verification failed.' };
@@ -82,6 +84,7 @@ export function useStudy() {
   const logoutUser = useCallback(() => {
     setUser(null);
     localStorage.removeItem('ssc_user');
+    localStorage.removeItem('ssc_token');
     setActiveView('drill');
   }, []);
 
@@ -95,10 +98,8 @@ export function useStudy() {
   const selectSubject = useCallback(async (subName) => {
     setSelectedSubject(subName);
     const result = await getTopicsApi.execute(subName);
-    if (result.success && result.data.data) {
-      setTopicsList(result.data.data);
-      setActiveView('topics');
-    }
+    setTopicsList(getListFromResponse(result));
+    setActiveView('topics');
   }, [getTopicsApi]);
 
   // Select Topic -> Load Study Notes
@@ -164,7 +165,6 @@ export function useStudy() {
     // Save progress user metrics to MongoDB Atlas
     if (user && selectedTopicId) {
       updateProgressApi.execute({
-        username: user.username,
         topicId: selectedTopicId,
         score: totalScore,
         maxScore,
@@ -241,7 +241,6 @@ export function useStudy() {
 
     if (user) {
       updateMockProgressApi.execute({
-        username: user.username,
         mockTestId: mockData._id,
         title: mockData.title,
         score: totalScore,

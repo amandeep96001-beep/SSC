@@ -12,6 +12,9 @@ services:
         value: 5000
       - key: MONGODB_URI
         sync: false
-      # Optional: your Vercel frontend URL for tighter CORS (e.g. https://your-app.vercel.app)
+      - key: JWT_SECRET
+        sync: false
+      - key: NODE_ENV
+        value: production
       - key: FRONTEND_URL
         sync: false

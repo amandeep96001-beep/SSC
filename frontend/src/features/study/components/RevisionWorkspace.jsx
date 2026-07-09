@@ -418,7 +418,7 @@ export function RevisionWorkspace({
               <div className="form-group">
                 <label>Category *</label>
                 <select value={vocabForm.category} onChange={e => setVocabForm(p => ({...p, category: e.target.value}))}
-                  style={{ padding: '10px 14px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#fff', fontSize: '0.92rem' }}
+                  style={{ padding: '10px 14px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '0.92rem' }}
                 >
                   <option value="Word Power">Word Power</option>
                   <option value="Idioms & Phrases">Idioms & Phrases</option>
@@ -431,11 +431,11 @@ export function RevisionWorkspace({
                 <textarea rows="2" value={vocabForm.definition} onChange={e => setVocabForm(p => ({...p, definition: e.target.value}))} required placeholder="Meaning of the word..." />
               </div>
               <div className="form-group">
-                <label>Synonyms <span style={{color:'#94a3b8', fontWeight:400}}>(comma separated)</span></label>
+                <label>Synonyms <span style={{color:'var(--text-muted)', fontWeight:400}}>(comma separated)</span></label>
                 <input value={vocabForm.synonyms} onChange={e => setVocabForm(p => ({...p, synonyms: e.target.value}))} placeholder="e.g. Transient, Fleeting, Brief" />
               </div>
               <div className="form-group">
-                <label>Antonyms <span style={{color:'#94a3b8', fontWeight:400}}>(comma separated)</span></label>
+                <label>Antonyms <span style={{color:'var(--text-muted)', fontWeight:400}}>(comma separated)</span></label>
                 <input value={vocabForm.antonyms} onChange={e => setVocabForm(p => ({...p, antonyms: e.target.value}))} placeholder="e.g. Eternal, Enduring, Permanent" />
               </div>
               {vocabFormError && <p style={{ color: '#f87171', fontSize: '0.85rem', margin: 0 }}>{vocabFormError}</p>}
@@ -463,7 +463,7 @@ export function RevisionWorkspace({
               <div className="form-group">
                 <label>
                   Paste JSON Array
-                  <span style={{ display: 'block', fontSize: '11px', color: '#94a3b8', fontWeight: 'normal', marginTop: '4px' }}>
+                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
                     Valid Categories: "Word Power", "Idioms & Phrases", "One Word Substitution", "Spelling Rules"<br/>
                     <pre style={{ margin: '8px 0', padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
 {`[
@@ -479,7 +479,7 @@ export function RevisionWorkspace({
                   value={vocabBulkJson} 
                   onChange={e => setVocabBulkJson(e.target.value)} 
                   placeholder="Paste JSON Array of vocabulary here..."
-                  style={{ fontFamily: 'monospace', fontSize: '12px', background: '#1e293b' }}
+                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
                   required
                 />
               </div>

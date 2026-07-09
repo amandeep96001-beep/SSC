@@ -1,19 +1,24 @@
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
 
-/**
- * Standard fetch helper that handles request headers, parsing, and custom error formats.
- */
+function getAuthHeaders() {
+  try {
+    const token = localStorage.getItem('ssc_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
-  
-  // Set default content type to JSON
+
   const headers = {
     'Content-Type': 'application/json',
+    ...getAuthHeaders(),
     ...options.headers,
   };
 
-  // Default timeout of 10 seconds (10000ms)
   const { timeout = 10000, ...restOptions } = options;
 
   const controller = new AbortController();
@@ -23,6 +28,7 @@ async function request(endpoint, options = {}) {
     ...restOptions,
     headers,
     signal: controller.signal,
+    cache: 'no-store',
   };
 
   if (config.body && typeof config.body === 'object') {
@@ -33,7 +39,6 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, config);
     clearTimeout(id);
 
-    // Safeguard response parsing (avoid crashing on HTML/non-JSON pages)
     const contentType = response.headers.get('content-type');
     let result;
     if (contentType && contentType.includes('application/json')) {
@@ -41,6 +46,11 @@ async function request(endpoint, options = {}) {
     } else {
       const text = await response.text();
       result = { message: text || `Request failed with status ${response.status}` };
+    }
+
+    if (response.status === 401) {
+      localStorage.removeItem('ssc_token');
+      localStorage.removeItem('ssc_user');
     }
 
     if (!response.ok) {
@@ -51,9 +61,8 @@ async function request(endpoint, options = {}) {
   } catch (error) {
     clearTimeout(id);
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please check if the backend server is running.');
+      throw new Error('Request timed out. Please check your connection.');
     }
-    console.error(`[API Service Error] ${endpoint}:`, error.message);
     throw error;
   }
 }

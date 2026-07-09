@@ -32,7 +32,7 @@ export const createMockTest = async (req, res, next) => {
     const savedTest = await mockTest.save();
 
     res.status(201).json({
-      success: true,
+      status: 'success',
       data: {
         id: savedTest._id,
         title: savedTest.title,
@@ -62,7 +62,7 @@ export const getMockTests = async (req, res, next) => {
     }));
 
     res.json({
-      success: true,
+      status: 'success',
       data: formattedTests
     });
   } catch (error) {
@@ -83,7 +83,7 @@ export const getMockTestById = async (req, res, next) => {
     }
 
     res.json({
-      success: true,
+      status: 'success',
       data: test
     });
   } catch (error) {
@@ -104,7 +104,7 @@ export const deleteMockTest = async (req, res, next) => {
     }
 
     res.json({
-      success: true,
+      status: 'success',
       message: 'Mock test deleted successfully'
     });
   } catch (error) {

@@ -39,7 +39,7 @@
   font-size: 12px;
   font-weight: bold;
   margin-bottom: 8px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .palette-warning {
@@ -92,34 +92,29 @@
 /* Modals */
 .modal-content-cancel {
   max-width: 420px;
-  border-top: 4px solid #f59e0b;
-  background: #1e293b;
+  border-top: 4px solid var(--color-warning);
+  background: var(--bg-surface);
 }
 
 .modal-title-warning {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #f8fafc;
+  color: var(--text-primary);
   margin: 0;
   font-size: 18px;
 }
 
 .modal-body-cancel {
   padding: 20px 0;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   font-size: 15px;
   line-height: 1.6;
 }
 
-.modal-body-bold {
-  margin: 0 0 12px 0;
-  font-weight: bold;
-}
-
 .modal-body-sub {
   margin: 0;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -306,7 +301,7 @@
   align-items: center;
   justify-content: center;
   background: #ef4444;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 10px;
   font-weight: 700;
   border-radius: 999px;
@@ -357,7 +352,7 @@
 .wrong-log-subtitle {
   margin: 0;
   font-size: 0.82rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .btn-clear-wrong-log {
@@ -379,7 +374,7 @@
 .btn-clear-wrong-log:hover {
   background: rgba(239, 68, 68, 0.22);
   border-color: #ef4444;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* Empty state */
@@ -451,7 +446,7 @@
 .wrong-q-category {
   font-size: 0.72rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
   background: rgba(148, 163, 184, 0.1);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 20px;
@@ -510,7 +505,7 @@
   align-items: center;
   gap: 7px;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 .wrong-q-correct-icon {
   color: #4ade80;
@@ -549,7 +544,7 @@
 .btn-related-questions:hover:not(:disabled) {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(59, 130, 246, 0.15));
   border-color: #10b981;
-  color: #fff;
+  color: var(--text-primary);
   transform: translateY(-1px);
 }
 .btn-related-questions:disabled {
@@ -576,7 +571,7 @@
 .btn-ai-explain:hover:not(:disabled) {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(59, 130, 246, 0.18));
   border-color: #8b5cf6;
-  color: #fff;
+  color: var(--text-primary);
   transform: translateY(-1px);
 }
 .btn-ai-explain:disabled {
@@ -661,7 +656,7 @@
   padding: 10px 12px;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
@@ -690,7 +685,7 @@
 }
 .related-q-num {
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 600;
   font-size: 0.9rem;
 }
@@ -757,7 +752,7 @@
 .btn-retry-attempt:hover {
   background: rgba(59, 130, 246, 0.2);
   border-color: #3b82f6;
-  color: #fff;
+  color: var(--text-primary);
   transform: translateY(-1px);
 }
 
@@ -776,7 +771,7 @@
   margin: 0;
   font-size: 0.82rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .retry-options-grid {
@@ -799,7 +794,7 @@
 .retry-option-btn:hover:not(:disabled) {
   border-color: #6366f1;
   background: rgba(99, 102, 241, 0.15);
-  color: #fff;
+  color: var(--text-primary);
 }
 .retry-option-btn:disabled {
   cursor: default;
@@ -826,7 +821,7 @@
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 0.9rem;
   transition: border-color 0.2s;
 }
@@ -842,7 +837,7 @@
   background: #6366f1;
   border: none;
   border-radius: 8px;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
   transition: background 0.2s;
   flex-shrink: 0;

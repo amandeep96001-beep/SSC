@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback} from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -34,7 +35,8 @@ export function SyllabusWorkspace({
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [localNotesHtml, setLocalNotesHtml] = useState(() => {
     if (!activeNotes) return '';
-    return localStorage.getItem(`ssc_notes_${activeNotes.id}`) || activeNotes.notes || '';
+    const stored = localStorage.getItem(`ssc_notes_${activeNotes.id}`);
+    return prepareNotesHtml(stored || activeNotes.notes || '');
   });
   const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
   const notesRef = useRef(null);
@@ -42,7 +44,7 @@ export function SyllabusWorkspace({
   if (activeNotes !== prevActiveNotes) {
     setPrevActiveNotes(activeNotes);
     const stored = activeNotes ? localStorage.getItem(`ssc_notes_${activeNotes.id}`) : null;
-    setLocalNotesHtml(stored || activeNotes?.notes || '');
+    setLocalNotesHtml(prepareNotesHtml(stored || activeNotes?.notes || ''));
   }
 
   const handleEditToggle = () => {
@@ -142,10 +144,10 @@ export function SyllabusWorkspace({
       {activeView === 'subjects' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
-              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>Select Subject Area</h1>
-                <p style={{ margin: 0 }}>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+            <div className="section-header page-header">
+              <div className="page-header__title">
+                <h1>Select Subject Area</h1>
+                <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
               </div>
             </div>
           </div>
@@ -172,12 +174,12 @@ export function SyllabusWorkspace({
       {activeView === 'topics' && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
-              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>{selectedSubject} — Topics</h1>
-                <p style={{ margin: 0 }}>Select a topic to read revision notes and take a speed test.</p>
+            <div className="section-header page-header">
+              <div className="page-header__title">
+                <h1>{selectedSubject} — Topics</h1>
+                <p>Select a topic to read revision notes and take a speed test.</p>
               </div>
-              <div style={{ display: 'flex', gap: '10px', marginLeft: 'auto' }}>
+              <div className="page-header__actions">
                 <button className="btn-back" onClick={() => setActiveView('subjects')}>
                   All Subjects
                 </button>
@@ -260,12 +262,12 @@ export function SyllabusWorkspace({
       {activeView === 'notes' && activeNotes && (
         <div className="study-workspace">
           <div className="workspace-header-sticky">
-            <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
-              <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-                <h1 style={{ margin: '0 0 6px 0', fontSize: '1.3rem' }}>{activeNotes.name} Revision Sheet</h1>
-                <p style={{ margin: 0 }}>Read formulas, shortcut tricks, and concepts below.</p>
+            <div className="section-header page-header">
+              <div className="page-header__title">
+                <h1>{activeNotes.name} Revision Sheet</h1>
+                <p>Read formulas, shortcut tricks, and concepts below.</p>
               </div>
-              <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', position: 'relative' }}>
+              <div className="page-header__actions" style={{ position: 'relative' }}>
                 <button className="btn-add" style={{ display: 'flex', alignItems: 'center' }} onClick={() => setShowActionsMenu(!showActionsMenu)}>
                   Actions <ChevronRight size={16} style={{ transform: showActionsMenu ? 'rotate(90deg)' : 'rotate(0deg)', transition: '0.2s', marginLeft: '4px' }} />
                 </button>
@@ -297,7 +299,7 @@ export function SyllabusWorkspace({
                         <button className="hl-btn" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.15)' }} onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
                         <button className="hl-btn" style={{ color: '#ec4899', background: 'rgba(236,72,153,0.15)' }} onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
                         <button className="hl-btn" style={{ color: '#3b82f6', background: 'rgba(59,130,246,0.15)' }} onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
-                        <button className="hl-btn" style={{ color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }} onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
+                        <button className="hl-btn" style={{ color: 'var(--text-muted)', background: 'var(--bg-surface-hover)' }} onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
                       </div>
                     </div>
                   </div>
@@ -308,16 +310,45 @@ export function SyllabusWorkspace({
 
           <div className="workspace-scrollable-content">
             <div className="revision-notes-container">
-              <div className="notes-sheet">
-                <pre
+              <article className="notes-sheet">
+                <header className="notes-sheet-header">
+                  <div className="notes-sheet-meta">
+                    <span className="notes-sheet-label">Revision Notes</span>
+                    <span className="notes-sheet-topic">{activeNotes.name}</span>
+                  </div>
+                  {isEditingNotes && (
+                    <span className="notes-edit-badge">Editing</span>
+                  )}
+                </header>
+
+                {isEditingNotes && (
+                  <div className="notes-inline-toolbar" role="toolbar" aria-label="Note formatting">
+                    <span className="notes-toolbar-label">Highlight</span>
+                    <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight"><Eraser size={16}/></button>
+                  </div>
+                )}
+
+                <div
                   ref={notesRef}
-                  className={`notes-display-pre ${isEditingNotes ? 'editing' : ''}`}
+                  className={`notes-reader ${isEditingNotes ? 'editing' : ''}`}
                   id="notes-content-view"
                   contentEditable={isEditingNotes}
                   suppressContentEditableWarning
                   dangerouslySetInnerHTML={{ __html: localNotesHtml }}
                 />
-              </div>
+
+                <footer className="notes-sheet-footer">
+                  <p className="notes-footer-hint">Finished reading? Test yourself on this topic.</p>
+                  <button type="button" className="btn-take-test notes-cta-btn" onClick={startTest}>
+                    <ClipboardList size={18} />
+                    Take Topic Test
+                  </button>
+                </footer>
+              </article>
             </div>
           </div>
         </div>

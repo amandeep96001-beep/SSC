@@ -180,7 +180,7 @@ export function PerformanceWorkspace({ user }) {
                             </span>
                           </div>
                         </td>
-                        <td><strong style={{ fontSize: '1.1rem', color: '#fff' }}>{record.score} <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>/ 200</span></strong></td>
+                        <td><strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{record.score} <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>/ 200</span></strong></td>
                         <td>
                           <div style={{ fontSize: '0.85rem', background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                             <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -209,7 +209,7 @@ export function PerformanceWorkspace({ user }) {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '8px', fontSize: '0.75rem' }}>
                               {Object.entries(record.sectionTimes).map(([sec, secs]) => (
                                 <div key={sec} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <span style={{ color: 'var(--text-muted)' }}>{sec.slice(0,3)}:</span> <span style={{ color: '#fff' }}>{Math.floor(secs / 60)}m {secs % 60}s</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>{sec.slice(0,3)}:</span> <span style={{ color: 'var(--text-primary)' }}>{Math.floor(secs / 60)}m {secs % 60}s</span>
                                 </div>
                               ))}
                             </div>
