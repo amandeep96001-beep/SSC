@@ -40,7 +40,7 @@ export function Dashboard() {
     submitAnswer: submitDrillAnswer,
     skipQuestion: skipDrillQuestion,
     loadNextDrill
-  } = useDrills();
+  } = useDrills(!!user);
 
   const {
     activeView,
@@ -138,18 +138,21 @@ export function Dashboard() {
 
   const checkApiHealth = useCallback(async () => {
     try {
-      await apiService.get('/prep/status', { timeout: 5000 });
-      setApiOnline(true);
+      const apiRoot = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+      const res = await fetch(`${apiRoot}/health`, { signal: AbortSignal.timeout(5000) });
+      const data = await res.json();
+      setApiOnline(res.ok && data.db === 'connected');
     } catch {
       setApiOnline(false);
     }
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     checkApiHealth();
     const interval = setInterval(checkApiHealth, 60000);
     return () => clearInterval(interval);
-  }, [checkApiHealth]);
+  }, [user, checkApiHealth]);
 
   const [deckTab, setDeckTab] = useState('tables');
   const [tableSubTab, setTableSubTab] = useState('tables');

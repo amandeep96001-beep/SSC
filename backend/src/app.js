@@ -61,10 +61,6 @@ export function createApp() {
     });
   });
 
-  app.get('/health', (req, res) => {
-    res.json({ status: 'ok', uptime: process.uptime() });
-  });
-
   app.use(notFound);
   app.use(errorHandler);
 

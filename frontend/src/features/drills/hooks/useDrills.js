@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 
-export function useDrills() {
+export function useDrills(isAuthenticated = false) {
   const [drillType, setDrillType] = useState('table'); // table, fraction, percentage, vocab
   const [currentDrill, setCurrentDrill] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
@@ -148,12 +148,11 @@ export function useDrills() {
     loadNextDrill(newType);
   }, [loadNextDrill]);
 
-  // Initial question load on boot
+  // Load first drill after sign-in
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!isAuthenticated) return;
     loadNextDrill(drillType);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated, drillType, loadNextDrill]);
 
   const clearWrongLog = () => setWrongQuestions([]);
 

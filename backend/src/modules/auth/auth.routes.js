@@ -9,6 +9,7 @@ import {
 } from './auth.validation.js';
 import { validateRequest } from '../../shared/middleware/validate.middleware.js';
 import { requireAuth } from '../../shared/middleware/auth.middleware.js';
+import { requireDb } from '../../shared/middleware/db.middleware.js';
 
 const router = express.Router();
 
@@ -20,8 +21,8 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/register', authLimiter, registerValidation, validateRequest, register);
-router.post('/login', authLimiter, loginValidation, validateRequest, login);
+router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, register);
+router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, login);
 router.get('/me', requireAuth, getMe);
 router.post('/progress', requireAuth, progressValidation, validateRequest, saveProgress);
 router.post('/mock-progress', requireAuth, mockProgressValidation, validateRequest, saveMockProgress);

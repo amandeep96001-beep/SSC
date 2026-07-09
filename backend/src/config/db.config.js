@@ -147,13 +147,12 @@ export const connectDB = async () => {
     console.log(`🔄 Connecting to Database at: ${mongoUri.replace(/:([^:@]+)@/, ':****@')}`);
     
     await mongoose.connect(mongoUri, {
-      maxPoolSize: 10, // Maintain up to 10 socket connections
-      serverSelectionTimeoutMS: 5000,
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 10000,
     });
     isDbConnected = true;
     console.log('🔥 MongoDB connected successfully!');
 
-    // Check if Vocab needs seeding
     const vocabCount = await Vocab.countDocuments();
     if (vocabCount === 0) {
       console.log('🌱 Seeding default vocabulary items into MongoDB Atlas...');
@@ -163,6 +162,10 @@ export const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
     isDbConnected = false;
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+    throw error;
   }
 };
 

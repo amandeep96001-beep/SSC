@@ -6,10 +6,15 @@ import drillRoutes from '../modules/drill/drill.routes.js';
 import mockRoutes from '../modules/mock/mock.routes.js';
 import aiRoutes from '../modules/ai/ai.routes.js';
 import competitionRoutes from '../modules/competition/competition.routes.js';
+import { requireAuth } from '../shared/middleware/auth.middleware.js';
 
 const router = express.Router();
 
+// Public: register & login only (see auth.routes.js)
 router.use('/auth', authRoutes);
+
+// Everything below requires a valid JWT
+router.use(requireAuth);
 router.use('/prep', prepRoutes);
 router.use('/study', studyRoutes);
 router.use('/drill', drillRoutes);

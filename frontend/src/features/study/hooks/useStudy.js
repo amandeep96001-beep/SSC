@@ -452,12 +452,11 @@ export function useStudy() {
     return { success: false, message: deleteTopicApi.error || 'Failed to delete topic.' };
   }, [selectedSubject, deleteTopicApi, getTopicsApi]);
 
-  // Fetch subjects initially
+  // Fetch subjects only when signed in
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!user) return;
     fetchSubjects();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user, fetchSubjects]);
 
   return {
     activeView,
