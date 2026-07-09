@@ -85,25 +85,25 @@ export function Dashboard() {
 
   useGSAP(() => {
     if (workspaceRef.current && activeView !== 'test' && activeView !== 'results' && activeView !== 'mock_exam_active') {
-      // 1. Subtle, instantaneous fade for the main wrapper (no clunky scaling)
+      // 1. Premium fade in for main wrapper with slight scale
       gsap.fromTo(workspaceRef.current, 
-        { opacity: 0 }, 
-        { opacity: 1, duration: 0.25, ease: 'power1.inOut', clearProps: 'opacity' }
+        { opacity: 0, scale: 0.98, filter: 'blur(4px)' }, 
+        { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.4, ease: 'expo.out', clearProps: 'all' }
       );
 
-      // 2. Premium staggered cascade for all inner interactive cards and headers
-      const cards = workspaceRef.current.querySelectorAll('.stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html');
+      // 2. Pro staggered cascade for all inner interactive cards and headers
+      const cards = workspaceRef.current.querySelectorAll('.stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html, .chart-container');
       const header = workspaceRef.current.querySelector('.workspace-header-sticky');
       if (header) {
         gsap.fromTo(header,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.3, ease: 'power1.out', clearProps: 'opacity' }
+          { opacity: 0, y: -10 },
+          { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out', clearProps: 'all' }
         );
       }
       if (cards.length > 0) {
         gsap.fromTo(cards, 
-          { opacity: 0, y: 12 }, 
-          { opacity: 1, y: 0, duration: 0.5, stagger: 0.04, ease: 'power2.out', clearProps: 'opacity,transform' }
+          { opacity: 0, y: 20, scale: 0.96 }, 
+          { opacity: 1, y: 0, scale: 1, duration: 0.6, stagger: 0.05, ease: 'back.out(1.2)', clearProps: 'all' }
         );
       }
     }
