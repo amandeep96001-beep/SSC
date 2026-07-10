@@ -22,6 +22,25 @@ import { MockWorkspace } from '@/features/mock-tests/components/MockWorkspace';
 import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal';
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
+import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
+
+const VIEW_PARENT = {
+  notes: 'topics',
+  topics: 'subjects',
+};
+
+const VALID_VIEWS = new Set([
+  'drill',
+  'subjects',
+  'topics',
+  'notes',
+  'revision',
+  'mock',
+  'performance',
+  'analytics',
+  'competition',
+  'results',
+]);
 
 export function Dashboard() {
   const {
@@ -88,31 +107,30 @@ export function Dashboard() {
     if (workspaceRef.current && activeView !== 'test' && activeView !== 'results' && activeView !== 'mock_exam_active') {
       const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
+      // Mobile: never fade to 0 — it can stick blank/white after back navigation
       if (isMobile) {
-        gsap.fromTo(workspaceRef.current,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.25, ease: 'power1.out', clearProps: 'opacity' }
-        );
-      } else {
-        gsap.fromTo(workspaceRef.current,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' }
-        );
+        gsap.set(workspaceRef.current, { clearProps: 'opacity,transform' });
+        return;
+      }
 
-        const cards = workspaceRef.current.querySelectorAll('.stat-card-premium, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html, .chart-container');
-        const header = workspaceRef.current.querySelector('.workspace-header-sticky');
-        if (header) {
-          gsap.fromTo(header,
-            { opacity: 0, y: -10 },
-            { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out', clearProps: 'all' }
-          );
-        }
-        if (cards.length > 0) {
-          gsap.fromTo(cards,
-            { opacity: 0, y: 16 },
-            { opacity: 1, y: 0, duration: 0.45, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
-          );
-        }
+      gsap.fromTo(workspaceRef.current,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' }
+      );
+
+      const cards = workspaceRef.current.querySelectorAll('.stat-card-premium, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html, .chart-container');
+      const header = workspaceRef.current.querySelector('.workspace-header-sticky');
+      if (header) {
+        gsap.fromTo(header,
+          { opacity: 0, y: -10 },
+          { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out', clearProps: 'all' }
+        );
+      }
+      if (cards.length > 0) {
+        gsap.fromTo(cards,
+          { opacity: 0, y: 16 },
+          { opacity: 1, y: 0, duration: 0.45, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
+        );
       }
     }
   }, { dependencies: [activeView], scope: workspaceRef });
@@ -143,148 +161,115 @@ export function Dashboard() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [apiOnline, setApiOnline] = useState(true);
-  const [exitToast, setExitToast] = useState('');
-  const lastBackPressRef = useRef(0);
-  const exitToastTimerRef = useRef(null);
-  const isHistoryRestoringRef = useRef(false);
-  const ignorePopRef = useRef(false);
-  const allowExitRef = useRef(false);
+  const viewStackRef = useRef([]);
+  const skipStackRef = useRef(false);
   const prevViewRef = useRef(activeView);
   const navRef = useRef({
     activeView,
     isMobileSidebarOpen,
     cancelConfirmOpen,
+    user,
   });
 
   navRef.current = {
     activeView,
     isMobileSidebarOpen,
     cancelConfirmOpen,
+    user,
   };
 
-  const VIEW_PARENT = {
-    notes: 'topics',
-    topics: 'subjects',
-  };
-
-  // Keep browser history in sync with sections so Back returns to the previous one
+  // Track in-app section history
   useEffect(() => {
     if (!user) return;
 
-    if (isHistoryRestoringRef.current) {
-      isHistoryRestoringRef.current = false;
+    const prev = prevViewRef.current;
+    if (skipStackRef.current) {
+      skipStackRef.current = false;
       prevViewRef.current = activeView;
       return;
     }
 
-    const prev = prevViewRef.current;
+    if (prev && prev !== activeView) {
+      if (VIEW_PARENT[prev] === activeView) {
+        const stack = viewStackRef.current;
+        if (stack[stack.length - 1] === activeView) stack.pop();
+      } else if (VALID_VIEWS.has(activeView)) {
+        viewStackRef.current.push(prev);
+        if (viewStackRef.current.length > 40) viewStackRef.current.shift();
+      }
+    }
+
     prevViewRef.current = activeView;
-
-    // notes→topics / topics→subjects via UI back: pop history instead of pushing
-    if (prev && VIEW_PARENT[prev] === activeView) {
-      ignorePopRef.current = true;
-      window.history.back();
-      return;
-    }
-
-    // Replace transient screens so Back skips the exam-in-progress entry
-    if (['results', 'test', 'mock_exam_active'].includes(activeView)) {
-      window.history.replaceState({ app: true, view: activeView }, '');
-      return;
-    }
-
-    window.history.pushState({ app: true, view: activeView }, '');
+    // Keep an extra history entry whenever the section changes
+    trapHistory();
   }, [activeView, user]);
 
-  // Android / browser back → previous section; double-back on root to exit
+  // Register in-app back behavior with the global trap (never leaves the page)
   useEffect(() => {
-    if (!user) return undefined;
-
-    const rearm = (view) => {
-      window.history.pushState({ app: true, view }, '');
+    const goToView = (view) => {
+      if (!VALID_VIEWS.has(view)) return false;
+      skipStackRef.current = true;
+      setActiveView(view);
+      if (workspaceRef.current) {
+        workspaceRef.current.style.opacity = '1';
+      }
+      return true;
     };
 
-    const showExitToast = () => {
-      setExitToast('Press back again to exit');
-      if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
-      exitToastTimerRef.current = setTimeout(() => {
-        setExitToast('');
-        lastBackPressRef.current = 0;
-      }, 2000);
-    };
-
-    const onPopState = (event) => {
-      if (ignorePopRef.current) {
-        ignorePopRef.current = false;
-        return;
-      }
-
-      if (allowExitRef.current) {
-        allowExitRef.current = false;
-        return;
-      }
-
+    setBackHandler(() => {
       const {
         activeView: currentView,
         isMobileSidebarOpen: sidebarOpen,
         cancelConfirmOpen: cancelOpen,
+        user: loggedIn,
       } = navRef.current;
+
+      if (!loggedIn) return false;
 
       if (sidebarOpen) {
         setIsMobileSidebarOpen(false);
-        rearm(currentView);
-        return;
+        return true;
       }
 
       if (currentView === 'test') {
         if (!cancelOpen) setCancelConfirmOpen(true);
-        rearm('test');
-        return;
+        return true;
       }
 
       if (currentView === 'mock_exam_active') {
-        isHistoryRestoringRef.current = true;
-        setActiveView('mock');
-        rearm('mock');
-        return;
+        return goToView('mock');
       }
 
-      const prevView = event.state?.app ? event.state.view : null;
-
-      if (prevView && prevView !== currentView) {
-        isHistoryRestoringRef.current = true;
-        setActiveView(prevView);
-        lastBackPressRef.current = 0;
-        setExitToast('');
-        return;
+      if (currentView === 'notes') {
+        return goToView('topics');
       }
 
-      // Already on this view after a history pop — stay put
-      if (prevView && prevView === currentView) {
-        return;
+      if (currentView === 'topics') {
+        return goToView('subjects');
       }
 
-      // Root / no previous section — require double back to leave
-      const now = Date.now();
-      if (now - lastBackPressRef.current < 2000) {
-        lastBackPressRef.current = 0;
-        setExitToast('');
-        allowExitRef.current = true;
-        window.history.back();
-        return;
+      if (currentView === 'results') {
+        return goToView('drill');
       }
 
-      lastBackPressRef.current = now;
-      showExitToast();
-      rearm(currentView);
-    };
+      const stack = viewStackRef.current;
+      while (stack.length > 0) {
+        const previous = stack.pop();
+        if (previous && previous !== currentView && VALID_VIEWS.has(previous)) {
+          return goToView(previous);
+        }
+      }
 
-    window.addEventListener('popstate', onPopState);
-    return () => {
-      window.removeEventListener('popstate', onPopState);
-      if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
-    };
-  }, [user, setActiveView]);
+      if (currentView !== 'drill') {
+        return goToView('drill');
+      }
+
+      // At root drills — let global trap show double-back toast (return false)
+      return false;
+    });
+
+    return () => setBackHandler(null);
+  }, [setActiveView]);
 
   const checkApiHealth = useCallback(async () => {
     try {
@@ -620,12 +605,6 @@ export function Dashboard() {
   return (
     <div className="lms-container">
       <Helmet><title>{pageTitle('Dashboard')}</title></Helmet>
-
-      {exitToast && (
-        <div className="exit-back-toast" role="status">
-          {exitToast}
-        </div>
-      )}
       
       {globalLoading && (
         <div className="absolute-loader-strip">

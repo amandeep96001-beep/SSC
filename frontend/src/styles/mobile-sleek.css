@@ -77,6 +77,8 @@
     flex: 1 1 auto !important;
     height: auto !important;
     max-height: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
   }
 
   .mobile-header {
