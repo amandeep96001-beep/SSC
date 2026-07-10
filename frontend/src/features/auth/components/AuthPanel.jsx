@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/shared/context/useTheme';
 import '../auth.css';
 
 export function AuthPanel({ loginUser, registerUser }) {
@@ -10,6 +11,7 @@ export function AuthPanel({ loginUser, registerUser }) {
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const switchMode = (mode) => {
     setAuthMode(mode);
@@ -53,6 +55,15 @@ export function AuthPanel({ loginUser, registerUser }) {
       <Helmet>
         <title>{authMode === 'login' ? 'Sign In' : 'Register'} | SSC Prep</title>
       </Helmet>
+
+      <button
+        type="button"
+        className="auth-theme-toggle"
+        onClick={toggleTheme}
+        aria-label="Toggle Theme"
+      >
+        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
 
       <div className="auth-card">
         <div className="auth-brand">

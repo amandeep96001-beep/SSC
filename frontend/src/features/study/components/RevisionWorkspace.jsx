@@ -104,7 +104,7 @@ export function RevisionWorkspace({
   return (
     <>
       {/* --- VIEW: REVISION DECK --- */}
-      <div className="study-workspace">
+      <div className="study-workspace revision-workspace">
         <div className="workspace-header-sticky">
           <div className="section-header">
             <h1>Revision & Learning Deck</h1>
@@ -112,7 +112,7 @@ export function RevisionWorkspace({
           </div>
 
           {/* TOP TABS: Tables | Vocab */}
-          <div className="tabs-header">
+          <div className="tabs-header tabs-header--scroll">
             <div className="drill-tabs">
               <button
                 className={`drill-tab ${deckTab === 'tables' ? 'active' : ''}`}
@@ -139,19 +139,18 @@ export function RevisionWorkspace({
                   className={`revision-sub-tab ${tableSubTab === st ? 'active' : ''}`}
                   onClick={() => setTableSubTab(st)}
                 >
-                  { st === 'tables' ? '× Multiplication Tables (1–50)'
-                    : st === 'squares' ? 'x² Squares (1–50)'
-                    : st === 'cubes' ? 'x³ Cubes (1–50)'
-                    : st === 'fractions' ? '½ Fraction → %'
-                    : '% Percentage → Fraction' }
+                  { st === 'tables' ? '× Tables'
+                    : st === 'squares' ? 'x² Squares'
+                    : st === 'cubes' ? 'x³ Cubes'
+                    : st === 'fractions' ? '½ → %'
+                    : '% → Fraction' }
                 </button>
               ))}
             </div>
           )}
 
           {deckTab === 'vocab' && (
-            <>
-              {/* Search + Add bar */}
+            <div className="revision-vocab-toolbar">
               <div className="vocab-add-bar">
                 <div className="vocab-search-bar vocab-search-flex">
                   <Search size={18} className="search-icon" />
@@ -162,21 +161,21 @@ export function RevisionWorkspace({
                     onChange={(e) => setVocabSearch(e.target.value)}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button className="btn-add-vocab" onClick={() => setVocabBulkModalOpen(true)} style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                <div className="vocab-add-bar__actions">
+                  <button type="button" className="btn-add-vocab btn-add-vocab--secondary" onClick={() => setVocabBulkModalOpen(true)}>
                     <Plus size={15} /> Bulk Import
                   </button>
-                  <button className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
+                  <button type="button" className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
                     <Plus size={15} /> Add New
                   </button>
                 </div>
               </div>
 
-              {/* Category tabs */}
-              <div className="revision-sub-tabs">
+              <div className="revision-sub-tabs revision-sub-tabs--vocab">
                 {['All','Word Power','Idioms & Phrases','One Word Substitution','Spelling Rules'].map(cat => (
                   <button
                     key={cat}
+                    type="button"
                     className={`revision-sub-tab ${vocabCategory === cat ? 'active' : ''}`}
                     onClick={() => setVocabCategory(cat)}
                   >
@@ -184,7 +183,7 @@ export function RevisionWorkspace({
                   </button>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
 
@@ -318,7 +317,7 @@ export function RevisionWorkspace({
         {deckTab === 'vocab' && (
           <div className="vocab-deck-container">
             {/* Vocab Cards Grid */}
-            <div className="vocab-results-grid" style={{ minHeight: '60vh', alignContent: 'start', opacity: vocabListLoading ? 0.6 : 1, transition: 'opacity 0.2s ease' }}>
+            <div className={`vocab-results-grid${vocabListLoading ? ' vocab-results-grid--loading' : ''}`}>
               {vocabListLoading && filteredVocabDB.length === 0 ? (
                 <div className="empty-syllabus" style={{ gridColumn: '1 / -1' }}>Loading vocabulary...</div>
               ) : filteredVocabDB.length > 0 ? (

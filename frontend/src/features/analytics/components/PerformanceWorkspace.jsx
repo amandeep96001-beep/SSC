@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Clock, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen } from 'lucide-react';
+import { StatCard } from '@/shared/components/ui/StatCard';
 
 export function PerformanceWorkspace({ user }) {
   const [activeTab, setActiveTab] = useState('syllabus');
@@ -60,26 +61,11 @@ export function PerformanceWorkspace({ user }) {
       {activeTab === 'syllabus' ? (
         <>
           <div className="stats-row">
-            <div className="stat-box">
-              <span className="stat-label">Tests Completed</span>
-              <span className="stat-val">{progressCount}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Average Score</span>
-              <span className="stat-val score-blue">{averageScore} / {averageMaxScore}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Mastered (Green)</span>
-              <span className="stat-val" style={{ color: '#2ecc71', marginTop: '6px' }}>{masteredCount}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Reviewing (Yellow)</span>
-              <span className="stat-val" style={{ color: '#f1c40f', marginTop: '6px' }}>{reviewingCount}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Needs Help (Red)</span>
-              <span className="stat-val" style={{ color: '#e74c3c', marginTop: '6px' }}>{revisionNeededCount}</span>
-            </div>
+            <StatCard icon={ClipboardList} label="Tests Completed" value={progressCount} variant="blue" />
+            <StatCard icon={Target} label="Average Score" value={`${averageScore} / ${averageMaxScore}`} variant="lavender" />
+            <StatCard icon={Award} label="Mastered (Green)" value={masteredCount} variant="mint" />
+            <StatCard icon={BookOpen} label="Reviewing (Yellow)" value={reviewingCount} variant="peach" />
+            <StatCard icon={AlertCircle} label="Needs Help (Red)" value={revisionNeededCount} variant="rose" />
           </div>
 
           <div className="performance-history-card">
@@ -132,26 +118,11 @@ export function PerformanceWorkspace({ user }) {
       ) : (
         <>
           <div className="stats-row">
-            <div className="stat-box">
-              <span className="stat-label">Mocks Completed</span>
-              <span className="stat-val">{mockCount}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Average Mock Score</span>
-              <span className="stat-val score-blue">{averageMockScore} / 200</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Average Accuracy</span>
-              <span className="stat-val score-green">{averageMockAccuracy}%</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Total Correct Answers</span>
-              <span className="stat-val score-yellow">{totalMockCorrect}</span>
-            </div>
-            <div className="stat-box">
-              <span className="stat-label">Total Wrong Answers</span>
-              <span className="stat-val score-red">{totalMockWrong}</span>
-            </div>
+            <StatCard icon={ClipboardList} label="Mocks Completed" value={mockCount} variant="blue" />
+            <StatCard icon={Target} label="Average Mock Score" value={`${averageMockScore} / 200`} variant="lavender" />
+            <StatCard icon={Award} label="Average Accuracy" value={`${averageMockAccuracy}%`} variant="mint" />
+            <StatCard icon={CheckCircle} label="Total Correct Answers" value={totalMockCorrect} variant="peach" />
+            <StatCard icon={XCircle} label="Total Wrong Answers" value={totalMockWrong} variant="rose" />
           </div>
 
           <div className="performance-history-card">

@@ -8,11 +8,14 @@ import {
   Trophy,
   Activity,
   PieChart,
-  Swords
+  Swords,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
+import { useTheme } from '@/shared/context/useTheme';
 
 export function Sidebar({
   user,
@@ -25,6 +28,7 @@ export function Sidebar({
   setIsMobileOpen
 }) {
   const sidebarRef = useRef(null);
+  const { theme, toggleTheme } = useTheme();
 
   useGSAP(() => {
     // Elegant entrance animation
@@ -165,6 +169,10 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
+        <button className="btn-theme-toggle" onClick={toggleTheme} aria-label="Toggle Theme">
+          {theme === 'dark' ? <Sun size={14} className="theme-toggle-icon" /> : <Moon size={14} className="theme-toggle-icon" />}
+          <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
+        </button>
         <span className="version-label">SSC Prep v2.0</span>
       </div>
     </aside>

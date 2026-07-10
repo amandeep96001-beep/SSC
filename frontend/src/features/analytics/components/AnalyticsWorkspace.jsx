@@ -1,31 +1,49 @@
-import { useMemo } from 'react';
-import { 
+import { useMemo, useState, useEffect } from 'react';
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
-   AreaChart, Area, PieChart, Pie, Cell
+  AreaChart, Area, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { Clock, Target, Activity } from 'lucide-react';
+import { StatCard } from '@/shared/components/ui/StatCard';
 
-const COLORS = ['url(#colorPrimary)', 'url(#colorSuccess)', 'url(#colorWarning)', '#bf4800', '#ff3b30'];
+const PIE_COLORS = ['#8b93f8', '#5eead4', '#f5c76a', '#f9a8d4', '#93c5fd'];
 
 const CHART_TOOLTIP = {
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  backgroundColor: 'rgba(20, 22, 34, 0.92)',
   backdropFilter: 'blur(16px)',
   WebkitBackdropFilter: 'blur(16px)',
   border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '16px',
+  borderRadius: '14px',
   color: '#f8fafc',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
 };
 
-const CHART_AXIS = '#71717a';
-const CHART_GRID = 'rgba(255, 255, 255, 0.05)';
+const CHART_AXIS = '#8b92a8';
+const CHART_GRID = 'rgba(128, 128, 160, 0.12)';
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [breakpoint]);
+
+  return isMobile;
+}
 
 export function AnalyticsWorkspace({ user }) {
+  const isMobile = useIsMobile();
+
   const analyticsData = useMemo(() => {
     let totalMins = 0;
     const mockScores = [];
     const topicDistribution = {};
-    
+
     const parseTime = (timeStr) => {
       if (!timeStr || timeStr === 'N/A') return 0;
       let m = 0;
@@ -36,7 +54,6 @@ export function AnalyticsWorkspace({ user }) {
       return m;
     };
 
-    // Process Mock Progress
     if (user?.mockProgress) {
       user.mockProgress.forEach((mock, index) => {
         totalMins += parseTime(mock.elapsedTime);
@@ -48,7 +65,6 @@ export function AnalyticsWorkspace({ user }) {
       });
     }
 
-    // Process Syllabus Progress
     if (user?.progress) {
       user.progress.forEach((prog) => {
         totalMins += parseTime(prog.elapsedTime);
@@ -60,14 +76,13 @@ export function AnalyticsWorkspace({ user }) {
     }
 
     const pieData = Object.entries(topicDistribution).map(([name, value]) => ({
-      name: name.substring(0, 15) + (name.length > 15 ? '...' : ''),
+      name: name.length > 18 ? `${name.slice(0, 16)}…` : name,
       value
-    })).sort((a,b) => b.value - a.value).slice(0, 5); // Top 5 topics
+    })).sort((a, b) => b.value - a.value).slice(0, 5);
 
     const hours = Math.floor(totalMins / 60);
     const mins = Math.floor(totalMins % 60);
 
-    // Calculate Last 7 Days Activity
     const last7DaysMap = {};
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -89,166 +104,142 @@ export function AnalyticsWorkspace({ user }) {
     if (user?.mockProgress) user.mockProgress.forEach(processDate);
     if (user?.progress) user.progress.forEach(processDate);
 
-    const barData = Object.values(last7DaysMap);
-
     return {
       totalTimeStr: hours > 0 ? `${hours}h ${mins}m` : `${mins} Mins`,
       mockCount: user?.mockProgress?.length || 0,
       syllabusCount: user?.progress?.length || 0,
       mockScores,
       pieData,
-      barData
+      barData: Object.values(last7DaysMap)
     };
   }, [user]);
+
+  const pieOuter = isMobile ? 72 : 105;
+  const pieInner = isMobile ? 44 : 70;
 
   return (
     <div className="study-workspace">
       <div className="workspace-header-sticky">
-        <div className="section-header" style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="section-header">
           <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: '700', letterSpacing: '-0.02em', background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Insights & Analytics
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', marginTop: '6px' }}>Visualize your study time, mock progression, and engagement scale.</p>
+            <h1>Insights & Analytics</h1>
+            <p>Visualize your study time, mock progression, and engagement scale.</p>
           </div>
         </div>
       </div>
 
       <div className="workspace-scrollable-content">
-      {/* Top Stats */}
-      <div className="stats-row" style={{ marginBottom: '32px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-        <div className="stat-box" style={{ background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(52, 199, 89, 0.02) 100%)', border: '1px solid rgba(52, 199, 89, 0.2)', borderRadius: '24px', padding: '24px', backdropFilter: 'blur(10px)' }}>
-          <span className="stat-label" style={{ color: '#28a745', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            <Clock size={18} /> Total Time on Mock
-          </span>
-          <span className="stat-val" style={{ color: '#28a745', fontSize: '2.5rem', fontWeight: '700', marginTop: '12px', display: 'block', letterSpacing: '-0.03em' }}>{analyticsData.totalTimeStr}</span>
+        <div className="stats-row">
+          <StatCard icon={Clock} label="Total Time on Mock" value={analyticsData.totalTimeStr} variant="mint" />
+          <StatCard icon={Target} label="Total Mocks Given" value={analyticsData.mockCount} variant="blue" />
+          <StatCard icon={Activity} label="Syllabus Tests Taken" value={analyticsData.syllabusCount} variant="peach" />
         </div>
-        <div className="stat-box" style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '24px', padding: '24px', backdropFilter: 'blur(20px)', boxShadow: 'var(--shadow-sm)' }}>
-          <span className="stat-label" style={{ color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            <Target size={18} /> Total Mocks Given
-          </span>
-          <span className="stat-val" style={{ color: 'var(--color-primary)', fontSize: '2.5rem', fontWeight: '700', marginTop: '12px', display: 'block', letterSpacing: '-0.03em' }}>{analyticsData.mockCount}</span>
-        </div>
-        <div className="stat-box" style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '24px', padding: '24px', backdropFilter: 'blur(20px)', boxShadow: 'var(--shadow-sm)' }}>
-          <span className="stat-label" style={{ color: '#ff9f0a', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            <Activity size={18} /> Syllabus Tests Taken
-          </span>
-          <span className="stat-val" style={{ color: '#ff9f0a', fontSize: '2.5rem', fontWeight: '700', marginTop: '12px', display: 'block', letterSpacing: '-0.03em' }}>{analyticsData.syllabusCount}</span>
-        </div>
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-        {/* Weekly Activity Bar Chart */}
-        <div className="chart-container" style={{ background: 'var(--glass-bg)', padding: '24px', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', backdropFilter: 'blur(20px)' }}>
-          <h3 style={{ color: 'var(--text-primary)', marginBottom: '24px', fontSize: '1.25rem', fontWeight: '600' }}>Daily Study Time (Last 7 Days)</h3>
-          <div style={{ width: '100%', height: 320 }}>
-            <ResponsiveContainer>
-              <BarChart data={analyticsData.barData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#34c759" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#28a745" stopOpacity={0.8}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
-                <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={13} tickLine={false} axisLine={false} dy={10} fontFamily="var(--font-sans)" />
-                <YAxis stroke={CHART_AXIS} fontSize={13} tickLine={false} axisLine={false} dx={-10} fontFamily="var(--font-sans)" />
-                <RechartsTooltip 
-                  contentStyle={CHART_TOOLTIP}
-                  itemStyle={{ color: '#34c759', fontWeight: '600', fontFamily: 'var(--font-sans)' }}
-                  labelStyle={{ color: '#86868b', marginBottom: '4px', fontFamily: 'var(--font-sans)' }}
-                  formatter={(value) => [`${Math.round(value)} Mins`, 'Time Spent']}
-                  cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                />
-                <Bar dataKey="minutes" fill="url(#colorBar)" radius={[8, 8, 8, 8]} barSize={32} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="analytics-charts-grid">
+          <div className="chart-container">
+            <h3>Daily Study Time (Last 7 Days)</h3>
+            <div className="chart-plot">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analyticsData.barData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.75} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} dy={8} />
+                  <YAxis stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} width={36} />
+                  <RechartsTooltip
+                    contentStyle={CHART_TOOLTIP}
+                    formatter={(value) => [`${Math.round(value)} Mins`, 'Time Spent']}
+                    cursor={{ fill: 'rgba(129, 140, 248, 0.08)' }}
+                  />
+                  <Bar dataKey="minutes" fill="url(#colorBar)" radius={[8, 8, 8, 8]} barSize={isMobile ? 22 : 32} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="chart-container">
+            <h3>Top 5 Practiced Topics</h3>
+            {analyticsData.pieData.length > 0 ? (
+              <div className="chart-plot chart-plot--pie">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
+                    <Pie
+                      data={analyticsData.pieData}
+                      cx="50%"
+                      cy={isMobile ? '40%' : '46%'}
+                      innerRadius={pieInner}
+                      outerRadius={pieOuter}
+                      paddingAngle={4}
+                      cornerRadius={8}
+                      dataKey="value"
+                      nameKey="name"
+                      stroke="none"
+                    >
+                      {analyticsData.pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Legend
+                      verticalAlign="bottom"
+                      align="center"
+                      layout="horizontal"
+                      height={isMobile ? 80 : 56}
+                      iconType="circle"
+                      iconSize={8}
+                      wrapperStyle={{ fontSize: isMobile ? 11 : 12, color: 'var(--text-secondary)', paddingTop: 4 }}
+                      formatter={(value) => (
+                        <span style={{ color: 'var(--text-secondary)', maxWidth: isMobile ? 90 : 140, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                          {value}
+                        </span>
+                      )}
+                    />
+                    <RechartsTooltip contentStyle={CHART_TOOLTIP} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="chart-empty">No syllabus tests taken yet.</div>
+            )}
           </div>
         </div>
 
-        {/* Syllabus Topic Distribution */}
-        <div className="chart-container" style={{ background: 'var(--glass-bg)', padding: '24px', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', backdropFilter: 'blur(20px)' }}>
-          <h3 style={{ color: 'var(--text-primary)', marginBottom: '24px', fontSize: '1.25rem', fontWeight: '600' }}>Top 5 Practiced Topics</h3>
-          {analyticsData.pieData.length > 0 ? (
-            <div style={{ width: '100%', height: 320 }}>
-              <ResponsiveContainer>
-                <PieChart>
+        <div className="chart-container chart-container--full">
+          <h3>Mock Score Progression</h3>
+          {analyticsData.mockScores.length > 0 ? (
+            <div className="chart-plot chart-plot--tall">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analyticsData.mockScores} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorPrimary" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#0071e3" stopOpacity={1}/>
-                      <stop offset="100%" stopColor="#005bb5" stopOpacity={1}/>
-                    </linearGradient>
-                    <linearGradient id="colorSuccess" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#34c759" stopOpacity={1}/>
-                      <stop offset="100%" stopColor="#28a745" stopOpacity={1}/>
-                    </linearGradient>
-                    <linearGradient id="colorWarning" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#ff9f0a" stopOpacity={1}/>
-                      <stop offset="100%" stopColor="#e08900" stopOpacity={1}/>
+                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#818cf8" stopOpacity={0.28} />
+                      <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <Pie
-                    data={analyticsData.pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={75}
-                    outerRadius={110}
-                    paddingAngle={6}
-                    dataKey="value"
-                    stroke="none"
-                    label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={{ stroke: CHART_AXIS, strokeWidth: 1 }}
-                  >
-                    {analyticsData.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip 
-                    contentStyle={CHART_TOOLTIP}
-                    itemStyle={{ color: '#1d1d1f', fontWeight: '600', fontFamily: 'var(--font-sans)' }}
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
+                  <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} dy={8} />
+                  <YAxis stroke={CHART_AXIS} fontSize={12} domain={[0, 200]} tickLine={false} axisLine={false} width={36} />
+                  <RechartsTooltip contentStyle={CHART_TOOLTIP} />
+                  <Area
+                    type="monotone"
+                    dataKey="score"
+                    name="Score"
+                    stroke="var(--color-primary)"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#colorScore)"
+                    activeDot={{ r: 6, fill: 'var(--color-primary)', stroke: '#fff', strokeWidth: 2 }}
                   />
-                </PieChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div style={{ height: 320, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-              No syllabus tests taken yet.
-            </div>
+            <div className="chart-empty">Not enough mock data to show progression.</div>
           )}
         </div>
-      </div>
-
-      {/* Mock Progression Chart */}
-      <div className="chart-container" style={{ background: 'var(--glass-bg)', padding: '24px', borderRadius: '32px', border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-premium)', backdropFilter: 'blur(20px)', marginBottom: '32px' }}>
-        <h3 style={{ color: 'var(--text-primary)', marginBottom: '24px', fontSize: '1.25rem', fontWeight: '600' }}>Mock Score Progression</h3>
-        {analyticsData.mockScores.length > 0 ? (
-          <div style={{ width: '100%', height: 360 }}>
-            <ResponsiveContainer>
-              <AreaChart data={analyticsData.mockScores} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0071e3" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="#0071e3" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
-                <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={13} tickLine={false} axisLine={false} dy={10} fontFamily="var(--font-sans)" />
-                <YAxis stroke={CHART_AXIS} fontSize={13} domain={[0, 200]} tickLine={false} axisLine={false} dx={-10} fontFamily="var(--font-sans)" />
-                <RechartsTooltip 
-                  contentStyle={CHART_TOOLTIP}
-                  itemStyle={{ color: '#0071e3', fontWeight: '600', fontFamily: 'var(--font-sans)' }}
-                  labelStyle={{ color: '#86868b', marginBottom: '4px', fontFamily: 'var(--font-sans)' }}
-                />
-                <Area type="monotone" dataKey="score" name="Score" stroke="var(--color-primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorScore)" activeDot={{ r: 8, fill: 'var(--color-primary)', stroke: '#fff', strokeWidth: 3 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-            Not enough mock data to show progression.
-          </div>
-        )}
-      </div>
       </div>
     </div>
   );

@@ -1,0 +1,614 @@
+/* ============================================================
+   Mobile sleek layout — overflow, spacing, readable notes
+   Loaded last via index.css — wins over App.css conflicts
+   ============================================================ */
+
+@media (max-width: 768px) {
+  html,
+  body {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+
+  .lms-container {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .lms-workspace {
+    padding: calc(var(--mobile-header-h, 56px) + 18px) 12px 20px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .workspace-card-enclosure {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin-top: 6px !important;
+    padding: 16px 12px 18px !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    height: calc(100dvh - var(--mobile-header-h, 56px) - 28px) !important;
+    max-height: calc(100dvh - var(--mobile-header-h, 56px) - 28px) !important;
+  }
+
+  .mobile-header {
+    min-height: var(--mobile-header-h, 56px) !important;
+    padding: max(12px, env(safe-area-inset-top, 0px)) 14px 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  .btn-mobile-toggle {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px !important;
+    background: var(--color-primary-muted) !important;
+    border: none !important;
+    color: var(--color-primary) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  .btn-mobile-toggle:hover {
+    transform: none !important;
+  }
+
+  /* ---- Charts / analytics ---- */
+  .analytics-charts-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .chart-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 16px 12px !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+  }
+
+  .chart-container h3 {
+    font-size: 1rem !important;
+    margin-bottom: 12px !important;
+  }
+
+  .chart-plot {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 220px !important;
+  }
+
+  .chart-plot--tall {
+    height: 240px !important;
+  }
+
+  .chart-plot--pie {
+    height: 300px !important;
+  }
+
+  /* ---- Drill / revision tabs — horizontal scroll on mobile ---- */
+  .tabs-header,
+  .tabs-header--scroll,
+  .drill-workspace .tabs-header,
+  .revision-workspace .tabs-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    margin-bottom: 10px !important;
+  }
+
+  .tabs-header::-webkit-scrollbar,
+  .tabs-header--scroll::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .drill-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: max-content !important;
+    max-width: none !important;
+    min-width: min(100%, max-content) !important;
+    padding: 4px !important;
+    border-radius: 16px !important;
+    gap: 4px !important;
+    box-sizing: border-box !important;
+  }
+
+  .drill-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+    padding: 8px 12px !important;
+    font-size: 0.78rem !important;
+  }
+
+  /* ---- Drill / Revision: scroll INSIDE white card ---- */
+  .drill-workspace,
+  .revision-workspace,
+  .study-workspace:not(.notes-flow):not(.syllabus-flow) {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    flex: 1 1 auto !important;
+  }
+
+  .drill-workspace .workspace-header-sticky,
+  .revision-workspace .workspace-header-sticky {
+    position: relative !important;
+    top: auto !important;
+    flex-shrink: 0 !important;
+    z-index: 2 !important;
+    background: transparent !important;
+  }
+
+  .drill-workspace .workspace-scrollable-content,
+  .revision-workspace .workspace-scrollable-content {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 32px !important;
+    padding-right: 0 !important;
+  }
+
+  .drill-interactive-card,
+  .drill-config-card {
+    border-radius: 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* ---- Stats ---- */
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .stat-card-premium {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    border-radius: 16px !important;
+    padding: 12px 10px !important;
+  }
+
+  .stat-card-premium__icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 12px !important;
+  }
+
+  .stat-card-premium__value {
+    font-size: 1.25rem !important;
+  }
+
+  /* ---- Revision ---- */
+  .revision-workspace,
+  .revision-workspace .workspace-scrollable-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .revision-sub-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 12px !important;
+    scrollbar-width: none !important;
+  }
+
+  .revision-sub-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .revision-sub-tab {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    border-radius: 999px !important;
+    padding: 8px 14px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .tables-deck-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .table-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+
+  .table-card-body {
+    padding: 10px 12px !important;
+  }
+
+  .multiplier-row {
+    gap: 10px !important;
+    padding: 8px 10px !important;
+    border-radius: 10px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .multiplier-row span:first-child {
+    min-width: 72px !important;
+    color: var(--text-primary) !important;
+  }
+
+  .fraction-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .fraction-row {
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+  }
+
+  /* Subjects / Topics list scroll inside white card */
+  .syllabus-flow:not(.notes-flow),
+  .study-workspace.syllabus-flow:not(.notes-flow) {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .syllabus-flow:not(.notes-flow) .syllabus-page-header {
+    flex-shrink: 0 !important;
+  }
+
+  .syllabus-flow:not(.notes-flow) .syllabus-page-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 28px !important;
+  }
+
+  .subjects-grid,
+  .topics-list-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-bottom: 8px !important;
+  }
+  .notes-flow.study-workspace.syllabus-flow,
+  .notes-flow.study-workspace,
+  .notes-flow.syllabus-flow {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .notes-flow--focus.study-workspace.syllabus-flow,
+  .notes-flow--focus.study-workspace {
+    height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  .notes-flow .notes-toolbar-header {
+    position: relative !important;
+    top: auto !important;
+    flex-shrink: 0 !important;
+    padding: 4px 0 8px !important;
+    margin: 0 0 6px !important;
+    background: transparent !important;
+  }
+
+  .notes-toolbar-header .syllabus-page-header__row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .notes-toolbar-header .syllabus-page-header__actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+  }
+
+  .notes-toolbar-header .btn-add,
+  .notes-toolbar-header .btn-back {
+    flex: 1 !important;
+    justify-content: center !important;
+    border-radius: 12px !important;
+    min-height: 40px !important;
+  }
+
+  .notes-reader-panel {
+    flex: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  .notes-reading-toolbar {
+    flex-shrink: 0 !important;
+    padding: 10px !important;
+    border-radius: 14px !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    margin-bottom: 0 !important;
+  }
+
+  .notes-reading-compact {
+    display: flex !important;
+  }
+
+  .notes-reading-panel {
+    display: none !important;
+  }
+
+  .notes-reading-toolbar--open .notes-reading-panel {
+    display: flex !important;
+  }
+
+  .notes-reading-meta--desktop,
+  .notes-reading-done--desktop,
+  .notes-reading-pct--desktop {
+    display: none !important;
+  }
+
+  .notes-reading-controls {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+  }
+
+  .notes-ctrl-btn {
+    min-height: 32px !important;
+    padding: 5px 10px !important;
+    border-radius: 10px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .notes-ctrl-btn--hide-sm,
+  .notes-reading-meta,
+  .notes-reading-done {
+    display: none !important;
+  }
+
+  .notes-reading-pct {
+    margin-left: auto !important;
+    font-size: 0.7rem !important;
+  }
+
+  .notes-search-bar {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 12px !important;
+  }
+
+  .btn-drill-next {
+    width: 100% !important;
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    font-size: 0.95rem !important;
+  }
+
+  .action-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .btn-skip,
+  .btn-submit {
+    width: 100% !important;
+    min-height: 44px !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+  }
+
+  .notes-reading-layout {
+    flex: 1 !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    gap: 8px !important;
+  }
+
+  .notes-toc {
+    position: static !important;
+    flex: none !important;
+    width: 100% !important;
+    max-height: 120px !important;
+    border-radius: 12px !important;
+  }
+
+  .notes-sheet--premium,
+  .notes-flow .notes-sheet--premium {
+    flex: 1 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .notes-sheet-header {
+    flex-shrink: 0 !important;
+    padding: 14px 14px 10px !important;
+  }
+
+  .notes-reader-scroll {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .notes-reader {
+    padding: 16px 14px 24px !important;
+  }
+
+  .notes-sheet-footer {
+    padding: 16px 14px 20px !important;
+  }
+
+  .notes-scroll-top {
+    position: absolute !important;
+    bottom: 12px !important;
+    right: 12px !important;
+  }
+
+  /* Drill / revision cards */
+  .drill-interactive-card,
+  .drill-config-card {
+    border-radius: 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .subject-selection-card,
+  .topic-outline-card,
+  .vocab-term-card {
+    border-radius: 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .lms-workspace {
+    padding: calc(var(--mobile-header-h, 56px) + 16px) 10px 16px !important;
+  }
+
+  .workspace-card-enclosure {
+    padding: 14px 10px 16px !important;
+    border-radius: 18px !important;
+  }
+
+  .tables-deck-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .chart-plot {
+    height: 200px !important;
+  }
+
+  .chart-plot--pie {
+    height: 280px !important;
+  }
+
+  .notes-flow.study-workspace.syllabus-flow {
+    height: calc(100dvh - var(--mobile-header-h, 56px) - 36px) !important;
+    max-height: calc(100dvh - var(--mobile-header-h, 56px) - 36px) !important;
+  }
+}
+
+/* ---- Notes text contrast (beats saved HTML inline colors) ---- */
+[data-theme="dark"] .notes-reader,
+[data-theme="dark"] .notes-reader p,
+[data-theme="dark"] .notes-reader li,
+[data-theme="dark"] .notes-reader span,
+[data-theme="dark"] .notes-reader div,
+[data-theme="dark"] .notes-reader td,
+[data-theme="dark"] .notes-reader th,
+[data-theme="dark"] .notes-reader .notes-lead {
+  color: #dce0f0 !important;
+}
+
+[data-theme="dark"] .notes-reader h1,
+[data-theme="dark"] .notes-reader h2,
+[data-theme="dark"] .notes-reader h3,
+[data-theme="dark"] .notes-reader h4,
+[data-theme="dark"] .notes-reader .notes-section-title,
+[data-theme="dark"] .notes-reader strong,
+[data-theme="dark"] .notes-reader b {
+  color: #f4f5fc !important;
+}
+
+[data-theme="light"] .notes-reader,
+[data-theme="light"] .notes-reader p,
+[data-theme="light"] .notes-reader li,
+[data-theme="light"] .notes-reader span,
+[data-theme="light"] .notes-reader div,
+[data-theme="light"] .notes-reader .notes-lead {
+  color: #3a3f55 !important;
+}
+
+[data-theme="light"] .notes-reader h1,
+[data-theme="light"] .notes-reader h2,
+[data-theme="light"] .notes-reader h3,
+[data-theme="light"] .notes-reader h4,
+[data-theme="light"] .notes-reader .notes-section-title,
+[data-theme="light"] .notes-reader strong,
+[data-theme="light"] .notes-reader b {
+  color: #1a1d2e !important;
+}
+
+.notes-sheet--comfort .notes-reader,
+.notes-sheet--comfort .notes-reader p,
+.notes-sheet--comfort .notes-reader li,
+.notes-sheet--comfort .notes-reader span,
+.notes-sheet--comfort .notes-reader div,
+.notes-sheet--comfort .notes-reader h1,
+.notes-sheet--comfort .notes-reader h2,
+.notes-sheet--comfort .notes-reader h3,
+.notes-sheet--comfort .notes-reader .notes-section-title,
+.notes-sheet--comfort .notes-reader strong {
+  color: var(--notes-comfort-text) !important;
+}
+
+[data-theme="dark"] .notes-reader mark,
+[data-theme="light"] .notes-reader mark {
+  color: inherit !important;
+}
+
+.notes-reader mark.search-hit {
+  background: rgba(245, 158, 11, 0.5) !important;
+  color: inherit !important;
+}
+
+/* Dark mode multiplier rows — readable */
+[data-theme="dark"] .multiplier-row span:first-child {
+  color: #e8eaf5 !important;
+}

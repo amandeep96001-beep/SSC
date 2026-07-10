@@ -4,8 +4,9 @@ import {
   Flame, Zap, Percent, TrendingUp, BookOpen,
   CheckCircle, XCircle, RefreshCw, Brain, FileText,
   Calculator, Cpu, AlertTriangle, Trash2, Sparkles,
-  ChevronDown, ChevronUp, Loader2, RotateCcw, Send
+  ChevronDown, ChevronUp, Loader2, RotateCcw, Send, ListChecks, ArrowRight
 } from 'lucide-react';
+import { StatCard } from '@/shared/components/ui/StatCard';
 import '@/features/dashboard/Dashboard.css';
 
 // ── Markdown Formatter ────────────────────────────────────────────────────────
@@ -449,20 +450,28 @@ export function DrillWorkspace({
           <h1>Practice Speed Drills</h1>
           <p>Solve high-speed calculations and English vocab vocabulary drills.</p>
         </div>
-        <div className="tabs-header">
+        <div className="tabs-header tabs-header--scroll">
           <div className="drill-tabs">
             {TABS.map(({ key, label, Icon }) => (
               <button
                 key={key}
+                type="button"
                 className={`drill-tab ${activeTab === 'drill' && drillType === key ? 'active' : ''}`}
-                onClick={() => switchDrill(key)}
+                onClick={(e) => {
+                  switchDrill(key);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }}
               >
                 <Icon size={14} /><span>{label}</span>
               </button>
             ))}
             <button
+              type="button"
               className={`drill-tab drill-tab--wronglog ${activeTab === 'wronglog' ? 'active' : ''}`}
-              onClick={() => setActiveTab('wronglog')}
+              onClick={(e) => {
+                setActiveTab('wronglog');
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+              }}
             >
               <AlertTriangle size={14} />
               <span>Wrong Questions</span>
@@ -477,10 +486,10 @@ export function DrillWorkspace({
       <div className="workspace-scrollable-content">
         {/* Stats row — always visible */}
         <div className="stats-row">
-          <div className="stat-box"><span className="stat-label">Total Attempts</span><span className="stat-val">{drillStats.totalAsked}</span></div>
-          <div className="stat-box"><span className="stat-label">Correct Answers</span><span className="stat-val">{drillStats.score}</span></div>
-          <div className="stat-box"><span className="stat-label">Incorrect / Skips</span><span className="stat-val">{drillStats.totalAsked - drillStats.score}</span></div>
-          <div className="stat-box"><span className="stat-label">Streak</span><span className="stat-val streak-val"><Flame className="streak-icon" size={20} />{drillStats.streak}</span></div>
+          <StatCard icon={ListChecks} label="Total Attempts" value={drillStats.totalAsked} variant="blue" />
+          <StatCard icon={CheckCircle} label="Correct Answers" value={drillStats.score} variant="mint" />
+          <StatCard icon={XCircle} label="Incorrect / Skips" value={drillStats.totalAsked - drillStats.score} variant="rose" />
+          <StatCard icon={Flame} label="Streak" value={drillStats.streak} variant="peach" />
         </div>
 
         {/* ═══ TAB: DRILL ═══════════════════════════════════════════════════ */}
@@ -557,10 +566,16 @@ export function DrillWorkspace({
                               <div className="drill-error-vocab-row"><strong>Explanation:</strong> {currentDrill.explanation}</div>
                             </div>
                           )}
-                          <button className="btn btn-save btn-drill-next" onClick={() => loadNextDrill(drillType)}>Next Question ➔</button>
                         </div>
                       )}
-                      {drillFeedback.isCorrect && <span className="loader-next-text">Sourcing next question...</span>}
+                      <button
+                        type="button"
+                        className="btn-drill-next"
+                        onClick={() => loadNextDrill(drillType)}
+                      >
+                        <span>Next Question</span>
+                        <ArrowRight size={18} />
+                      </button>
                     </div>
                   ) : (
                     <form onSubmit={submitDrillAnswer} className="submit-form">
