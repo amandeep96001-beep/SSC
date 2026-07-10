@@ -23,11 +23,6 @@ import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal'
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
 
-const VIEW_PARENT = {
-  notes: 'topics',
-  topics: 'subjects',
-};
-
 export function Dashboard() {
   const {
     activeView,
@@ -151,8 +146,9 @@ export function Dashboard() {
   const [exitToast, setExitToast] = useState('');
   const lastBackPressRef = useRef(0);
   const exitToastTimerRef = useRef(null);
-  const viewHistoryRef = useRef([]);
-  const skipHistoryRef = useRef(false);
+  const isHistoryRestoringRef = useRef(false);
+  const ignorePopRef = useRef(false);
+  const allowExitRef = useRef(false);
   const prevViewRef = useRef(activeView);
   const navRef = useRef({
     activeView,
@@ -166,106 +162,121 @@ export function Dashboard() {
     cancelConfirmOpen,
   };
 
-  // Track section history so back returns to the previous section
+  const VIEW_PARENT = {
+    notes: 'topics',
+    topics: 'subjects',
+  };
+
+  // Keep browser history in sync with sections so Back returns to the previous one
   useEffect(() => {
     if (!user) return;
 
-    const prev = prevViewRef.current;
-    if (skipHistoryRef.current) {
-      skipHistoryRef.current = false;
+    if (isHistoryRestoringRef.current) {
+      isHistoryRestoringRef.current = false;
       prevViewRef.current = activeView;
       return;
     }
 
-    if (prev && prev !== activeView) {
-      const stack = viewHistoryRef.current;
-      if (VIEW_PARENT[prev] === activeView) {
-        // UI "up" navigation (notes→topics→subjects) — keep stack in sync
-        if (stack[stack.length - 1] === activeView) stack.pop();
-      } else if (!['test', 'mock_exam_active'].includes(activeView)) {
-        stack.push(prev);
-        if (stack.length > 40) stack.shift();
-      }
+    const prev = prevViewRef.current;
+    prevViewRef.current = activeView;
+
+    // notes→topics / topics→subjects via UI back: pop history instead of pushing
+    if (prev && VIEW_PARENT[prev] === activeView) {
+      ignorePopRef.current = true;
+      window.history.back();
+      return;
     }
 
-    prevViewRef.current = activeView;
+    // Replace transient screens so Back skips the exam-in-progress entry
+    if (['results', 'test', 'mock_exam_active'].includes(activeView)) {
+      window.history.replaceState({ app: true, view: activeView }, '');
+      return;
+    }
+
+    window.history.pushState({ app: true, view: activeView }, '');
   }, [activeView, user]);
 
-  // Android / browser back: previous section first, then double-press to leave app
+  // Android / browser back → previous section; double-back on root to exit
   useEffect(() => {
     if (!user) return undefined;
 
-    const pushGuard = () => {
-      window.history.pushState({ appGuard: true }, '');
+    const rearm = (view) => {
+      window.history.pushState({ app: true, view }, '');
     };
-
-    if (!window.history.state?.appGuard) {
-      pushGuard();
-    }
 
     const showExitToast = () => {
       setExitToast('Press back again to exit');
       if (exitToastTimerRef.current) clearTimeout(exitToastTimerRef.current);
-      exitToastTimerRef.current = setTimeout(() => setExitToast(''), 2000);
+      exitToastTimerRef.current = setTimeout(() => {
+        setExitToast('');
+        lastBackPressRef.current = 0;
+      }, 2000);
     };
 
-    const goToView = (view) => {
-      skipHistoryRef.current = true;
-      setActiveView(view);
-    };
+    const onPopState = (event) => {
+      if (ignorePopRef.current) {
+        ignorePopRef.current = false;
+        return;
+      }
 
-    const onPopState = () => {
+      if (allowExitRef.current) {
+        allowExitRef.current = false;
+        return;
+      }
+
       const {
-        activeView: view,
+        activeView: currentView,
         isMobileSidebarOpen: sidebarOpen,
         cancelConfirmOpen: cancelOpen,
       } = navRef.current;
 
-      const stay = () => pushGuard();
-
       if (sidebarOpen) {
         setIsMobileSidebarOpen(false);
-        stay();
+        rearm(currentView);
         return;
       }
 
-      if (view === 'mock_exam_active') {
-        goToView('mock');
-        stay();
-        return;
-      }
-
-      if (view === 'test') {
+      if (currentView === 'test') {
         if (!cancelOpen) setCancelConfirmOpen(true);
-        stay();
+        rearm('test');
         return;
       }
 
-      const stack = viewHistoryRef.current;
-      if (stack.length > 0) {
-        const previous = stack.pop();
-        goToView(previous);
-        stay();
+      if (currentView === 'mock_exam_active') {
+        isHistoryRestoringRef.current = true;
+        setActiveView('mock');
+        rearm('mock');
         return;
       }
 
-      if (view !== 'drill') {
-        goToView('drill');
-        stay();
+      const prevView = event.state?.app ? event.state.view : null;
+
+      if (prevView && prevView !== currentView) {
+        isHistoryRestoringRef.current = true;
+        setActiveView(prevView);
+        lastBackPressRef.current = 0;
+        setExitToast('');
         return;
       }
 
+      // Already on this view after a history pop — stay put
+      if (prevView && prevView === currentView) {
+        return;
+      }
+
+      // Root / no previous section — require double back to leave
       const now = Date.now();
       if (now - lastBackPressRef.current < 2000) {
         lastBackPressRef.current = 0;
         setExitToast('');
+        allowExitRef.current = true;
         window.history.back();
         return;
       }
 
       lastBackPressRef.current = now;
       showExitToast();
-      stay();
+      rearm(currentView);
     };
 
     window.addEventListener('popstate', onPopState);
