@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
+import { APP_NAME, APP_TAGLINE, APP_BLURB, pageTitle } from '@/shared/brand';
 import '../auth.css';
 
 export function AuthPanel({ loginUser, registerUser }) {
@@ -53,7 +54,7 @@ export function AuthPanel({ loginUser, registerUser }) {
   return (
     <div className="auth-page">
       <Helmet>
-        <title>{authMode === 'login' ? 'Sign In' : 'Register'} | SSC Prep</title>
+        <title>{pageTitle(authMode === 'login' ? 'Sign In' : 'Register')}</title>
       </Helmet>
 
       <button
@@ -68,10 +69,14 @@ export function AuthPanel({ loginUser, registerUser }) {
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-brand-icon">
-            <GraduationCap size={32} />
+            <GraduationCap size={28} />
           </div>
-          <h1>SSC Prep</h1>
-          <p>{authMode === 'login' ? 'Sign in to your account' : 'Create your account'}</p>
+          <h1>{APP_NAME}</h1>
+          <p className="auth-brand-tagline">{APP_TAGLINE}</p>
+          <p className="auth-brand-blurb">{APP_BLURB}</p>
+          <p className="auth-brand-action">
+            {authMode === 'login' ? 'Sign in to continue your prep' : 'Create an account to start preparing'}
+          </p>
         </div>
 
         <div className="auth-mode-selector" role="tablist">
@@ -155,7 +160,7 @@ export function AuthPanel({ loginUser, registerUser }) {
                 <span>Please wait…</span>
               </>
             ) : (
-              authMode === 'login' ? 'Sign In' : 'Create Account'
+              authMode === 'login' ? 'Continue Prep' : 'Create Account'
             )}
           </button>
         </form>

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { APP_NAME, pageTitle } from '@/shared/brand';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useDrills } from '@/features/drills/hooks/useDrills';
@@ -476,7 +477,7 @@ export function Dashboard() {
 
   return (
     <div className="lms-container">
-      <Helmet><title>Dashboard | ExamPrep Pro</title></Helmet>
+      <Helmet><title>{pageTitle('Dashboard')}</title></Helmet>
       
       {globalLoading && (
         <div className="absolute-loader-strip">
@@ -502,7 +503,7 @@ export function Dashboard() {
           <button className="btn-mobile-toggle" onClick={() => setIsMobileSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h2>{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</h2>
+          <h2>{APP_NAME}</h2>
         </div>
 
         {globalError && (

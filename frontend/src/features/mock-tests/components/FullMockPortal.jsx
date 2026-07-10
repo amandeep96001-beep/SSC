@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 import { apiService } from '@/shared/services/apiService';
@@ -178,7 +179,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
   return (
     <div id="exam-portal" className="no-select">
-      <Helmet><title>Full Mock Test | ExamPrep Pro</title></Helmet>
+      <Helmet><title>{pageTitle('Full Mock')}</title></Helmet>
       
       {/* Top Navbar */}
       <div className="navbar">

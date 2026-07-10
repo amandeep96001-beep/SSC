@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 
@@ -30,7 +31,7 @@ export function ExamPortal({
 
   return (
     <div id="exam-portal" className="no-select">
-      <Helmet><title>Mock Test | ExamPrep Pro</title></Helmet>
+      <Helmet><title>{pageTitle('Topic Test')}</title></Helmet>
       <div className="navbar">
         <div>CHSL DYNAMIC EXAM INTERFACE - {selectedSubject?.toUpperCase()}</div>
         <div id="timer-box">{formatTimer(timer)}</div>

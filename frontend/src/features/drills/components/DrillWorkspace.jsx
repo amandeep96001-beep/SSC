@@ -447,8 +447,8 @@ export function DrillWorkspace({
     <div className="drill-workspace">
       <div className="workspace-header-sticky">
         <div className="section-header">
-          <h1>Practice Speed Drills</h1>
-          <p>Solve high-speed calculations and English vocab vocabulary drills.</p>
+          <h1>Daily Speed Drills</h1>
+          <p>Sharpen Quant calculations and English vocabulary with short, timed sets.</p>
         </div>
         <div className="tabs-header tabs-header--scroll">
           <div className="drill-tabs">

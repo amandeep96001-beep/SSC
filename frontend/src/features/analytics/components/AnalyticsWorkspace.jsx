@@ -123,7 +123,7 @@ export function AnalyticsWorkspace({ user }) {
         <div className="section-header">
           <div>
             <h1>Insights & Analytics</h1>
-            <p>Visualize your study time, mock progression, and engagement scale.</p>
+            <p>Study time, mock trends, and consistency — so you know what to fix next.</p>
           </div>
         </div>
       </div>

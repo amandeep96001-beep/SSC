@@ -36,12 +36,22 @@
 
 .lms-sidebar .brand-icon {
   color: var(--sidebar-nav-active-fg);
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  filter: none;
+}
+
+.lms-sidebar .brand-mark {
+  background: var(--sidebar-surface);
+  border-color: var(--sidebar-border);
 }
 
 :root[data-theme="light"] .lms-sidebar .brand-icon {
   color: var(--color-primary);
   filter: none;
+}
+
+:root[data-theme="light"] .lms-sidebar .brand-mark {
+  background: var(--color-primary-muted);
+  border-color: rgba(99, 102, 241, 0.16);
 }
 
 .lms-sidebar .user-profile-card,

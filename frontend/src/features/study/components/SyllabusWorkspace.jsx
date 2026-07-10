@@ -324,7 +324,7 @@ export function SyllabusWorkspace({
         <div className="study-workspace syllabus-flow">
           <header className="syllabus-page-header">
             <h1>Select Subject Area</h1>
-            <p>Access notes, revision structures, and complete Previous Year Questions mock tests.</p>
+            <p>Browse the SSC syllabus — notes, topic tests, and PYQ-style practice in one place.</p>
           </header>
           <div className="syllabus-page-body">
             <div className="subjects-grid">
@@ -352,7 +352,7 @@ export function SyllabusWorkspace({
             <div className="syllabus-page-header__row">
               <div className="syllabus-page-header__text">
                 <h1>{selectedSubject} — Topics</h1>
-                <p>Select a topic to read revision notes and take a speed test.</p>
+                <p>Open a topic for revision notes, then attempt a timed speed test.</p>
               </div>
               <div className="syllabus-page-header__actions">
                 <button type="button" className="btn-back" onClick={() => setActiveView('subjects')}>

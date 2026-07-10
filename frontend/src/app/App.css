@@ -91,6 +91,19 @@
   padding-bottom: 12px;
 }
 
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--color-primary-muted);
+  border: 1px solid rgba(99, 102, 241, 0.16);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.1);
+}
+
 .brand-icon {
   color: var(--color-primary);
   flex-shrink: 0;
@@ -98,19 +111,23 @@
 
 .brand-text h2 {
   font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
   margin: 0;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
+  color: var(--text-heading);
+  letter-spacing: -0.03em;
   text-align: left;
 }
 
 .brand-text span {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
   display: block;
   text-align: left;
+  margin-top: 2px;
 }
 
 /* Connection info card */

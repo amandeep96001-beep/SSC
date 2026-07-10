@@ -34,9 +34,9 @@ export function PerformanceWorkspace({ user }) {
         <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1>
-            Performance Analytics Dashboard
+            Performance Tracker
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Track your target concepts, average mock scores, and revision statistics.</p>
+          <p style={{ color: 'var(--text-muted)' }}>Syllabus coverage, mock averages, and weak areas at a glance.</p>
         </div>
       </div>
 

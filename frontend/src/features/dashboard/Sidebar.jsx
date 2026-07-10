@@ -16,6 +16,7 @@ import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
+import { APP_NAME, APP_TAGLINE, APP_VERSION } from '@/shared/brand';
 
 export function Sidebar({
   user,
@@ -31,7 +32,6 @@ export function Sidebar({
   const { theme, toggleTheme } = useTheme();
 
   useGSAP(() => {
-    // Elegant entrance animation
     gsap.fromTo('.sidebar-brand', 
       { y: -20, opacity: 0 }, 
       { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out', clearProps: 'all' }
@@ -42,7 +42,7 @@ export function Sidebar({
     );
     gsap.fromTo('.nav-item', 
       { x: -30, opacity: 0 }, 
-      { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 0.4, ease: 'back.out(1.2)', clearProps: 'all' }
+      { x: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 0.4, ease: 'power2.out', clearProps: 'all' }
     );
     gsap.fromTo('.sidebar-footer', 
       { opacity: 0 }, 
@@ -52,7 +52,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
           className="sidebar-mobile-overlay" 
@@ -61,10 +60,12 @@ export function Sidebar({
       )}
       <aside ref={sidebarRef} className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
-        <GraduationCap className="brand-icon" size={28} />
+        <div className="brand-mark" aria-hidden="true">
+          <GraduationCap className="brand-icon" size={22} />
+        </div>
         <div className="brand-text">
-          <h2>SSC Prep</h2>
-          <span>CGL · CHSL · MTS</span>
+          <h2>{APP_NAME}</h2>
+          <span>{APP_TAGLINE}</span>
         </div>
       </div>
 
@@ -84,8 +85,8 @@ export function Sidebar({
       <div className="connection-card">
         <div className={`status-dot ${isOnline ? 'connected' : 'disconnected'}`}></div>
         <div className="connection-info">
-          <span className="status-label">Database</span>
-          <span className="status-text">{isOnline ? 'Atlas Connected' : 'Offline Mode'}</span>
+          <span className="status-label">Sync status</span>
+          <span className="status-text">{isOnline ? 'Connected' : 'Offline'}</span>
         </div>
       </div>
 
@@ -98,7 +99,7 @@ export function Sidebar({
           }}
         >
           <Zap className="nav-icon" size={18} />
-          <span>Speed Drills</span>
+          <span>Daily Drills</span>
         </button>
         
         <button 
@@ -142,7 +143,7 @@ export function Sidebar({
           }}
         >
           <Trophy className="nav-icon" size={18} />
-          <span>Performance Tracker</span>
+          <span>Performance</span>
         </button>
 
         <button 
@@ -153,7 +154,7 @@ export function Sidebar({
           }}
         >
           <PieChart className="nav-icon" size={18} />
-          <span>Insights & Analytics</span>
+          <span>Analytics</span>
         </button>
 
         <button 
@@ -173,7 +174,7 @@ export function Sidebar({
           {theme === 'dark' ? <Sun size={14} className="theme-toggle-icon" /> : <Moon size={14} className="theme-toggle-icon" />}
           <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
         </button>
-        <span className="version-label">SSC Prep v2.0</span>
+        <span className="version-label">{APP_NAME} v{APP_VERSION}</span>
       </div>
     </aside>
     </>
