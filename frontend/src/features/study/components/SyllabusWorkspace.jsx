@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { 
   BookMarked, 
@@ -20,7 +20,6 @@ import {
   Minimize2,
   ChevronUp,
   ChevronDown,
-  CheckCircle2,
   AlignJustify,
   Settings2
 } from 'lucide-react';
@@ -91,18 +90,6 @@ export function SyllabusWorkspace({
     localStorage.setItem('ssc_notes_spacing', notesLineSpacing);
   }, [notesLineSpacing]);
 
-  const readStats = useMemo(() => {
-    const plain = (localNotesHtml || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    const words = plain ? plain.split(' ').filter(Boolean).length : 0;
-    const minutes = Math.max(1, Math.ceil(words / 200));
-    return { words, minutes };
-  }, [localNotesHtml]);
-
-  const isTopicRead = useMemo(() => {
-    if (!activeNotes) return false;
-    return Boolean(localStorage.getItem(`ssc_notes_done_${activeNotes.id}`));
-  }, [activeNotes, readingProgress]);
-
   useEffect(() => {
     if (!notesRef.current || activeView !== 'notes') return;
     const headings = notesRef.current.querySelectorAll('h2, h3, .notes-section-title');
@@ -126,9 +113,6 @@ export function SyllabusWorkspace({
     const pct = max > 0 ? Math.min(100, Math.round((el.scrollTop / max) * 100)) : 0;
     setReadingProgress(pct);
     setShowScrollTop(el.scrollTop > 200);
-    if (pct >= 90 && activeNotes?.id) {
-      localStorage.setItem(`ssc_notes_done_${activeNotes.id}`, new Date().toISOString());
-    }
     if (activeNotes?.id) {
       localStorage.setItem(`ssc_notes_scroll_${activeNotes.id}`, String(el.scrollTop));
     }
@@ -509,10 +493,7 @@ export function SyllabusWorkspace({
                 </div>
 
                 <div className="notes-reading-compact">
-                  <span className="notes-reading-compact__meta">
-                    {readStats.minutes} min · {readingProgress}%
-                    {isTopicRead && <span className="notes-reading-done"><CheckCircle2 size={13} /> Done</span>}
-                  </span>
+                  <span className="notes-reading-compact__meta">{readingProgress}% read</span>
                   <button
                     type="button"
                     className={`notes-tools-toggle${showReadTools ? ' active' : ''}`}
@@ -545,10 +526,6 @@ export function SyllabusWorkspace({
                       {notesFocus ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                       {notesFocus ? 'Exit' : 'Focus'}
                     </button>
-                    <span className="notes-reading-meta notes-reading-meta--desktop">{readStats.minutes} min · {readStats.words} words</span>
-                    {isTopicRead && (
-                      <span className="notes-reading-done notes-reading-done--desktop"><CheckCircle2 size={14} /> Done</span>
-                    )}
                     <span className="notes-reading-controls__label notes-reading-pct notes-reading-pct--desktop">{readingProgress}%</span>
                   </div>
                   <form className="notes-search-bar" onSubmit={handleSearchSubmit}>

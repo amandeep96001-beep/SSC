@@ -34,30 +34,43 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
   // Fetch Mock Data
   useEffect(() => {
+    let cancelled = false;
+
     async function loadTest() {
+      if (!mockTestId) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
+        // apiService returns the JSON body: { status: 'success', data: test }
         const res = await apiService.get(`/mock/${mockTestId}`);
-        if (res.success && res.data) {
-          const testData = res.data;
+        const testData = res?.data ?? res;
+
+        if (cancelled) return;
+
+        if (testData?.questions) {
           setMockData(testData);
-          
-          // Pre-populate visited for the first question
-          if (testData.questions && testData.questions.length > 0) {
-            setQuestionStatuses(prev => ({ ...prev, 0: 'not-answered' }));
-            
-            // Set first section based on the first question
+
+          if (testData.questions.length > 0) {
+            setQuestionStatuses({ 0: 'not-answered' });
             if (testData.questions[0].section) {
               setCurrentSection(testData.questions[0].section);
             }
           }
+        } else {
+          console.error('Mock test payload missing questions', res);
         }
       } catch (err) {
         console.error('Error loading mock test', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     loadTest();
+    return () => { cancelled = true; };
   }, [mockTestId]);
 
   // Timer logic
@@ -134,12 +147,25 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
     }
   };
 
-  if (loading || !mockData) {
+  if (loading) {
     return (
       <div id="exam-portal" className="no-select">
          <div className="exam-initializing-overlay">
             <RefreshCw className="spin-icon spin-icon-blue" size={32} />
             <span className="exam-initializing-text">Initializing Secure Mock Exam Environment...</span>
+         </div>
+      </div>
+    );
+  }
+
+  if (!mockData?.questions?.length) {
+    return (
+      <div id="exam-portal" className="no-select">
+         <div className="exam-initializing-overlay">
+            <span className="exam-initializing-text">Could not load this mock test. Please go back and try again.</span>
+            <button type="button" className="btn-cancel" style={{ marginTop: 16 }} onClick={onCancel}>
+              Back to Mocks
+            </button>
          </div>
       </div>
     );

@@ -29,9 +29,11 @@
     max-width: 100% !important;
     box-sizing: border-box !important;
     margin-top: 6px !important;
-    padding: 16px 12px 18px !important;
+    padding: 16px 14px 20px !important;
     border-radius: 20px !important;
-    overflow: hidden !important;
+    /* Allow hover shadows; Y scroll stays on inner bodies */
+    overflow-x: visible !important;
+    overflow-y: hidden !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
@@ -298,14 +300,15 @@
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 28px !important;
+    padding: 8px 8px 28px 2px !important;
   }
 
   .subjects-grid,
   .topics-list-container {
     width: 100% !important;
     max-width: 100% !important;
-    padding-bottom: 8px !important;
+    box-sizing: border-box !important;
+    padding: 4px 2px 12px !important;
   }
   .notes-flow.study-workspace.syllabus-flow,
   .notes-flow.study-workspace,
@@ -385,8 +388,6 @@
     display: flex !important;
   }
 
-  .notes-reading-meta--desktop,
-  .notes-reading-done--desktop,
   .notes-reading-pct--desktop {
     display: none !important;
   }
@@ -405,9 +406,7 @@
     font-size: 0.75rem !important;
   }
 
-  .notes-ctrl-btn--hide-sm,
-  .notes-reading-meta,
-  .notes-reading-done {
+  .notes-ctrl-btn--hide-sm {
     display: none !important;
   }
 

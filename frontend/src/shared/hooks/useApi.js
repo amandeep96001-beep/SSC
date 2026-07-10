@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 
 /**
  * Custom hook to run asynchronous API requests cleanly without cluttering components.
@@ -31,11 +31,8 @@ export function useApi(apiFunc) {
 
   const clearError = useCallback(() => setError(null), []);
 
-  return {
-    data,
-    loading,
-    error,
-    execute,
-    clearError
-  };
+  return useMemo(
+    () => ({ data, loading, error, execute, clearError }),
+    [data, loading, error, execute, clearError]
+  );
 }

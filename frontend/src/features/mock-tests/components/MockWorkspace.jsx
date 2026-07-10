@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Check, Play, BookOpen, Inbox, Trash2, XCircle } from 'lucide-react';
 
-export function MockWorkspace({ useMockTests, startMockExam }) {
-  const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = useMockTests();
+export function MockWorkspace({ mockTestsApi, startMockExam }) {
+  const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
   const [showAddForm, setShowAddForm] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTestId, setDeletingTestId] = useState(null);
@@ -106,7 +106,7 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
         <div style={{ display: 'flex', gap: '24px', alignItems: 'stretch' }}>
           {/* Add Form */}
           <div className="mock-glass-card" style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ marginBottom: '20px', color: '#f8fafc' }}>Add Mock JSON</h2>
+            <h2 style={{ marginBottom: '20px', color: 'var(--text-heading)' }}>Add Mock JSON</h2>
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <input 
                 type="text" 
@@ -182,11 +182,11 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
               </button>
             </div>
           ) : (
-            <div className="syllabus-grid">
+            <div className="subjects-grid">
               {loading && mockTests.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Loading secure mock tests...</p>}
           
           {mockTests.map((test) => (
-            <div key={test._id} className="mock-glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '20px' }}>
+            <div key={test._id} className="mock-glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '24px' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                   <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.2rem' }}>{test.title}</h3>
@@ -232,10 +232,10 @@ export function MockWorkspace({ useMockTests, startMockExam }) {
               </h3>
             </div>
             
-            <div style={{ padding: '20px 0', color: '#cbd5e1' }}>
+            <div style={{ padding: '20px 0', color: 'var(--text-secondary)' }}>
               Are you completely sure you want to permanently delete this mock test? 
               <br/><br/>
-              <strong>This cannot be undone!</strong>
+              <strong style={{ color: 'var(--text-heading)' }}>This cannot be undone!</strong>
             </div>
 
             <div className="modal-footer-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

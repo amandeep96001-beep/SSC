@@ -6,43 +6,53 @@ import { getListFromResponse, getObjectFromResponse } from '@/shared/utils/apiRe
 export function useMockTests() {
   const [mockTests, setMockTests] = useState([]);
 
-  const getMockTestsApi = useApi(useCallback(() => apiService.get('/mock'), []));
-  const getMockTestByIdApi = useApi(useCallback((id) => apiService.get(`/mock/${id}`), []));
-  const createMockTestApi = useApi(useCallback((body) => apiService.post('/mock', body), []));
-  const deleteMockTestApi = useApi(useCallback((id) => apiService.delete(`/mock/${id}`), []));
+  const { execute: fetchMockTests, loading: listLoading, error: listError } = useApi(
+    useCallback(() => apiService.get('/mock'), [])
+  );
+  const { execute: fetchMockById, loading: byIdLoading, error: byIdError } = useApi(
+    useCallback((id) => apiService.get(`/mock/${id}`), [])
+  );
+  const { execute: createMock, loading: createLoading, error: createError } = useApi(
+    useCallback((body) => apiService.post('/mock', body), [])
+  );
+  const { execute: deleteMock, loading: deleteLoading, error: deleteError } = useApi(
+    useCallback((id) => apiService.delete(`/mock/${id}`), [])
+  );
 
+  // Depend only on stable execute fns — whole useApi objects change every render
+  // and would retrigger MockWorkspace's load effect in an infinite loop.
   const loadMockTests = useCallback(async () => {
-    const result = await getMockTestsApi.execute();
+    const result = await fetchMockTests();
     setMockTests(getListFromResponse(result));
-  }, [getMockTestsApi]);
+  }, [fetchMockTests]);
 
   const addMockTest = useCallback(async (testData) => {
-    const result = await createMockTestApi.execute(testData);
+    const result = await createMock(testData);
     if (result.success) {
       await loadMockTests();
       return { success: true };
     }
     return { success: false, error: result.error };
-  }, [createMockTestApi, loadMockTests]);
+  }, [createMock, loadMockTests]);
 
   const getFullTest = useCallback(async (id) => {
-    const result = await getMockTestByIdApi.execute(id);
+    const result = await fetchMockById(id);
     return getObjectFromResponse(result);
-  }, [getMockTestByIdApi]);
+  }, [fetchMockById]);
 
   const removeMockTest = useCallback(async (id) => {
-    const result = await deleteMockTestApi.execute(id);
+    const result = await deleteMock(id);
     if (result.success) {
       await loadMockTests();
       return { success: true };
     }
     return { success: false, error: result.error };
-  }, [deleteMockTestApi, loadMockTests]);
+  }, [deleteMock, loadMockTests]);
 
   return {
     mockTests,
-    loading: getMockTestsApi.loading || createMockTestApi.loading || getMockTestByIdApi.loading || deleteMockTestApi.loading,
-    error: getMockTestsApi.error || createMockTestApi.error || getMockTestByIdApi.error || deleteMockTestApi.error,
+    loading: listLoading || createLoading || byIdLoading || deleteLoading,
+    error: listError || createError || byIdError || deleteError,
     loadMockTests,
     addMockTest,
     getFullTest,

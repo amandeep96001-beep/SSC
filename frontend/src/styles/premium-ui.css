@@ -108,14 +108,23 @@
 /* ---- Main workspace shell ---- */
 .lms-workspace {
   padding: 32px 32px 32px 24px;
+  overflow-x: visible;
+  overflow-y: hidden;
 }
 
 .workspace-card-enclosure {
-  background: var(--bg-elevated);
-  border: none;
-  border-radius: var(--radius-xl);
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 36px;
   box-shadow: var(--shadow-float);
-  padding: 28px 32px 32px;
+  padding: 32px 36px 36px;
+  /* Keep Y clip for rounded shell; allow X so card hover shadows aren't chopped */
+  overflow-x: visible;
+  overflow-y: auto;
+}
+
+:root[data-theme="dark"] .workspace-card-enclosure {
+  background: var(--bg-elevated);
 }
 
 .section-header h1,
@@ -134,10 +143,24 @@
 .drill-interactive-card,
 .drill-config-card,
 .mock-glass-card {
-  border: none;
-  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(30, 50, 100, 0.05);
+  transition: transform var(--transition-fast), box-shadow var(--transition-smooth), border-color var(--transition-fast);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:root[data-theme="dark"] .subject-selection-card,
+:root[data-theme="dark"] .topic-outline-card,
+:root[data-theme="dark"] .vocab-term-card,
+:root[data-theme="dark"] .stat-box,
+:root[data-theme="dark"] .drill-interactive-card,
+:root[data-theme="dark"] .drill-config-card,
+:root[data-theme="dark"] .mock-glass-card {
+  border-color: var(--border-subtle);
   box-shadow: var(--shadow-card);
-  transition: transform var(--transition-fast), box-shadow var(--transition-smooth);
 }
 
 .subject-selection-card:nth-child(4n + 1) { background: var(--card-tint-blue); }
@@ -152,18 +175,30 @@
 .vocab-term-card:nth-child(3n + 2) { background: var(--card-tint-blue); }
 .vocab-term-card:nth-child(3n + 3) { background: var(--card-tint-peach); }
 
+.mock-glass-card:nth-child(3n + 1) { background: var(--card-tint-blue); }
+.mock-glass-card:nth-child(3n + 2) { background: var(--card-tint-lavender); }
+.mock-glass-card:nth-child(3n + 3) { background: var(--card-tint-peach); }
+
 .subject-selection-card:hover,
 .topic-outline-card:hover,
-.vocab-term-card:hover {
+.vocab-term-card:hover,
+.mock-glass-card:hover {
   transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 16px 40px rgba(30, 50, 100, 0.1);
+  border-color: rgba(99, 102, 241, 0.18);
+  z-index: 2;
+}
+
+.subject-selection-card,
+.topic-outline-card {
+  padding: 24px 26px;
 }
 
 .subject-icon-box {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.75);
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.85);
   box-shadow: var(--shadow-sm);
 }
 
@@ -619,22 +654,6 @@
   border-radius: 8px;
 }
 
-.notes-reading-meta {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.notes-reading-done {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-success);
-}
-
 .notes-reading-pct {
   margin-left: auto;
 }
@@ -895,11 +914,6 @@
     font-size: 0.74rem;
   }
 
-  .notes-reading-meta,
-  .notes-reading-done {
-    display: none;
-  }
-
   .notes-toc {
     position: static;
     flex: none;
@@ -925,7 +939,8 @@
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow-x: visible;
+    overflow-y: hidden;
   }
 
   .study-workspace,

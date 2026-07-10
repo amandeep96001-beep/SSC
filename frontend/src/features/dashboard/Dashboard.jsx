@@ -94,8 +94,8 @@ export function Dashboard() {
         );
       } else {
         gsap.fromTo(workspaceRef.current,
-          { opacity: 0, scale: 0.98, filter: 'blur(4px)' },
-          { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.4, ease: 'expo.out', clearProps: 'all' }
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' }
         );
 
         const cards = workspaceRef.current.querySelectorAll('.stat-card-premium, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html, .chart-container');
@@ -103,13 +103,13 @@ export function Dashboard() {
         if (header) {
           gsap.fromTo(header,
             { opacity: 0, y: -10 },
-            { opacity: 1, y: 0, duration: 0.5, ease: 'expo.out', clearProps: 'all' }
+            { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out', clearProps: 'all' }
           );
         }
         if (cards.length > 0) {
           gsap.fromTo(cards,
-            { opacity: 0, y: 20, scale: 0.96 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.6, stagger: 0.05, ease: 'back.out(1.2)', clearProps: 'all' }
+            { opacity: 0, y: 16 },
+            { opacity: 1, y: 0, duration: 0.45, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
           );
         }
       }
@@ -567,7 +567,7 @@ export function Dashboard() {
 
           {activeView === 'mock' && (
             <MockWorkspace 
-              useMockTests={() => mockTestsHooks}
+              mockTestsApi={mockTestsHooks}
               startMockExam={startMockExam}
             />
           )}
