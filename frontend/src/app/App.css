@@ -2717,12 +2717,50 @@
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     margin: 0;
-    height: 100vh;
+    width: min(300px, 86vw);
+    height: 100dvh;
+    height: 100svh;
+    max-height: 100dvh;
     border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
   }
 
   .lms-sidebar.mobile-open {
     transform: translateX(0);
+  }
+
+  .lms-sidebar .sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lms-sidebar .sidebar-footer {
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+
+  .lms-sidebar .sidebar-brand {
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .lms-sidebar .user-profile-card,
+  .lms-sidebar .connection-card {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .lms-sidebar .nav-item {
+    padding: 10px 12px;
   }
 
   .sidebar-mobile-overlay {
@@ -2740,11 +2778,14 @@
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
-    padding: 0 12px 16px;
-    padding-top: calc(var(--mobile-header-h) + 14px);
-    height: auto;
-    min-height: 100dvh;
-    overflow-x: hidden;
+    padding: 0 12px 8px;
+    padding-top: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px);
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .mobile-header {
@@ -2754,28 +2795,26 @@
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
+    right: auto;
     z-index: 300;
     margin: 0;
-    min-height: var(--mobile-header-h);
-    padding: max(10px, env(safe-area-inset-top, 0px)) 14px 10px;
-    border-bottom: 1px solid var(--border-subtle);
-    background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    box-shadow: var(--shadow-sm);
+    min-height: 0;
+    width: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    pointer-events: none;
   }
 
   .mobile-header h2 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text-heading);
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
+    display: none;
   }
 
   .btn-mobile-toggle {
+    pointer-events: auto;
     background: var(--color-primary-muted);
     border: none;
     color: var(--color-primary);
@@ -3717,32 +3756,38 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
 /* Responsiveness enhancements */
 @media (max-width: 768px) {
   .lms-container {
-    overflow: visible;
-    min-height: 100dvh;
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
   }
 
   .lms-workspace {
-    padding: calc(var(--mobile-header-h) + 12px) 12px 16px !important;
-    height: auto !important;
-    min-height: 100dvh !important;
-    overflow-x: hidden !important;
+    padding: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px) 12px 8px !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .workspace-card-enclosure {
-    padding: 16px 14px 20px !important;
+    padding: 14px 12px 14px !important;
     border-radius: var(--radius-lg) !important;
-    flex: none !important;
+    flex: 1 1 auto !important;
     min-height: 0 !important;
     height: auto !important;
-    overflow-x: visible !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
     overflow-y: hidden !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    margin-top: 6px !important;
+    margin-top: 0 !important;
   }
 
   /* Keep flex scroll chain for drills/revision — scroll INSIDE card */
@@ -3775,7 +3820,7 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 28px !important;
+    padding-bottom: 12px !important;
     padding-right: 0 !important;
   }
 
@@ -3869,18 +3914,33 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 32px !important;
+    padding-bottom: 12px !important;
   }
 
   .mobile-header {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
-    right: 0 !important;
+    right: auto !important;
     z-index: 300 !important;
     margin: 0 !important;
-    min-height: var(--mobile-header-h) !important;
-    padding: max(10px, env(safe-area-inset-top, 0px)) 14px 10px !important;
+    min-height: 0 !important;
+    width: auto !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    pointer-events: none !important;
+  }
+
+  .mobile-header h2 {
+    display: none !important;
+  }
+
+  .mobile-header .btn-mobile-toggle {
+    pointer-events: auto !important;
   }
 
   .page-header__title {
@@ -4116,10 +4176,10 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
 
 @media (max-width: 480px) {
   .lms-workspace {
-    padding: calc(var(--mobile-header-h) + 10px) 10px 12px !important;
+    padding: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px) 10px 6px !important;
   }
   .workspace-card-enclosure {
-    padding: 14px 12px 16px !important;
+    padding: 12px 10px 12px !important;
     border-radius: var(--radius-lg) !important;
   }
   .section-header {

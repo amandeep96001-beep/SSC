@@ -459,7 +459,12 @@ export function DrillWorkspace({
                 className={`drill-tab ${activeTab === 'drill' && drillType === key ? 'active' : ''}`}
                 onClick={(e) => {
                   switchDrill(key);
-                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  const scroller = e.currentTarget.closest('.tabs-header');
+                  if (scroller) {
+                    const tab = e.currentTarget;
+                    const left = tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2;
+                    scroller.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+                  }
                 }}
               >
                 <Icon size={14} /><span>{label}</span>
@@ -470,7 +475,12 @@ export function DrillWorkspace({
               className={`drill-tab drill-tab--wronglog ${activeTab === 'wronglog' ? 'active' : ''}`}
               onClick={(e) => {
                 setActiveTab('wronglog');
-                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                const scroller = e.currentTarget.closest('.tabs-header');
+                if (scroller) {
+                  const tab = e.currentTarget;
+                  const left = tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2;
+                  scroller.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+                }
               }}
             >
               <AlertTriangle size={14} />

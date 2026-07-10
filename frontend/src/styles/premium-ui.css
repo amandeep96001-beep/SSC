@@ -938,9 +938,9 @@
 }
 @media (max-width: 768px) {
   .mobile-header {
-    background: color-mix(in srgb, var(--bg-elevated) 94%, transparent) !important;
-    border-bottom: 1px solid var(--border-subtle) !important;
-    box-shadow: var(--shadow-sm);
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   .workspace-card-enclosure {

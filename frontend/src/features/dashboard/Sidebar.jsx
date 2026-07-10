@@ -12,7 +12,7 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
@@ -30,6 +30,14 @@ export function Sidebar({
 }) {
   const sidebarRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    if (!isMobileOpen) return undefined;
+    document.documentElement.classList.add('sidebar-open');
+    return () => {
+      document.documentElement.classList.remove('sidebar-open');
+    };
+  }, [isMobileOpen]);
 
   useGSAP(() => {
     gsap.fromTo('.sidebar-brand', 
