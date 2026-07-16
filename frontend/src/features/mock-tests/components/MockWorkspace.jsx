@@ -85,7 +85,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam }) {
         <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
           <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
             <h1 style={{ margin: '0 0 6px 0' }}>Full Mock Exams</h1>
-            <p style={{ margin: 0 }}>Timed 100-question papers in a real SSC Tier-I style environment — 60 minutes, four sections.</p>
+            <p style={{ margin: 0 }}>Timed 100-question papers — 60 minutes, four sections. Upload your own mock papers.</p>
           </div>
           <button className="btn-create-topic" style={{ marginLeft: 'auto' }} onClick={() => {
             setShowAddForm(!showAddForm);
@@ -111,7 +111,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam }) {
               <input 
                 type="text" 
                 className="mock-premium-input" 
-                placeholder="Test Title (e.g. Full Mock Tier-I)" 
+                placeholder="Test Title (e.g. Full Mock 1)" 
                 value={title} 
                 onChange={e => setTitle(e.target.value)} 
                 required 

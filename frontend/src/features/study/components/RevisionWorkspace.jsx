@@ -108,7 +108,7 @@ export function RevisionWorkspace({
         <div className="workspace-header-sticky">
           <div className="section-header">
             <h1>Revision Deck</h1>
-            <p>Quick sheets for tables, fractions, and high-frequency SSC vocabulary.</p>
+            <p>Quick sheets for tables, fractions, and vocabulary reference.</p>
           </div>
 
           {/* TOP TABS: Tables | Vocab */}

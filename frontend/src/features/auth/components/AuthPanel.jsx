@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
-import { APP_NAME, APP_TAGLINE, APP_BLURB, pageTitle } from '@/shared/brand';
+import { APP_NAME, pageTitle } from '@/shared/brand';
 import '../auth.css';
 
 export function AuthPanel({ loginUser, registerUser }) {
@@ -72,8 +72,6 @@ export function AuthPanel({ loginUser, registerUser }) {
             <GraduationCap size={28} />
           </div>
           <h1>{APP_NAME}</h1>
-          <p className="auth-brand-tagline">{APP_TAGLINE}</p>
-          <p className="auth-brand-blurb">{APP_BLURB}</p>
           <p className="auth-brand-action">
             {authMode === 'login' ? 'Sign in to continue your prep' : 'Create an account to start preparing'}
           </p>

@@ -159,7 +159,7 @@ export function useStudy() {
     let correctCount = 0;
     let wrongCount = 0;
     let unattemptedCount = 0;
-    let errorLog = "=== CHSL 25-QUESTION MEGA MOCK ERROR LOG ===\n\n";
+    let errorLog = "=== TOPIC TEST ERROR LOG ===\n\n";
 
     testQuestions.forEach((item, index) => {
       const userAns = selectedAnswers[index];

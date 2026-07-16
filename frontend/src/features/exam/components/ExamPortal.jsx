@@ -37,7 +37,7 @@ export function ExamPortal({
     <div id="exam-portal" className="no-select">
       <Helmet><title>{pageTitle('Topic Test')}</title></Helmet>
       <div className="navbar">
-        <div>CHSL DYNAMIC EXAM INTERFACE - {selectedSubject?.toUpperCase()}</div>
+        <div>TOPIC TEST — {selectedSubject?.toUpperCase()}</div>
         <div id="timer-box">{formatTimer(timer)}</div>
       </div>
 

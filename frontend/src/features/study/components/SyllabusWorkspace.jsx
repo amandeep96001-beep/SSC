@@ -428,7 +428,7 @@ export function SyllabusWorkspace({
                 <p>
                   {isMineMode
                     ? 'Build your own subjects, topics, notes, and practice questions.'
-                    : 'Study from the official SSC syllabus — notes and topic tests ready to go.'}
+                    : 'Study from your institute\'s published syllabus — notes and topic tests.'}
                 </p>
               </div>
               {isMineMode && (

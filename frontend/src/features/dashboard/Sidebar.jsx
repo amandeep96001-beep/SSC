@@ -16,7 +16,7 @@ import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
-import { APP_NAME, APP_TAGLINE, APP_VERSION } from '@/shared/brand';
+import { APP_NAME, APP_VERSION } from '@/shared/brand';
 
 export function Sidebar({
   user,
@@ -73,7 +73,6 @@ export function Sidebar({
         </div>
         <div className="brand-text">
           <h2>{APP_NAME}</h2>
-          <span>{APP_TAGLINE}</span>
         </div>
       </div>
 
