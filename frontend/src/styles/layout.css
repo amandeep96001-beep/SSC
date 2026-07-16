@@ -195,6 +195,7 @@
   gap: 12px;
   padding: 12px 16px;
   border: none;
+  border-left: 3px solid transparent;
   background: transparent;
   border-radius: 8px;
   color: var(--text-secondary);
@@ -205,6 +206,7 @@
   font-family: var(--font-sans);
   text-align: left;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-item:hover {
@@ -405,15 +407,19 @@
   border-radius: 6px;
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.25;
+  min-height: 36px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
   font-family: var(--font-sans);
+  box-sizing: border-box;
+  flex: 0 0 auto;
 }
 
 .drill-tab:hover {
   color: var(--text-primary);
-  background: var(--nav-hover-bg);
+  background: transparent;
 }
 
 .drill-tab.active {

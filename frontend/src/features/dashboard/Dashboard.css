@@ -271,16 +271,15 @@
   font-family: var(--font-sans);
   cursor: pointer;
   box-shadow: 0 8px 22px var(--color-primary-glow);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+  transition: filter var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .btn-drill-next:hover {
   filter: brightness(1.05);
-  transform: translateY(-1px);
 }
 
 .btn-drill-next:active {
-  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .feedback-result {
@@ -346,11 +345,8 @@
   height: 18px;
   padding: 0 5px;
   margin-left: 4px;
-  animation: pulse-badge 2s infinite;
-}
-@keyframes pulse-badge {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
-  50%       { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+  flex-shrink: 0;
+  /* No layout-affecting pulse — keeps neighboring tabs steady */
 }
 
 /* Wrong log section wrapper */
@@ -582,7 +578,6 @@
   background: var(--bg-surface-hover);
   border-color: var(--color-success);
   color: var(--color-success);
-  transform: translateY(-1px);
 }
 .btn-related-questions:disabled {
   opacity: 0.6;
@@ -609,7 +604,6 @@
   background: var(--bg-surface-hover);
   border-color: var(--color-primary);
   color: var(--color-primary);
-  transform: translateY(-1px);
 }
 .btn-ai-explain:disabled {
   opacity: 0.6;
@@ -790,7 +784,6 @@
   background: var(--bg-surface-hover);
   border-color: var(--color-primary);
   color: var(--color-primary);
-  transform: translateY(-1px);
 }
 
 .retry-attempt-box {

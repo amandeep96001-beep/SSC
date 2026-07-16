@@ -120,29 +120,32 @@ export function Dashboard() {
     if (workspaceRef.current && activeView !== 'test' && activeView !== 'results' && activeView !== 'mock_exam_active') {
       const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-      // Mobile: never fade to 0 — it can stick blank/white after back navigation
+      // Sidebar tab switch: content slides in (premium). Mobile keeps a soft fade only.
       if (isMobile) {
-        gsap.set(workspaceRef.current, { clearProps: 'opacity,transform' });
+        gsap.fromTo(workspaceRef.current,
+          { opacity: 0.82 },
+          { opacity: 1, duration: 0.28, ease: 'power2.out', clearProps: 'opacity' }
+        );
         return;
       }
 
       gsap.fromTo(workspaceRef.current,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' }
+        { opacity: 0, y: 18 },
+        { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out', clearProps: 'all' }
       );
 
       const cards = workspaceRef.current.querySelectorAll('.stat-card-premium, .stat-box, .mock-glass-card, .subject-selection-card, .topic-outline-card, .drill-interactive-card, .drill-config-card, .vocab-search-flex, .topic-notes-html, .chart-container');
       const header = workspaceRef.current.querySelector('.workspace-header-sticky');
       if (header) {
         gsap.fromTo(header,
-          { opacity: 0, y: -10 },
-          { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out', clearProps: 'all' }
+          { opacity: 0, y: -12 },
+          { opacity: 1, y: 0, duration: 0.42, ease: 'power3.out', clearProps: 'all' }
         );
       }
       if (cards.length > 0) {
         gsap.fromTo(cards,
-          { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.45, stagger: 0.04, ease: 'power2.out', clearProps: 'all' }
+          { opacity: 0, y: 20 },
+          { opacity: 1, y: 0, duration: 0.45, stagger: 0.045, ease: 'power3.out', clearProps: 'all' }
         );
       }
     }

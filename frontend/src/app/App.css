@@ -179,6 +179,7 @@
   gap: 12px;
   padding: 12px 16px;
   border: none;
+  border-left: 3px solid transparent;
   background: transparent;
   border-radius: 8px;
   color: var(--text-secondary);
@@ -189,18 +190,18 @@
   font-family: var(--font-sans);
   text-align: left;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-item:hover {
   color: var(--text-primary);
   background: var(--nav-hover-bg);
-  transform: translateX(2px);
 }
 
 .nav-item.active {
   color: var(--color-primary);
   background: var(--nav-active-bg);
-  border-left: 3px solid var(--color-primary);
+  border-left-color: var(--color-primary);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   font-weight: 600;
 }
@@ -358,15 +359,19 @@
   border-radius: 6px;
   color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.25;
+  min-height: 36px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
   font-family: var(--font-sans);
+  box-sizing: border-box;
+  flex: 0 0 auto;
 }
 
 .drill-tab:hover {
   color: var(--text-primary);
-  background: var(--nav-hover-bg);
+  background: transparent;
 }
 
 .drill-tab.active {
@@ -701,7 +706,6 @@
 
 .subject-selection-card:hover {
   border-color: var(--border-focus);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
@@ -770,7 +774,6 @@
 .topic-outline-card:hover {
   border-color: var(--border-focus);
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 .topic-header-title {
@@ -1795,12 +1798,12 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .btn-premium-mock:hover {
   background: var(--color-primary-hover);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.28);
 }
 
 .btn-premium-mock:disabled {
@@ -2556,7 +2559,7 @@
   }
 
   .btn-mobile-toggle:active {
-    transform: scale(0.96);
+    filter: brightness(0.96);
   }
 
   /* Adjust grids for mobile */
@@ -2642,10 +2645,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
+  transition: background 0.15s;
 }
 .hl-btn:hover {
-  transform: scale(1.15);
   background: var(--nav-hover-bg);
 }
 .hl-btn.hl-yellow { color: #eab308; }
@@ -2828,11 +2830,10 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
   align-items: center;
   gap: 10px;
   font-family: var(--font-sans);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
   box-shadow: var(--shadow-md);
 }
 .competition-start-btn:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
 
@@ -3057,7 +3058,6 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
 .battle-option-btn:hover:not(:disabled) {
   border-color: rgba(0, 113, 227, 0.35);
   background: var(--color-primary-muted);
-  transform: translateY(-1px);
 }
 
 .battle-option-btn.correct {
@@ -3323,9 +3323,9 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
   align-items: center;
   gap: 8px;
   font-family: var(--font-sans);
-  transition: transform 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
-.battle-again-btn:hover { transform: translateY(-2px); }
+.battle-again-btn:hover { box-shadow: var(--shadow-md); }
 
 .battle-home-btn {
   padding: 12px 24px;

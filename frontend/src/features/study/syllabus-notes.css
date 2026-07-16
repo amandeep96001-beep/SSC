@@ -837,7 +837,7 @@
 
 .sticky-color-dot.active {
   border-color: var(--text-primary);
-  transform: scale(1.1);
+  box-shadow: 0 0 0 2px var(--bg-surface);
 }
 
 .sticky-color-dot--yellow { background: #fde68a; }

@@ -140,7 +140,7 @@
   }
 
   .btn-mobile-toggle:active {
-    transform: scale(0.96);
+    filter: brightness(0.96);
   }
 
   html.sidebar-open .mobile-header {
@@ -251,10 +251,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
+  transition: background 0.15s;
 }
 .hl-btn:hover {
-  transform: scale(1.15);
   background: var(--nav-hover-bg);
 }
 .hl-btn.hl-yellow { color: #eab308; }

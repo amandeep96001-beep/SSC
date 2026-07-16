@@ -23,7 +23,7 @@
 .notes-fab:active,
 .notes-fab--dragging {
   cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.04);
+  transform: translate(-50%, -50%);
 }
 
 .notes-fab--open {

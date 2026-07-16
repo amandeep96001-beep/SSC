@@ -130,11 +130,10 @@
   align-items: center;
   gap: 10px;
   font-family: var(--font-sans);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
   box-shadow: var(--shadow-md);
 }
 .competition-start-btn:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
 
@@ -359,7 +358,6 @@
 .battle-option-btn:hover:not(:disabled) {
   border-color: rgba(0, 113, 227, 0.35);
   background: var(--color-primary-muted);
-  transform: translateY(-1px);
 }
 
 .battle-option-btn.correct {
@@ -625,9 +623,9 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-sans);
-  transition: transform 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
-.battle-again-btn:hover { transform: translateY(-2px); }
+.battle-again-btn:hover { box-shadow: var(--shadow-md); }
 
 .battle-home-btn {
   padding: 12px 24px;

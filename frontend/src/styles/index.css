@@ -258,7 +258,8 @@ body,
 .input-with-icon,
 input, select, textarea,
 button {
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform var(--transition-fast);
+  /* No transform transition — prevents click/hover “jiggle” across the app */
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 @keyframes fadeIn {
@@ -381,13 +382,49 @@ button {
   transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
 }
 
-button:active:not(:disabled) {
-  opacity: 0.92;
-}
-
 button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Steady interactions: kill lift / press-in motion app-wide */
+button:hover:not(:disabled):not(.notes-fab),
+button:active:not(:disabled):not(.notes-fab),
+button:focus-visible:not(:disabled):not(.notes-fab),
+.subject-selection-card:hover,
+.subject-selection-card:active,
+.topic-outline-card:hover,
+.topic-outline-card:active,
+.mock-glass-card:hover,
+.mock-glass-card:active,
+.vocab-term-card:hover,
+.vocab-term-card:active,
+.stat-card-premium:hover,
+.stat-box:hover,
+.drill-interactive-card:hover,
+.drill-config-card:hover,
+.perf-log-card:hover,
+.nav-item:hover,
+.nav-item:active,
+.competition-start-btn:hover,
+.competition-start-btn:active,
+.battle-again-btn:hover,
+.battle-again-btn:active,
+.battle-option-btn:hover,
+.battle-option-btn:active,
+.btn-premium-mock:hover,
+.btn-premium-mock:active,
+.btn-drill-next:hover,
+.btn-drill-next:active,
+.btn-related-questions:hover,
+.btn-ai-explain:hover,
+.btn-retry-attempt:hover,
+.auth-theme-toggle:hover,
+.auth-theme-toggle:active,
+.btn-theme-toggle:hover,
+.btn-theme-toggle:active,
+.btn-mobile-toggle:active {
+  transform: none !important;
 }
 
 /* Premium Sidebar Theme Switcher Button */
@@ -417,7 +454,7 @@ button:disabled {
 }
 
 .btn-theme-toggle:active:not(:disabled) {
-  transform: translateY(0);
+  transform: none;
 }
 
 .theme-toggle-icon {

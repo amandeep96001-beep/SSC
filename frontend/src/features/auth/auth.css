@@ -225,10 +225,9 @@
   background: var(--color-primary-muted);
   border-color: var(--color-primary);
   color: var(--color-primary);
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
 .auth-theme-toggle:active {
-  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
