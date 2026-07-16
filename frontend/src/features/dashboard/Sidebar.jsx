@@ -4,9 +4,9 @@ import {
   LogOut, 
   Zap, 
   BookMarked, 
-  Book, 
-  Trophy,
-  Activity,
+  Layers, 
+  Award,
+  ClipboardList,
   PieChart,
   Swords,
   Sun,
@@ -105,7 +105,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <Zap className="nav-icon" size={18} />
+          <Zap className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Daily Drills</span>
         </button>
         
@@ -116,7 +116,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <BookMarked className="nav-icon" size={18} />
+          <BookMarked className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Syllabus & Notes</span>
         </button>
 
@@ -127,7 +127,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <Book className="nav-icon" size={18} />
+          <Layers className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Revision Deck</span>
         </button>
 
@@ -138,7 +138,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <Activity className="nav-icon" size={18} />
+          <ClipboardList className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Full Mocks</span>
         </button>
 
@@ -149,7 +149,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <Trophy className="nav-icon" size={18} />
+          <Award className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Performance</span>
         </button>
 
@@ -160,7 +160,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <PieChart className="nav-icon" size={18} />
+          <PieChart className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Analytics</span>
         </button>
 
@@ -171,7 +171,7 @@ export function Sidebar({
             setIsMobileOpen(false);
           }}
         >
-          <Swords className="nav-icon" size={18} />
+          <Swords className="nav-icon" size={18} strokeWidth={1.75} />
           <span>MCQ Battle</span>
         </button>
       </nav>

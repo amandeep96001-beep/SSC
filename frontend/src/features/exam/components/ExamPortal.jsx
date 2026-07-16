@@ -1,9 +1,8 @@
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
-import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
+import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/study/study.css';
-import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
 
 export function ExamPortal({
   selectedSubject,
@@ -38,7 +37,7 @@ export function ExamPortal({
       <Helmet><title>{pageTitle('Topic Test')}</title></Helmet>
       <div className="navbar">
         <div>TOPIC TEST — {selectedSubject?.toUpperCase()}</div>
-        <div id="timer-box">{formatTimer(timer)}</div>
+        <div id="timer-box"><Timer size={16} strokeWidth={2} /> {formatTimer(timer)}</div>
       </div>
 
       <div className="main-layout">
@@ -89,14 +88,14 @@ export function ExamPortal({
           <div className="footer-buttons">
             <div>
               <button className="btn btn-review" onClick={markForReview}>
-                Mark for Review & Next
+                <Flag size={15} strokeWidth={2} /> Mark for Review & Next
               </button>
               <button className="btn btn-clear" onClick={clearResponse}>
-                Clear Response
+                <Eraser size={15} strokeWidth={2} /> Clear Response
               </button>
             </div>
             <button className="btn btn-save" onClick={saveAndNext}>
-              Save & Next
+              <Save size={15} strokeWidth={2} /> Save & Next
             </button>
           </div>
         </div>
@@ -156,13 +155,13 @@ export function ExamPortal({
               className="btn btn-submit-section" 
               onClick={submitExam}
             >
-              Submit Section
+              <Send size={15} strokeWidth={2} /> Submit Section
             </button>
             <button 
               className="btn btn-cancel-test" 
               onClick={() => setCancelConfirmOpen(true)}
             >
-              ✕ Cancel Test
+              <X size={15} strokeWidth={2} /> Cancel Test
             </button>
           </div>
         </div>
@@ -209,12 +208,6 @@ export function ExamPortal({
           </div>
         </div>
       )}
-      <NotesFloatingDock
-        topicId={activeNotes?.id || selectedTopicId}
-        topicName={activeNotes?.name}
-        serverNotes={activeNotes?.notes}
-        lockBodyScroll={false}
-      />
     </div>
   );
 }

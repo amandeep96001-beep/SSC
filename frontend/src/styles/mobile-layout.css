@@ -25,13 +25,18 @@
     height: 100dvh;
     height: 100svh;
     max-height: 100dvh;
-    border-radius: 0;
+    border-radius: 0 18px 18px 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     padding-top: max(20px, env(safe-area-inset-top, 0px));
     padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+    box-shadow:
+      12px 0 40px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -2px 16px rgba(0, 0, 0, 0.18),
+      inset 4px 0 18px rgba(0, 0, 0, 0.12);
   }
 
   .lms-sidebar.mobile-open {
@@ -100,7 +105,7 @@
     top: 0;
     left: 0;
     right: auto;
-    z-index: 300;
+    z-index: 900;
     margin: 0;
     min-height: 0;
     width: auto;
@@ -119,18 +124,18 @@
 
   .btn-mobile-toggle {
     pointer-events: auto;
-    background: var(--color-primary-muted);
-    border: none;
-    color: var(--color-primary);
-    width: 42px;
-    height: 42px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    width: 44px;
+    height: 44px;
     padding: 0;
     border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
     flex-shrink: 0;
   }
 
@@ -138,11 +143,29 @@
     transform: scale(0.96);
   }
 
+  html.sidebar-open .mobile-header {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  html.sidebar-open,
+  html.sidebar-open body {
+    overflow: hidden;
+  }
+
   .workspace-card-enclosure {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     margin-top: 4px;
+  }
+
+  /* Keep page titles clear of the floating hamburger */
+  .workspace-header-sticky,
+  .syllabus-page-header,
+  .notes-toolbar-header {
+    padding-left: var(--mobile-menu-clear, 56px);
+    box-sizing: border-box;
   }
 
   /* Adjust grids for mobile */

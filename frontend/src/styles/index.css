@@ -26,6 +26,7 @@
   --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Outfit', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mobile-header-h: 52px;
+  --mobile-menu-clear: 56px;
 
   --radius-sm: 12px;
   --radius-md: 18px;
@@ -127,10 +128,10 @@
   --bg-body: #dce5f3;
   --bg-sidebar: rgba(255, 255, 255, 0.78);
 
-  --text-heading: #1a1d2e;
-  --text-primary: #2a2f45;
-  --text-secondary: #5c6378;
-  --text-muted: #8b92a8;
+  --text-heading: #14182a;
+  --text-primary: #252b42;
+  --text-secondary: #4a5168;
+  --text-muted: #7a8299;
   --text-inverse: #ffffff;
 
   --border-color: rgba(99, 120, 200, 0.12);
@@ -355,17 +356,33 @@ textarea:focus {
   appearance: none;
 }
 
-button {
-  font-weight: 600;
-  transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+/* Search bars: one border on the wrapper — never nest a second input chrome */
+.vocab-search-bar input:not([type="radio"]):not([type="checkbox"]),
+.vocab-search-bar input:not([type="radio"]):not([type="checkbox"]):focus,
+.vocab-search-bar input:not([type="radio"]):not([type="checkbox"]):focus-visible,
+.notes-search-bar input:not([type="radio"]):not([type="checkbox"]),
+.notes-search-bar input:not([type="radio"]):not([type="checkbox"]):focus,
+.notes-search-bar input:not([type="radio"]):not([type="checkbox"]):focus-visible {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  outline: none;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+button {
+  font-weight: 600;
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
 }
 
 button:active:not(:disabled) {
-  transform: translateY(0);
+  opacity: 0.92;
 }
 
 button:disabled {
@@ -396,7 +413,6 @@ button:disabled {
   background: var(--color-primary-muted);
   border-color: var(--color-primary);
   color: var(--color-primary);
-  transform: translateY(-1.5px);
   box-shadow: var(--shadow-sm);
 }
 

@@ -35,7 +35,12 @@
     padding-top: max(20px, env(safe-area-inset-top, 0px)) !important;
     padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)) !important;
     margin: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 0 18px 18px 0 !important;
+    box-shadow:
+      12px 0 40px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -2px 16px rgba(0, 0, 0, 0.18),
+      inset 4px 0 18px rgba(0, 0, 0, 0.12) !important;
   }
 
   .lms-sidebar .sidebar-nav {
@@ -85,6 +90,7 @@
     min-height: 0 !important;
     width: auto !important;
     right: auto !important;
+    z-index: 900 !important;
     padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0 !important;
     background: transparent !important;
     border: none !important;
@@ -103,17 +109,25 @@
   }
 
   .btn-mobile-toggle {
-    width: 42px !important;
-    height: 42px !important;
-    border-radius: 14px !important;
-    background: var(--color-primary-muted) !important;
-    border: none !important;
-    color: var(--color-primary) !important;
-    box-shadow: var(--shadow-sm) !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    background: var(--bg-elevated) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--text-primary) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
   }
 
   .btn-mobile-toggle:hover {
     transform: none !important;
+  }
+
+  /* Titles must not sit under the hamburger */
+  .workspace-header-sticky,
+  .syllabus-page-header,
+  .notes-toolbar-header {
+    padding-left: var(--mobile-menu-clear, 56px) !important;
+    box-sizing: border-box !important;
   }
 
   /* ---- Charts / analytics ---- */
@@ -416,7 +430,7 @@
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 12px !important;
     overflow: hidden !important;
     position: relative !important;
   }

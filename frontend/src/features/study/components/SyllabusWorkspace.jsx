@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
-import { NotesFloatingDock } from './NotesFloatingDock';
+import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -16,6 +16,7 @@ import {
   List,
   Eye,
   ArrowUp,
+  ArrowLeft,
   Search,
   Maximize2,
   Minimize2,
@@ -23,7 +24,8 @@ import {
   ChevronDown,
   AlignJustify,
   Settings2,
-  StickyNote,
+  NotebookPen,
+  MoreHorizontal,
   Bold,
   Italic,
   Underline,
@@ -55,7 +57,8 @@ export function SyllabusWorkspace({
   handleDeleteSubjectClick,
   activeNotes,
   startTest,
-  updateCustomTopic
+  updateCustomTopic,
+  onOpenNotesDock
 }) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -69,9 +72,9 @@ export function SyllabusWorkspace({
   const notesRef = useRef(null);
   const notesScrollRef = useRef(null);
 
-  const [notesFontSize, setNotesFontSize] = useState(() => localStorage.getItem('ssc_notes_font') || 'md');
+  const [notesFontSize, setNotesFontSize] = useState(() => localStorage.getItem('ssc_notes_font') || 'lg');
   const [notesComfort, setNotesComfort] = useState(() => localStorage.getItem('ssc_notes_comfort') === '1');
-  const [notesLineSpacing, setNotesLineSpacing] = useState(() => localStorage.getItem('ssc_notes_spacing') || 'normal');
+  const [notesLineSpacing, setNotesLineSpacing] = useState(() => localStorage.getItem('ssc_notes_spacing') || 'relaxed');
   const [notesFocus, setNotesFocus] = useState(false);
   const [showReadTools, setShowReadTools] = useState(false);
   const [showToc, setShowToc] = useState(false);
@@ -82,7 +85,6 @@ export function SyllabusWorkspace({
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
   const [searchMatchCount, setSearchMatchCount] = useState(0);
   const searchHitsRef = useRef([]);
-  const [dockOpenSignal, setDockOpenSignal] = useState(0);
   const [bookmarks, setBookmarks] = useState(() => {
     if (!activeNotes?.id) return [];
     try {
@@ -448,7 +450,7 @@ export function SyllabusWorkspace({
                 className={`content-source-btn${contentSource === 'global' ? ' active' : ''}`}
                 onClick={() => setContentSource('global')}
               >
-                Official Syllabus
+                <BookMarked size={14} strokeWidth={2} /> Official Syllabus
               </button>
               <button
                 type="button"
@@ -457,7 +459,7 @@ export function SyllabusWorkspace({
                 className={`content-source-btn${contentSource === 'mine' ? ' active' : ''}`}
                 onClick={() => setContentSource('mine')}
               >
-                My Notes
+                <NotebookPen size={14} strokeWidth={2} /> My Notes
               </button>
             </div>
           </header>
@@ -466,17 +468,24 @@ export function SyllabusWorkspace({
               <div className="subjects-grid">
                 {subjects.map((sub) => {
                   const name = typeof sub === 'string' ? sub : sub.name;
+                  const visual = getSubjectVisual(name);
                   return (
-                    <div key={name} className="subject-selection-card" onClick={() => selectSubject(name)}>
-                      <div className="subject-icon-box">
-                        <BookMarked size={24} />
+                    <div
+                      key={name}
+                      className={`subject-selection-card subject-selection-card--${visual.tone}`}
+                      onClick={() => selectSubject(name)}
+                    >
+                      <div className={`subject-icon-box subject-icon-box--${visual.tone}`} aria-hidden>
+                        <span className="material-symbols-outlined subject-material-icon">
+                          {visual.icon}
+                        </span>
                       </div>
                       <div className="subject-content">
                         <h3>{name}</h3>
                         <p>
                           {isMineMode
-                            ? 'Your custom topics, notes, and Q&A.'
-                            : 'Read detailed syllabus points and practice mock tests.'}
+                            ? 'Your custom topics, notes, and practice questions.'
+                            : `${visual.label} — open notes and try a timed topic test.`}
                         </p>
                       </div>
                       {isMineMode && (
@@ -527,7 +536,7 @@ export function SyllabusWorkspace({
               </div>
               <div className="syllabus-page-header__actions">
                 <button type="button" className="btn-back" onClick={() => setActiveView('subjects')}>
-                  All Subjects
+                  <ArrowLeft size={16} strokeWidth={2} /> All Subjects
                 </button>
                 {isMineMode && (
                   <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
@@ -637,17 +646,31 @@ export function SyllabusWorkspace({
               <div className="syllabus-page-header__actions notes-toolbar-actions">
                 <button
                   type="button"
-                  className="btn-add sticky-launch-btn"
-                  onClick={() => setDockOpenSignal((n) => n + 1)}
+                  className="notes-tool-icon sticky-launch-btn"
+                  onClick={() => onOpenNotesDock?.()}
+                  title="Quick Notes"
+                  aria-label="Quick Notes"
                 >
-                  <StickyNote size={16} />
-                  Stickies
+                  <NotebookPen size={18} strokeWidth={1.75} />
                 </button>
-                <button type="button" className="btn-add" onClick={() => setShowActionsMenu(!showActionsMenu)}>
-                  Actions <ChevronRight size={16} style={{ transform: showActionsMenu ? 'rotate(90deg)' : 'rotate(0deg)', transition: '0.2s', marginLeft: '4px' }} />
+                <button
+                  type="button"
+                  className={`notes-tool-icon${showActionsMenu ? ' is-open' : ''}`}
+                  onClick={() => setShowActionsMenu(!showActionsMenu)}
+                  title="Actions"
+                  aria-label="Actions"
+                  aria-expanded={showActionsMenu}
+                >
+                  <MoreHorizontal size={18} strokeWidth={1.75} />
                 </button>
-                <button type="button" className="btn-back" onClick={() => { setIsEditingNotes(false); setActiveView('topics'); setShowActionsMenu(false); }}>
-                  Back to Topics
+                <button
+                  type="button"
+                  className="notes-tool-icon notes-tool-icon--ghost"
+                  onClick={() => { setIsEditingNotes(false); setActiveView('topics'); setShowActionsMenu(false); }}
+                  title="Back to topics"
+                  aria-label="Back to topics"
+                >
+                  <ArrowLeft size={18} strokeWidth={1.75} />
                 </button>
 
                 {showActionsMenu && (
@@ -739,11 +762,12 @@ export function SyllabusWorkspace({
                     </button>
                     <button
                       type="button"
-                      className="notes-ctrl-btn"
-                      onClick={() => setDockOpenSignal((n) => n + 1)}
-                      title="Sticky notes"
+                      className="notes-ctrl-btn notes-ctrl-btn--icon"
+                      onClick={() => onOpenNotesDock?.()}
+                      title="Quick Notes"
+                      aria-label="Quick Notes"
                     >
-                      <StickyNote size={14} /> Stickies
+                      <NotebookPen size={15} strokeWidth={1.75} />
                     </button>
                     <button type="button" className="notes-ctrl-btn" onClick={handleAddBookmark} title="Bookmark current position">
                       <Bookmark size={14} /> Mark
@@ -830,7 +854,7 @@ export function SyllabusWorkspace({
               <article className={`notes-sheet notes-sheet--premium${notesComfort ? ' notes-sheet--comfort' : ''}`}>
                 <header className="notes-sheet-header">
                   <div className="notes-sheet-meta">
-                    <span className="notes-sheet-label">Study Material</span>
+                    <span className="notes-sheet-label">Topic notes</span>
                     <span className="notes-sheet-topic">{activeNotes.name}</span>
                   </div>
                   {isEditingNotes && (
@@ -892,14 +916,6 @@ export function SyllabusWorkspace({
             )}
           </div>
 
-          <NotesFloatingDock
-            topicId={activeNotes.id}
-            topicName={activeNotes.name}
-            notesHtml={localNotesHtml}
-            serverNotes={activeNotes.notes}
-            openSignal={dockOpenSignal}
-            openSignalTab="stickies"
-          />
         </div>
       )}
     </>

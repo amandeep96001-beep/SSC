@@ -1,10 +1,19 @@
 import { 
-  Zap, 
   Book, 
   ChevronRight, 
+  ChevronLeft,
   Search, 
   Plus, 
-  X 
+  X,
+  Grid3x3,
+  Square,
+  Box,
+  Percent,
+  ArrowLeftRight,
+  Star,
+  Pencil,
+  Upload,
+  Layers
 } from 'lucide-react';
 
 // Fraction ↔ Percentage Reference Sheet
@@ -118,14 +127,14 @@ export function RevisionWorkspace({
                 className={`drill-tab ${deckTab === 'tables' ? 'active' : ''}`}
                 onClick={() => setDeckTab('tables')}
               >
-                <Zap size={14} />
+                <Layers size={14} strokeWidth={2} />
                 <span>Tables & Fractions</span>
               </button>
               <button
                 className={`drill-tab ${deckTab === 'vocab' ? 'active' : ''}`}
                 onClick={() => { setDeckTab('vocab'); loadVocabList(); }}
               >
-                <Book size={14} />
+                <Book size={14} strokeWidth={2} />
                 <span>Vocabulary</span>
               </button>
             </div>
@@ -139,11 +148,11 @@ export function RevisionWorkspace({
                   className={`revision-sub-tab ${tableSubTab === st ? 'active' : ''}`}
                   onClick={() => setTableSubTab(st)}
                 >
-                  { st === 'tables' ? '× Tables'
-                    : st === 'squares' ? 'x² Squares'
-                    : st === 'cubes' ? 'x³ Cubes'
-                    : st === 'fractions' ? '½ → %'
-                    : '% → Fraction' }
+                  { st === 'tables' ? <><Grid3x3 size={13} strokeWidth={2} /> Tables</>
+                    : st === 'squares' ? <><Square size={13} strokeWidth={2} /> Squares</>
+                    : st === 'cubes' ? <><Box size={13} strokeWidth={2} /> Cubes</>
+                    : st === 'fractions' ? <><Percent size={13} strokeWidth={2} /> Fraction → %</>
+                    : <><ArrowLeftRight size={13} strokeWidth={2} /> % → Fraction</> }
                 </button>
               ))}
             </div>
@@ -152,18 +161,19 @@ export function RevisionWorkspace({
           {deckTab === 'vocab' && (
             <div className="revision-vocab-toolbar">
               <div className="vocab-add-bar">
-                <div className="vocab-search-bar vocab-search-flex">
-                  <Search size={18} className="search-icon" />
+                <div className="vocab-search-bar vocab-search-flex input-with-icon">
+                  <Search size={18} className="search-icon" aria-hidden />
                   <input
-                    type="text"
+                    type="search"
                     placeholder="Search word, synonym, antonym, idiom..."
                     value={vocabSearch}
                     onChange={(e) => setVocabSearch(e.target.value)}
+                    autoComplete="off"
                   />
                 </div>
                 <div className="vocab-add-bar__actions">
                   <button type="button" className="btn-add-vocab btn-add-vocab--secondary" onClick={() => setVocabBulkModalOpen(true)}>
-                    <Plus size={15} /> Bulk Import
+                    <Upload size={15} strokeWidth={2} /> Bulk Import
                   </button>
                   <button type="button" className="btn-add-vocab" onClick={() => setVocabModalOpen(true)}>
                     <Plus size={15} /> Add New
@@ -238,7 +248,7 @@ export function RevisionWorkspace({
                       <div className="table-card-header" style={{ cursor: 'default' }}>
                         <h3>
                           {num}² = {num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ IMP</span>}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Star size={10} fill="currentColor" /> IMP</span>}
                         </h3>
                       </div>
                       <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
@@ -267,7 +277,7 @@ export function RevisionWorkspace({
                       <div className="table-card-header" style={{ cursor: 'default' }}>
                         <h3>
                           {num}³ = {num * num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem' }}>★ IMP</span>}
+                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Star size={10} fill="currentColor" /> IMP</span>}
                         </h3>
                       </div>
                       <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
@@ -326,9 +336,15 @@ export function RevisionWorkspace({
                     <div className="vocab-term-header">
                       <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {item.word}
-                        {item.isImportant && <span className="pos-badge" style={{ fontSize: '0.65rem', background: '#eab308', color: '#000' }}>★ IMP</span>}
+                        {item.isImportant && <span className="pos-badge" style={{ fontSize: '0.65rem', background: '#eab308', color: '#000', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Star size={10} fill="currentColor" /> IMP</span>}
                       </h3>
-                      <span className="pos-badge">{item.category || item.pos}</span>
+                      <span className="pos-badge" title={item.category || item.pos}>
+                        {(item.category === 'Idioms & Phrases' && 'Idioms')
+                          || (item.category === 'One Word Substitution' && 'OWS')
+                          || (item.category === 'Spelling Rules' && 'Spelling')
+                          || item.category
+                          || item.pos}
+                      </span>
                     </div>
                     <p className="vocab-def">"{item.definition}"</p>
 
@@ -353,7 +369,9 @@ export function RevisionWorkspace({
                     )}
 
                     <div className="vocab-card-actions">
-                      <button className="vocab-action-btn" onClick={() => openEditVocab(item)}>Edit</button>
+                      <button className="vocab-action-btn" onClick={() => openEditVocab(item)}>
+                        <Pencil size={13} strokeWidth={2} /> Edit
+                      </button>
                     </div>
                   </div>
                 ))
@@ -373,7 +391,7 @@ export function RevisionWorkspace({
                   disabled={vocabPage === 1 || vocabListLoading}
                   style={{ opacity: (vocabPage === 1 || vocabListLoading) ? 0.5 : 1, cursor: (vocabPage === 1 || vocabListLoading) ? 'not-allowed' : 'pointer' }}
                 >
-                  &larr; Previous
+                  <ChevronLeft size={14} strokeWidth={2} /> Previous
                 </button>
                 <span style={{ color: '#cbd5e1', fontSize: '0.95rem' }}>
                   Page {vocabPage} of {vocabTotalPages}
@@ -384,7 +402,7 @@ export function RevisionWorkspace({
                   disabled={vocabPage === vocabTotalPages || vocabListLoading}
                   style={{ opacity: (vocabPage === vocabTotalPages || vocabListLoading) ? 0.5 : 1, cursor: (vocabPage === vocabTotalPages || vocabListLoading) ? 'not-allowed' : 'pointer' }}
                 >
-                  Next &rarr;
+                  Next <ChevronRight size={14} strokeWidth={2} />
                 </button>
               </div>
             )}

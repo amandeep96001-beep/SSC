@@ -208,6 +208,14 @@
   margin-top: 30px;
   display: flex;
   gap: 15px;
+  flex-wrap: wrap;
+}
+
+.results-actions-row .btn,
+.btn-copy-log {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-outline {
@@ -799,6 +807,9 @@
 .retry-label {
   margin: 0;
   font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -904,6 +915,9 @@
   text-decoration: underline;
   margin-left: auto;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .retry-reset-link:hover { color: var(--color-primary); }
 

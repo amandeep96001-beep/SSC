@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Check, Play, BookOpen, Inbox, Trash2, XCircle } from 'lucide-react';
+import { Plus, Check, Play, BookOpen, Inbox, Trash2, XCircle, List } from 'lucide-react';
 
 export function MockWorkspace({ mockTestsApi, startMockExam }) {
   const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
@@ -92,7 +92,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam }) {
             setFormError('');
             setFormSuccess('');
           }}>
-            <Plus size={16} />
+            {showAddForm ? <List size={16} strokeWidth={2} /> : <Plus size={16} strokeWidth={2} />}
             {showAddForm ? 'View Mocks' : 'Add New Mock'}
           </button>
         </div>
@@ -250,13 +250,13 @@ export function MockWorkspace({ mockTestsApi, startMockExam }) {
               <button 
                 type="button" 
                 className="btn-save-topic" 
-                style={{ backgroundColor: '#ef4444', flex: 1 }}
+                style={{ backgroundColor: '#ef4444', flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 onClick={async () => {
                   setDeleteConfirmOpen(false);
                   await removeMockTest(deletingTestId);
                 }}
               >
-                Yes, Delete It
+                <Trash2 size={15} strokeWidth={2} /> Yes, Delete It
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
-import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
+import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ArrowLeft, Ban } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 import { apiService } from '@/shared/services/apiService';
 
@@ -164,8 +164,8 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
       <div id="exam-portal" className="no-select">
          <div className="exam-initializing-overlay">
             <span className="exam-initializing-text">Could not load this mock test. Please go back and try again.</span>
-            <button type="button" className="btn-cancel" style={{ marginTop: 16 }} onClick={onCancel}>
-              Back to Mocks
+            <button type="button" className="btn-cancel" style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 8 }} onClick={onCancel}>
+              <ArrowLeft size={16} /> Back to Mocks
             </button>
          </div>
       </div>
@@ -184,7 +184,9 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
       {/* Top Navbar */}
       <div className="navbar">
         <div>{mockData.title.toUpperCase()} - FULL MOCK (100 Qs)</div>
-        <div id="timer-box" style={{ color: timer < 300 ? '#ef4444' : 'inherit' }}>{formatTimer(timer)}</div>
+        <div id="timer-box" style={{ color: timer < 300 ? '#ef4444' : 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Timer size={16} strokeWidth={2} /> {formatTimer(timer)}
+        </div>
       </div>
 
       {/* Section Tabs */}
@@ -248,14 +250,14 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
           <div className="footer-buttons">
             <div>
               <button className="btn btn-review" onClick={markForReview}>
-                Mark for Review & Next
+                <Flag size={15} strokeWidth={2} /> Mark for Review & Next
               </button>
               <button className="btn btn-clear" onClick={clearResponse}>
-                Clear Response
+                <Eraser size={15} strokeWidth={2} /> Clear Response
               </button>
             </div>
             <button className="btn btn-save" onClick={saveAndNext}>
-              Save & Next
+              <Save size={15} strokeWidth={2} /> Save & Next
             </button>
           </div>
         </div>
@@ -313,13 +315,13 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
               onClick={() => onSubmit(mockData, selectedAnswers, timer, sectionTimes)}
               style={{ background: '#10b981' }}
             >
-              Submit Full Test
+              <Send size={15} strokeWidth={2} /> Submit Full Test
             </button>
             <button 
               className="btn btn-cancel-test" 
               onClick={() => setCancelConfirmOpen(true)}
             >
-              ✕ Abort Test
+              <Ban size={15} strokeWidth={2} /> Abort Test
             </button>
           </div>
         </div>

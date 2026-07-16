@@ -96,6 +96,10 @@
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .auth-mode-selector button:hover:not(.active) {

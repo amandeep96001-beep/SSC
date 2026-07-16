@@ -3,29 +3,29 @@
    Keep reading first — tools stay out of the way on small screens
    ============================================================ */
 
-/* ---- Readable defaults ---- */
+/* ---- Readable defaults — roomy reading column ---- */
 .notes-reader {
-  font-size: 1.0625rem;
-  line-height: 1.75;
+  font-size: 1.125rem;
+  line-height: 1.85;
   letter-spacing: -0.01em;
 }
 
-.notes-reader--size-sm { font-size: 0.95rem; line-height: 1.7; }
-.notes-reader--size-md { font-size: 1.0625rem; line-height: 1.75; }
-.notes-reader--size-lg { font-size: 1.2rem; line-height: 1.8; }
+.notes-reader--size-sm { font-size: 1rem; line-height: 1.72; }
+.notes-reader--size-md { font-size: 1.125rem; line-height: 1.85; }
+.notes-reader--size-lg { font-size: 1.28rem; line-height: 1.95; }
 
 .notes-reader--spacing-relaxed {
-  line-height: 1.9 !important;
+  line-height: 2.05 !important;
 }
 
 .notes-reader p {
-  margin: 0 0 1em;
-  max-width: 68ch;
+  margin: 0 0 1.15em;
+  max-width: 62ch;
 }
 
 .notes-reader li {
-  margin-bottom: 0.35em;
-  max-width: 68ch;
+  margin-bottom: 0.45em;
+  max-width: 62ch;
 }
 
 /* Sticky overlay backdrop (mobile sheet) */
@@ -146,8 +146,8 @@
   }
 
   .sticky-launch-btn {
-    order: -1;
-    flex: 1 1 100% !important;
+    order: 0;
+    flex: 0 0 auto !important;
   }
 
   .notes-reading-controls {
@@ -183,6 +183,25 @@
   .subject-selection-card {
     padding: 16px !important;
     border-radius: 16px !important;
+  }
+
+  .subject-icon-box {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 14px !important;
+    margin-right: 12px !important;
+  }
+
+  .subject-material-icon {
+    font-size: 24px !important;
+  }
+
+  .subject-content h3 {
+    font-size: 0.98rem !important;
+  }
+
+  .subject-content p {
+    font-size: 0.78rem !important;
   }
 
   .topic-outline-card {

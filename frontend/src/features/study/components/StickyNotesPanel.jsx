@@ -1,196 +1,234 @@
-import { useState, useEffect, useCallback } from 'react';
-import { StickyNote, Plus, Trash2, X, Pin } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
+import { Plus, Trash2, Pin } from 'lucide-react';
 import {
   STICKY_COLORS,
-  loadStickies,
-  saveStickies
+  loadDailyStickies,
+  saveDailyStickies
 } from '../stickyNotesStorage';
 
-export function StickyNotesPanel({
-  topicId,
-  topicName,
+function makeId() {
+  return `st-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export const StickyNotesPanel = forwardRef(function StickyNotesPanel({
   open,
-  onClose,
-  onCountChange,
-  variant = 'sheet'
-}) {
-  const [stickies, setStickies] = useState(() => loadStickies(topicId));
+  onCountChange
+}, ref) {
+  const [notes, setNotes] = useState(() => loadDailyStickies());
   const [draft, setDraft] = useState('');
+  const [draftLabel, setDraftLabel] = useState('');
   const [draftColor, setDraftColor] = useState('yellow');
+  const composeRef = useRef(null);
+
+  const syncCount = useCallback((list) => {
+    onCountChange?.(list.filter((n) => n.text?.trim()).length);
+  }, [onCountChange]);
 
   useEffect(() => {
-    setStickies(loadStickies(topicId));
-    setDraft('');
-    setDraftColor('yellow');
-  }, [topicId]);
-
-  useEffect(() => {
-    if (!open || variant === 'embedded') return undefined;
-    document.documentElement.classList.add('sticky-sheet-open');
-    return () => document.documentElement.classList.remove('sticky-sheet-open');
-  }, [open, variant]);
+    if (!open) return;
+    const list = loadDailyStickies();
+    setNotes(list);
+    syncCount(list);
+  }, [open, syncCount]);
 
   const persist = useCallback((next) => {
-    setStickies(next);
-    saveStickies(topicId, next);
-    onCountChange?.(next.length);
-  }, [topicId, onCountChange]);
+    setNotes(next);
+    saveDailyStickies(next);
+    syncCount(next);
+  }, [syncCount]);
 
-  const addSticky = () => {
+  const saveDraft = useCallback(() => {
     const text = draft.trim();
-    if (!text) return;
-    const next = [
-      {
-        id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        text,
-        color: draftColor,
-        pinned: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      },
-      ...stickies
-    ];
-    persist(next);
+    if (!text) {
+      composeRef.current?.focus();
+      return;
+    }
+    const note = {
+      id: makeId(),
+      text,
+      label: draftLabel.trim() || undefined,
+      color: draftColor,
+      pinned: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    persist([note, ...notes]);
     setDraft('');
-  };
+    setDraftLabel('');
+    setDraftColor('yellow');
+    composeRef.current?.focus();
+  }, [draft, draftLabel, draftColor, notes, persist]);
+
+  const focusCompose = useCallback(() => {
+    composeRef.current?.focus();
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    addNewNote: focusCompose,
+    focusCompose
+  }), [focusCompose]);
 
   const updateText = (id, text) => {
-    persist(stickies.map((s) => (
+    persist(notes.map((s) => (
       s.id === id ? { ...s, text, updatedAt: Date.now() } : s
     )));
   };
 
+  const updateLabel = (id, label) => {
+    persist(notes.map((s) => (
+      s.id === id ? { ...s, label, updatedAt: Date.now() } : s
+    )));
+  };
+
+  const finalizeLabel = (id, label) => {
+    const trimmed = label.trim();
+    persist(notes.map((s) => (
+      s.id === id ? { ...s, label: trimmed || undefined, updatedAt: Date.now() } : s
+    )));
+  };
+
   const setColor = (id, color) => {
-    persist(stickies.map((s) => (
+    persist(notes.map((s) => (
       s.id === id ? { ...s, color, updatedAt: Date.now() } : s
     )));
   };
 
   const togglePin = (id) => {
     persist(
-      [...stickies]
+      [...notes]
         .map((s) => (s.id === id ? { ...s, pinned: !s.pinned, updatedAt: Date.now() } : s))
         .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt)
     );
   };
 
-  const removeSticky = (id) => {
-    persist(stickies.filter((s) => s.id !== id));
+  const removeNote = (id) => {
+    persist(notes.filter((s) => s.id !== id));
   };
 
   if (!open) return null;
 
-  const sorted = [...stickies].sort(
+  const sorted = [...notes].sort(
     (a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt - a.updatedAt
   );
 
-  const panelBody = (
-    <aside className={`sticky-panel${variant === 'embedded' ? ' sticky-panel--embedded' : ' sticky-panel--sheet'}`} aria-label="Sticky notes">
-        <header className="sticky-panel__header">
-          <div>
-            <p className="sticky-panel__eyebrow">
-              <StickyNote size={14} aria-hidden /> Sticky notes
-            </p>
-            <h3>{topicName || 'This topic'}</h3>
-            <p className="sticky-panel__hint">Quick reminders — saved on this device.</p>
-          </div>
-          <button type="button" className="sticky-panel__close" onClick={onClose} aria-label="Close sticky notes">
-            <X size={18} />
-          </button>
-        </header>
-
-        <div className="sticky-compose">
+  return (
+    <div className="qn-panel">
+      <div className="qn-compose">
+        <div className={`qn-compose__sheet qn-compose__sheet--${draftColor}`}>
+          <input
+            type="text"
+            className="qn-compose__label"
+            placeholder="Label (optional)"
+            value={draftLabel}
+            onChange={(e) => setDraftLabel(e.target.value)}
+            spellCheck={false}
+          />
           <textarea
-            className="sticky-compose__input"
+            ref={composeRef}
+            className="qn-compose__body"
+            placeholder="Tomorrow’s topic, formula, reminder…"
             rows={3}
-            placeholder="Jot a formula, trick, or doubt…"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                addSticky();
+                saveDraft();
               }
             }}
+            spellCheck={false}
           />
-          <div className="sticky-compose__row">
-            <div className="sticky-color-row" role="group" aria-label="Sticky color">
-              {STICKY_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`sticky-color-dot sticky-color-dot--${c}${draftColor === c ? ' active' : ''}`}
-                  onClick={() => setDraftColor(c)}
-                  title={c}
-                  aria-label={c}
-                />
-              ))}
-            </div>
-            <button type="button" className="sticky-compose__add" onClick={addSticky} disabled={!draft.trim()}>
-              <Plus size={15} /> Add
-            </button>
-          </div>
         </div>
+        <div className="qn-compose__bar">
+          <div className="qn-compose__colors" role="group" aria-label="Color">
+            {STICKY_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`qn-swatch qn-swatch--${c}${draftColor === c ? ' is-on' : ''}`}
+                onClick={() => setDraftColor(c)}
+                aria-label={c}
+                aria-pressed={draftColor === c}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            className="qn-compose__save"
+            onClick={saveDraft}
+            disabled={!draft.trim()}
+          >
+            <Plus size={15} /> Save
+          </button>
+        </div>
+      </div>
 
-        <div className="sticky-list">
-          {sorted.length === 0 ? (
-            <div className="sticky-empty">
-              <StickyNote size={28} strokeWidth={1.5} />
-              <p>No stickies yet. Capture shortcuts while you read.</p>
-            </div>
-          ) : (
-            sorted.map((s) => (
-              <div key={s.id} className={`sticky-card sticky-card--${s.color}${s.pinned ? ' sticky-card--pinned' : ''}`}>
-                <div className="sticky-card__tools">
-                  <button
-                    type="button"
-                    className={`sticky-icon-btn${s.pinned ? ' active' : ''}`}
-                    onClick={() => togglePin(s.id)}
-                    title={s.pinned ? 'Unpin' : 'Pin to top'}
-                  >
-                    <Pin size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    className="sticky-icon-btn danger"
-                    onClick={() => removeSticky(s.id)}
-                    title="Delete sticky"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <textarea
-                  className="sticky-card__text"
-                  value={s.text}
-                  rows={Math.min(8, Math.max(2, s.text.split('\n').length + 1))}
-                  onChange={(e) => updateText(s.id, e.target.value)}
+      {sorted.length === 0 ? (
+        <div className="qn-empty">
+          <p>No quick notes yet</p>
+          <span>Daily scratchpad — not topic study notes. Type above and Save.</span>
+        </div>
+      ) : (
+        <ul className="qn-list">
+          {sorted.map((s) => (
+            <li key={s.id} className={`qn-item qn-item--${s.color}${s.pinned ? ' qn-item--pinned' : ''}`}>
+              <div className="qn-item__top">
+                <span className={`qn-item__dot qn-item__dot--${s.color}`} aria-hidden />
+                <input
+                  type="text"
+                  className="qn-item__label"
+                  placeholder="Add a label"
+                  value={s.label ?? ''}
+                  onChange={(e) => updateLabel(s.id, e.target.value)}
+                  onBlur={(e) => finalizeLabel(s.id, e.target.value)}
+                  spellCheck={false}
                 />
-                <div className="sticky-color-row sticky-color-row--sm">
-                  {STICKY_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      className={`sticky-color-dot sticky-color-dot--${c}${s.color === c ? ' active' : ''}`}
-                      onClick={() => setColor(s.id, c)}
-                      aria-label={c}
-                    />
-                  ))}
+                <div className="qn-item__actions">
+                  <button
+                    type="button"
+                    className={`qn-item__action${s.pinned ? ' is-on' : ''}`}
+                    onClick={() => togglePin(s.id)}
+                    title={s.pinned ? 'Unpin' : 'Pin'}
+                    aria-label={s.pinned ? 'Unpin' : 'Pin'}
+                  >
+                    <Pin size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="qn-item__action qn-item__action--del"
+                    onClick={() => removeNote(s.id)}
+                    title="Delete"
+                    aria-label="Delete"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
-            ))
-        )}
-      </div>
-    </aside>
-  );
 
-  if (variant === 'embedded') {
-    return panelBody;
-  }
+              <textarea
+                className="qn-item__body"
+                value={s.text}
+                rows={Math.min(6, Math.max(2, (s.text || '').split('\n').length + 1))}
+                onChange={(e) => updateText(s.id, e.target.value)}
+                spellCheck={false}
+              />
 
-  return (
-    <>
-      <button type="button" className="sticky-backdrop" aria-label="Close sticky notes" onClick={onClose} />
-      {panelBody}
-    </>
+              <div className="qn-item__colors" role="group" aria-label="Color">
+                {STICKY_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`qn-swatch qn-swatch--${c}${s.color === c ? ' is-on' : ''}`}
+                    onClick={() => setColor(s.id, c)}
+                    aria-label={c}
+                    aria-pressed={s.color === c}
+                  />
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
-}
+});

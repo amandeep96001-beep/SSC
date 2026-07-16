@@ -7,12 +7,26 @@
 .lms-sidebar {
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-border);
-  box-shadow: var(--shadow-float);
+  box-shadow:
+    var(--shadow-float),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    inset 2px 0 8px rgba(0, 0, 0, 0.04),
+    inset -2px 0 10px rgba(0, 0, 0, 0.06);
   border-radius: var(--radius-xl);
   padding: 28px 16px;
   overflow: visible;
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+}
+
+:root[data-theme="dark"] .lms-sidebar {
+  box-shadow:
+    var(--shadow-float),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 12px rgba(0, 0, 0, 0.35),
+    inset 3px 0 14px rgba(0, 0, 0, 0.25),
+    inset -2px 0 10px rgba(0, 0, 0, 0.2);
 }
 
 .lms-sidebar .sidebar-nav {
@@ -178,6 +192,12 @@
 .subject-selection-card:nth-child(4n + 3) { background: var(--card-tint-peach); }
 .subject-selection-card:nth-child(4n + 4) { background: var(--card-tint-mint); }
 
+/* Prefer subject tone over nth-child pastel when mapped */
+.subject-selection-card--blue { background: var(--card-tint-blue); }
+.subject-selection-card--lavender { background: var(--card-tint-lavender); }
+.subject-selection-card--peach { background: var(--card-tint-peach); }
+.subject-selection-card--mint { background: var(--card-tint-mint); }
+
 .topic-outline-card:nth-child(odd) { background: var(--card-tint-blue); }
 .topic-outline-card:nth-child(even) { background: var(--card-tint-lavender); }
 
@@ -191,11 +211,15 @@
 
 .subject-selection-card:hover,
 .topic-outline-card:hover,
-.vocab-term-card:hover,
 .mock-glass-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 40px rgba(30, 50, 100, 0.1);
-  border-color: rgba(99, 102, 241, 0.18);
+  box-shadow: 0 12px 32px rgba(30, 50, 100, 0.1);
+  border-color: var(--border-subtle);
+  z-index: 2;
+}
+
+.vocab-term-card:hover {
+  box-shadow: 0 8px 24px rgba(30, 50, 100, 0.08);
+  border-color: var(--border-subtle);
   z-index: 2;
 }
 
@@ -208,8 +232,65 @@
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow-sm);
+}
+
+.subject-icon-box--blue {
+  background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+}
+
+.subject-icon-box--lavender {
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
+  color: #7c3aed;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.12);
+}
+
+.subject-icon-box--peach {
+  background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%);
+  color: #ea580c;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.12);
+}
+
+.subject-icon-box--mint {
+  background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+  color: #059669;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.12);
+}
+
+:root[data-theme="dark"] .subject-icon-box--blue {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .subject-icon-box--lavender {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .subject-icon-box--peach {
+  background: rgba(249, 115, 22, 0.18);
+  color: #fdba74;
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .subject-icon-box--mint {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+  box-shadow: none;
+}
+
+.subject-selection-card .subject-content h3 {
+  color: var(--text-heading);
+}
+
+.subject-selection-card .subject-content p {
+  color: var(--text-secondary);
+  opacity: 0.95;
 }
 
 /* ---- Stats & drills ---- */
@@ -232,7 +313,6 @@
 }
 
 .stat-card-premium:hover {
-  transform: translateY(-3px);
   box-shadow: var(--shadow-md);
 }
 
@@ -335,9 +415,14 @@
 
 .drill-tabs {
   background: var(--bg-surface-hover);
-  border: none;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 5px;
+  padding: 8px;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -351,8 +436,10 @@
   }
 
   .tabs-header--scroll {
-    overflow-x: visible !important;
-    overflow-y: visible !important;
+    overflow: visible !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .tabs-header--scroll .drill-tabs,
@@ -363,7 +450,8 @@
   }
 
   .drill-tab {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    max-width: 100%;
   }
 
   .workspace-scrollable-content {
@@ -380,12 +468,15 @@
   .tabs-header--scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    max-width: 100%;
   }
 
   .tabs-header--scroll .drill-tabs {
-    flex-wrap: nowrap;
-    width: max-content;
-    max-width: none;
+    flex-wrap: nowrap !important;
+    width: max-content !important;
+    max-width: none !important;
+    overflow: visible !important;
+    border-radius: 16px !important;
   }
 }
 
@@ -436,9 +527,12 @@
 /* ---- Search bars ---- */
 .vocab-search-bar,
 .input-with-icon {
-  border-radius: var(--radius-md);
-  border: none;
-  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+}
+
+.vocab-search-bar {
+  border: 1px solid var(--border-color);
+  box-shadow: none;
 }
 
 /* ---- History & chart panels ---- */
@@ -606,6 +700,11 @@
   background: var(--color-primary-muted);
 }
 
+.notes-ctrl-btn--icon {
+  width: 34px;
+  padding: 6px;
+}
+
 .notes-ctrl-btn.active {
   background: var(--color-primary);
   color: var(--text-inverse);
@@ -636,6 +735,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 14px;
 }
 
 .notes-flow {
@@ -737,7 +837,7 @@
 }
 
 .notes-reader--spacing-normal { line-height: 1.78; }
-.notes-reader--spacing-relaxed { line-height: 2; }
+.notes-reader--spacing-relaxed { line-height: 2.05; }
 
 /* Readable text — override inline colors from saved HTML */
 .notes-reader,
@@ -839,9 +939,9 @@
   width: 100%;
 }
 
-.notes-reader--size-sm { font-size: 0.95rem; line-height: 1.7; }
-.notes-reader--size-md { font-size: 1.0625rem; line-height: 1.78; }
-.notes-reader--size-lg { font-size: 1.2rem; line-height: 1.88; }
+.notes-reader--size-sm { font-size: 1rem; line-height: 1.72; }
+.notes-reader--size-md { font-size: 1.125rem; line-height: 1.85; }
+.notes-reader--size-lg { font-size: 1.28rem; line-height: 1.95; }
 
 .notes-reader--comfort {
   font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;

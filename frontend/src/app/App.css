@@ -338,12 +338,14 @@
   display: flex;
   flex-wrap: wrap;
   background: var(--bg-surface-hover);
-  padding: 5px;
-  border-radius: 999px;
+  padding: 8px;
+  border-radius: var(--radius-lg, 16px);
   border: 1px solid var(--border-color);
-  gap: 4px;
-  width: fit-content;
+  gap: 6px;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .drill-tab {
@@ -718,26 +720,32 @@
 
 .subject-content {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .subject-content h3 {
   font-family: var(--font-display);
   font-size: 1.05rem;
   font-weight: 700;
-  margin: 0 0 4px 0;
-  color: var(--text-primary);
+  margin: 0 0 5px 0;
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .subject-content p {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   margin: 0;
-  line-height: 1.3;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .arrow-icon {
   color: var(--text-muted);
   margin-left: 8px;
+  flex-shrink: 0;
 }
 
 /* Syllabus Topics listing */
@@ -1851,7 +1859,6 @@
 }
 
 .mock-glass-card:hover {
-  transform: translateY(-3px);
   border-color: rgba(0, 113, 227, 0.25);
   box-shadow: var(--shadow-md);
 }
@@ -2066,30 +2073,56 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.vocab-search-bar {
+.vocab-search-bar,
+.vocab-search-bar.input-with-icon {
   display: flex;
   align-items: center;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 18px;
-  gap: 12px;
+  border-radius: 12px;
+  padding: 0 14px;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.vocab-search-bar:focus-within,
+.vocab-search-bar.input-with-icon:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
 }
 
 .vocab-search-bar .search-icon {
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.vocab-search-bar input {
-  background: transparent;
-  border: none;
+.vocab-search-bar input,
+.vocab-search-bar input[type="search"],
+.vocab-search-bar input[type="text"],
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]),
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]):focus,
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]):focus-visible {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   color: var(--text-primary);
   font-size: 0.95rem;
-  width: 100%;
+  padding: 10px 0 !important;
+  border-radius: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
-.vocab-search-bar input:focus {
-  outline: none;
+.vocab-search-bar input::-webkit-search-decoration,
+.vocab-search-bar input::-webkit-search-cancel-button,
+.vocab-search-bar input::-webkit-search-results-button {
+  -webkit-appearance: none;
 }
 
 .vocab-results-grid {
@@ -2110,7 +2143,8 @@
   transition: border-color 0.15s;
 }
 .vocab-term-card:hover {
-  border-color: var(--color-primary);
+  border-color: var(--border-color);
+  box-shadow: 0 8px 24px rgba(30, 50, 100, 0.08);
 }
 
 .vocab-term-header {
@@ -2131,9 +2165,9 @@
 .vocab-def {
   font-size: 0.86rem;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.5;
   margin: 0;
-  font-style: italic;
+  font-style: normal;
 }
 
 /* Pill chips for synonyms/antonyms */
@@ -2223,17 +2257,18 @@
 }
 
 .pos-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: var(--color-primary-muted);
   color: var(--color-primary);
-  border: 1px solid rgba(0, 113, 227, 0.15);
+  border: 1px solid transparent;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 130px;
+  flex-shrink: 0;
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .vocab-synonyms {
@@ -2447,7 +2482,12 @@
     transition: transform 0.3s ease-in-out;
     margin: 0;
     height: 100vh;
-    border-radius: 0;
+    border-radius: 0 18px 18px 0;
+    box-shadow:
+      12px 0 40px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -2px 16px rgba(0, 0, 0, 0.18),
+      inset 4px 0 18px rgba(0, 0, 0, 0.12);
   }
 
   .lms-sidebar.mobile-open {
@@ -2474,31 +2514,49 @@
   }
 
   .mobile-header {
-    display: flex;
+    display: flex !important;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 24px;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 16px;
+    gap: 12px;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    z-index: 900 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    width: auto !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    pointer-events: none !important;
   }
 
   .mobile-header h2 {
-    margin: 0;
-    font-size: 1.25rem;
-    color: var(--text-primary);
-    font-family: var(--font-display);
+    display: none !important;
   }
 
   .btn-mobile-toggle {
-    background: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 8px;
-    border-radius: 8px;
-    display: flex;
+    pointer-events: auto !important;
+    background: var(--bg-elevated) !important;
+    border: 1px solid var(--border-subtle) !important;
+    color: var(--text-primary) !important;
+    width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12) !important;
+    flex-shrink: 0;
+  }
+
+  .btn-mobile-toggle:active {
+    transform: scale(0.96);
   }
 
   /* Adjust grids for mobile */
@@ -3421,8 +3479,9 @@ mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; borde
   .drill-tabs {
     flex-wrap: nowrap !important;
     width: max-content !important;
-    padding: 4px !important;
-    border-radius: 999px !important;
+    padding: 6px !important;
+    border-radius: 16px !important;
+    overflow: visible !important;
   }
   .drill-tab {
     padding: 6px 12px !important;

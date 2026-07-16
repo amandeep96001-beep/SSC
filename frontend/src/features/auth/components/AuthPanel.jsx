@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2, Sun, Moon } from 'lucide-react';
+import { GraduationCap, User, Lock, XCircle, Eye, EyeOff, Loader2, Sun, Moon, LogIn, UserPlus, ArrowRight } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
 import '../auth.css';
@@ -85,7 +85,7 @@ export function AuthPanel({ loginUser, registerUser }) {
             className={authMode === 'login' ? 'active' : ''}
             onClick={() => switchMode('login')}
           >
-            Sign In
+            <LogIn size={15} strokeWidth={2} /> Sign In
           </button>
           <button
             type="button"
@@ -94,7 +94,7 @@ export function AuthPanel({ loginUser, registerUser }) {
             className={authMode === 'register' ? 'active' : ''}
             onClick={() => switchMode('register')}
           >
-            Register
+            <UserPlus size={15} strokeWidth={2} /> Register
           </button>
         </div>
 
@@ -157,8 +157,16 @@ export function AuthPanel({ loginUser, registerUser }) {
                 <Loader2 size={18} className="spin-icon" />
                 <span>Please wait…</span>
               </>
+            ) : authMode === 'login' ? (
+              <>
+                <span>Continue Prep</span>
+                <ArrowRight size={18} strokeWidth={2} />
+              </>
             ) : (
-              authMode === 'login' ? 'Continue Prep' : 'Create Account'
+              <>
+                <UserPlus size={18} strokeWidth={2} />
+                <span>Create Account</span>
+              </>
             )}
           </button>
         </form>

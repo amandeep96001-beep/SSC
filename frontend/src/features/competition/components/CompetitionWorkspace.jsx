@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Swords, Trophy, Target, Zap, Clock, CheckCircle2, XCircle, 
-  SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer
+  SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer, Award, Shuffle
 } from 'lucide-react';
 import { apiService } from '@/shared/services/apiService';
 
@@ -406,7 +406,7 @@ export function CompetitionWorkspace({ user }) {
           <div className="result-trophy-icon" style={{ color: color.primary }}>
             {isPerfect ? <Crown size={40} /> : <Trophy size={40} />}
           </div>
-          <h2 className="result-title">{isPerfect ? '🎯 Perfect Score!' : 'Battle Complete!'}</h2>
+          <h2 className="result-title">{isPerfect ? 'Perfect Score!' : 'Battle Complete!'}</h2>
           <div className="result-score-display" style={{ color: color.primary }}>
             {score} <span className="result-score-total">/ {QUESTION_LIMIT}</span>
           </div>
@@ -477,7 +477,10 @@ export function CompetitionWorkspace({ user }) {
                     return (
                       <tr key={entry.username} className={`leaderboard-row ${isMe ? 'my-row' : ''}`}>
                         <td className="rank-cell">
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                          {i === 0 ? <Medal size={20} className="rank-medal rank-medal--gold" strokeWidth={1.75} />
+                            : i === 1 ? <Medal size={20} className="rank-medal rank-medal--silver" strokeWidth={1.75} />
+                            : i === 2 ? <Award size={20} className="rank-medal rank-medal--bronze" strokeWidth={1.75} />
+                            : <span className="rank-num">#{i + 1}</span>}
                         </td>
                         <td className="username-cell">{entry.username}{isMe ? ' (You)' : ''}</td>
                         <td className="score-cell">{entry.bestScore}/{QUESTION_LIMIT}</td>
@@ -499,7 +502,7 @@ export function CompetitionWorkspace({ user }) {
             <Swords size={18} /> Battle Again
           </button>
           <button className="battle-home-btn" onClick={resetToStart}>
-            Change Subject
+            <Shuffle size={16} strokeWidth={2} /> Change Subject
           </button>
         </div>
       </div>

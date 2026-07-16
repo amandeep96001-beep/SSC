@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
+import { ArrowLeft, RotateCcw, Copy, Zap } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 
 export function ResultsPortal({
@@ -60,7 +61,7 @@ export function ResultsPortal({
           className="btn btn-clear btn-copy-log" 
           onClick={copyErrorLog}
         >
-          Copy Full Error Log
+          <Copy size={15} strokeWidth={2} /> Copy Full Error Log
         </button>
       </div>
 
@@ -107,22 +108,22 @@ export function ResultsPortal({
         {isMock ? (
           <>
             <button className="btn btn-save" onClick={() => setActiveView('mock')}>
-              Back to Mock Exams
+              <ArrowLeft size={16} strokeWidth={2} /> Back to Mock Exams
             </button>
             <button className="btn btn-clear btn-outline" onClick={() => setActiveView('drill')}>
-              Back to Drills
+              <Zap size={16} strokeWidth={2} /> Back to Drills
             </button>
           </>
         ) : (
           <>
             <button className="btn btn-save" onClick={startTest}>
-              Retake Mock Test
+              <RotateCcw size={16} strokeWidth={2} /> Retake Mock Test
             </button>
             <button className="btn btn-clear btn-outline" onClick={() => setActiveView('topics')}>
-              Back to Topics
+              <ArrowLeft size={16} strokeWidth={2} /> Back to Topics
             </button>
             <button className="btn btn-clear btn-outline" onClick={() => setActiveView('drill')}>
-              Back to Drills
+              <Zap size={16} strokeWidth={2} /> Back to Drills
             </button>
           </>
         )}

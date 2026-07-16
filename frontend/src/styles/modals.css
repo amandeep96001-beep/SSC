@@ -238,7 +238,6 @@
 }
 
 .mock-glass-card:hover {
-  transform: translateY(-4px);
   border-color: rgba(99, 102, 241, 0.18);
   box-shadow: 0 16px 40px rgba(30, 50, 100, 0.1);
 }

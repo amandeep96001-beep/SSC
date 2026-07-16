@@ -177,6 +177,9 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .btn-skip:hover {
@@ -196,6 +199,9 @@
   transition: all 0.2s ease;
   font-family: var(--font-sans);
   box-shadow: var(--shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
 
 .btn-submit:hover {

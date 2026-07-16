@@ -27,7 +27,9 @@ import { MockWorkspace } from '@/features/mock-tests/components/MockWorkspace';
 import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal';
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
+import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
+import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 
 const VIEW_PARENT = {
   notes: 'topics',
@@ -176,6 +178,11 @@ export function Dashboard() {
   const [deletingTopicId, setDeletingTopicId] = useState('');
   const [deleteSubjectConfirmOpen, setDeleteSubjectConfirmOpen] = useState(false);
   const [deletingSubjectName, setDeletingSubjectName] = useState('');
+  const [notesDockSignal, setNotesDockSignal] = useState(0);
+
+  const openNotesDock = useCallback(() => {
+    setNotesDockSignal((n) => n + 1);
+  }, []);
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -516,7 +523,7 @@ export function Dashboard() {
     const res = await updateCustomTopic(editingTopicId, {
       name: editTopicName.trim(),
       syllabus: editTopicSyllabus.trim(),
-      notes: editTopicNotes,
+      notes: prepareNotesHtml(editTopicNotes),
       questions: parsedQuestions
     });
 
@@ -603,7 +610,7 @@ export function Dashboard() {
     const payload = {
       name: newTopicName.trim(),
       syllabus: newTopicSyllabus.trim() || 'Custom added user revision notes.',
-      notes: newTopicNotes,
+      notes: prepareNotesHtml(newTopicNotes),
       questions: parsedQuestions
     };
 
@@ -763,6 +770,7 @@ export function Dashboard() {
               activeNotes={activeNotes}
               startTest={startTest}
               updateCustomTopic={updateCustomTopic}
+              onOpenNotesDock={openNotesDock}
             />
           )}
 
@@ -824,6 +832,8 @@ export function Dashboard() {
           )}
         </div>
       </main>
+
+      <NotesFloatingDock openSignal={notesDockSignal} />
 
       {/* --- ADD CUSTOM SUBJECT MODAL --- */}
       {subjectModalOpen && (
@@ -892,14 +902,28 @@ export function Dashboard() {
                 />
               </div>
               <div className="form-group">
-                <label>Comprehensive Revision Notes (Markdown / HTML) *</label>
+                <label>Revision Notes (text / Markdown / HTML) *</label>
                 <textarea 
-                  rows="6" 
+                  rows="10" 
                   value={newTopicNotes} 
                   onChange={e => setNewTopicNotes(e.target.value)} 
                   required 
-                  placeholder="Draft your detailed formulas, logic steps, and tricks here..."
+                  placeholder={`Paste plain text, Markdown, or HTML. Examples:
+
+## Percentage
+**Definition:** Per hundred
+
+Tip: 12.5% = 1/8
+
+- Convert % → fraction
+- Convert fraction → %
+
+1. Divide by 100
+2. Simplify`}
                 />
+                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.45 }}>
+                  Tip: Use <code>## Heading</code>, <code>- bullets</code>, <code>1. numbered</code>, or paste HTML — we auto-format for easy reading.
+                </span>
               </div>
               <div className="form-group">
                 <label>
@@ -966,13 +990,17 @@ export function Dashboard() {
                 />
               </div>
               <div className="form-group">
-                <label>Topic Notes *</label>
+                <label>Revision Notes (text / Markdown / HTML) *</label>
                 <textarea 
-                  rows="4" 
+                  rows="10" 
                   value={editTopicNotes} 
                   onChange={e => setEditTopicNotes(e.target.value)} 
                   required 
+                  placeholder="Paste plain text, Markdown, or HTML — we format it for easy reading."
                 />
+                <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.45 }}>
+                  Tip: <code>## Heading</code>, <code>- bullets</code>, <code>1. numbered</code>, or paste HTML.
+                </span>
               </div>
               <div className="form-group">
                 <label>

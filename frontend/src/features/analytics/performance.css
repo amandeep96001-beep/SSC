@@ -55,6 +55,9 @@
   border-radius: 10px;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .perf-mode-btn:hover {

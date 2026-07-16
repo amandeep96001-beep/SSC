@@ -154,6 +154,16 @@
   border: 1px solid var(--border-color);
   font-family: var(--font-sans);
   text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+#exam-portal #timer-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #exam-portal .btn-clear {

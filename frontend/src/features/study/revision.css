@@ -65,6 +65,9 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .revision-sub-tab.active {
   background: var(--color-primary);
@@ -210,30 +213,56 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.vocab-search-bar {
+.vocab-search-bar,
+.vocab-search-bar.input-with-icon {
   display: flex;
   align-items: center;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 18px;
-  gap: 12px;
+  border-radius: 12px;
+  padding: 0 14px;
+  gap: 10px;
+  min-height: 44px;
+  box-sizing: border-box;
+  box-shadow: none;
+}
+
+.vocab-search-bar:focus-within,
+.vocab-search-bar.input-with-icon:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-muted);
 }
 
 .vocab-search-bar .search-icon {
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-.vocab-search-bar input {
-  background: transparent;
-  border: none;
+.vocab-search-bar input,
+.vocab-search-bar input[type="search"],
+.vocab-search-bar input[type="text"],
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]),
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]):focus,
+.vocab-search-bar.input-with-icon input:not([type="radio"]):not([type="checkbox"]):focus-visible {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   color: var(--text-primary);
   font-size: 0.95rem;
-  width: 100%;
+  padding: 10px 0 !important;
+  border-radius: 0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
 }
 
-.vocab-search-bar input:focus {
-  outline: none;
+.vocab-search-bar input::-webkit-search-decoration,
+.vocab-search-bar input::-webkit-search-cancel-button,
+.vocab-search-bar input::-webkit-search-results-button {
+  -webkit-appearance: none;
 }
 
 .vocab-term-card {
@@ -245,10 +274,12 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .vocab-term-card:hover {
-  border-color: var(--color-primary);
+  border-color: var(--border-color);
+  box-shadow: 0 8px 24px rgba(30, 50, 100, 0.08);
+  transform: none;
 }
 
 .vocab-term-header {
@@ -264,14 +295,16 @@
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
 }
 
 .vocab-def {
   font-size: 0.86rem;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.5;
   margin: 0;
-  font-style: italic;
+  font-style: normal;
 }
 
 /* Pill chips for synonyms/antonyms */
@@ -323,6 +356,9 @@
   padding: 4px 10px;
   font-size: 0.78rem;
   transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .vocab-action-btn:hover {
   border-color: var(--color-primary);
@@ -381,17 +417,18 @@
 }
 
 .pos-badge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 3px 8px;
+  border-radius: 6px;
   background: var(--color-primary-muted);
   color: var(--color-primary);
-  border: 1px solid rgba(0, 113, 227, 0.15);
+  border: 1px solid transparent;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 130px;
+  flex-shrink: 0;
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .vocab-synonyms {

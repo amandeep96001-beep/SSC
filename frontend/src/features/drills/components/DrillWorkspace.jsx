@@ -4,7 +4,8 @@ import {
   Flame, Zap, Percent, TrendingUp, BookOpen,
   CheckCircle, XCircle, RefreshCw, Brain, FileText,
   Calculator, Cpu, AlertTriangle, Trash2, Sparkles,
-  ChevronDown, ChevronUp, Loader2, RotateCcw, Send, ListChecks, ArrowRight
+  ChevronDown, ChevronUp, Loader2, RotateCcw, Send, ListChecks, ArrowRight,
+  SkipForward, Target
 } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
 import '@/features/dashboard/Dashboard.css';
@@ -182,7 +183,7 @@ function WrongQuestionCard({ wq }) {
 
       {attempting && (
         <div className="retry-attempt-box">
-          <p className="retry-label">🎯 Try Again:</p>
+          <p className="retry-label"><Target size={14} strokeWidth={2} /> Try Again:</p>
           {isMCQ ? (
             <div className="retry-options-grid">
               {wq.options.map((opt) => (
@@ -221,7 +222,7 @@ function WrongQuestionCard({ wq }) {
           )}
           {retryResult === 'correct' && (
             <div className="retry-feedback retry-feedback--correct">
-              <CheckCircle size={14} /> Correct! Well done! 🎉
+              <CheckCircle size={14} /> Correct! Well done!
             </div>
           )}
         </div>
@@ -231,7 +232,7 @@ function WrongQuestionCard({ wq }) {
         <div className="retry-success-row">
           <CheckCircle size={16} className="wrong-q-correct-icon" />
           <span>Answered correctly this time!</span>
-          <button className="retry-reset-link" onClick={resetRetry}>Try Again</button>
+          <button className="retry-reset-link" onClick={resetRetry}><RotateCcw size={13} /> Try Again</button>
         </div>
       )}
 
@@ -602,9 +603,13 @@ export function DrillWorkspace({
                         </div>
                       )}
                       <div className="action-row">
-                        <button type="button" className="btn-skip" onClick={skipDrillQuestion}>Skip Drill</button>
+                        <button type="button" className="btn-skip" onClick={skipDrillQuestion}>
+                          <SkipForward size={15} strokeWidth={2} /> Skip Drill
+                        </button>
                         {!MCQ_TYPES.includes(drillType) && (
-                          <button type="submit" disabled={!userAnswer.trim()} className="btn-submit">Verify Answer</button>
+                          <button type="submit" disabled={!userAnswer.trim()} className="btn-submit">
+                            <CheckCircle size={15} strokeWidth={2} /> Verify Answer
+                          </button>
                         )}
                       </div>
                     </form>

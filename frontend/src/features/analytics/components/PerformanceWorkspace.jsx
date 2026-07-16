@@ -136,9 +136,6 @@ export function PerformanceWorkspace({ user }) {
       <div className="workspace-header-sticky">
         <div className="section-header perf-hero-header">
           <div>
-            <p className="perf-eyebrow">
-              <TrendingUp size={14} aria-hidden /> Progress radar
-            </p>
             <h1>Performance Tracker</h1>
             <p className="section-header-sub">Syllabus coverage, mock averages, and weak areas at a glance.</p>
           </div>
@@ -152,7 +149,7 @@ export function PerformanceWorkspace({ user }) {
             className={`perf-mode-btn ${activeTab === 'syllabus' ? 'active' : ''}`}
             onClick={() => setActiveTab('syllabus')}
           >
-            Syllabus Practice
+            <BookOpen size={15} strokeWidth={2} /> Syllabus Practice
           </button>
           <button
             type="button"
@@ -161,7 +158,7 @@ export function PerformanceWorkspace({ user }) {
             className={`perf-mode-btn ${activeTab === 'mock' ? 'active' : ''}`}
             onClick={() => setActiveTab('mock')}
           >
-            Full Mock Exams
+            <ClipboardList size={15} strokeWidth={2} /> Full Mock Exams
           </button>
         </div>
       </div>
