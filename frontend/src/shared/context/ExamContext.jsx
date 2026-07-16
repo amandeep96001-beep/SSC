@@ -56,7 +56,7 @@ export function ExamProvider({ children }) {
       if (res?.status === 'success' && Array.isArray(res.data)) {
         const map = { ...defaultSubjectsMap() };
         res.data.forEach((row) => {
-          if (row.examId && Array.isArray(row.subjects) && row.subjects.length) {
+          if (row.examId && Array.isArray(row.subjects)) {
             map[row.examId] = row.subjects;
           }
         });

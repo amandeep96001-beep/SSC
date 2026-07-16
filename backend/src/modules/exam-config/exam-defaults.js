@@ -1,38 +1,49 @@
-/** Default exam → subjects (admin can override in DB) */
+/** Default exam → subjects (admin can override in DB). Existing syllabus is SSC-only; other exams start empty. */
 export const EXAM_DEFAULTS = {
   ssc: {
     name: 'SSC',
     fullName: 'SSC CGL / CHSL / MTS',
-    subjects: ['Quantitative Aptitude', 'English Comprehension', 'General Awareness', 'Reasoning'],
+    subjects: [
+      'Quantitative Aptitude',
+      'English Comprehension',
+      'General Awareness',
+      'Reasoning',
+      'GK - Biology',
+      'GK - Physics',
+      'GK - Chemistry',
+      'GK - Polity',
+      'GK - History',
+      'GK - Geography',
+    ],
   },
   banking: {
     name: 'Banking',
     fullName: 'IBPS / SBI / RBI',
-    subjects: ['Quantitative Aptitude', 'English Comprehension', 'Reasoning', 'General Awareness'],
+    subjects: [],
   },
   railways: {
     name: 'Railways',
     fullName: 'RRB NTPC / Group D / ALP',
-    subjects: ['Quantitative Aptitude', 'Reasoning', 'General Awareness'],
+    subjects: [],
   },
   upsc: {
     name: 'UPSC',
     fullName: 'UPSC CSE Prelims',
-    subjects: ['General Awareness', 'English Comprehension', 'Reasoning'],
+    subjects: [],
   },
   cat: {
     name: 'CAT',
     fullName: 'CAT / XAT / SNAP',
-    subjects: ['Quantitative Aptitude', 'English Comprehension', 'Reasoning'],
+    subjects: [],
   },
   state_psc: {
     name: 'State PSC',
     fullName: 'State PCS / Police / Teaching',
-    subjects: ['General Awareness', 'Quantitative Aptitude', 'English Comprehension', 'Reasoning'],
+    subjects: [],
   },
   other: {
     name: 'Custom',
     fullName: 'Any competitive exam',
-    subjects: ['Quantitative Aptitude', 'English Comprehension', 'General Awareness', 'Reasoning'],
+    subjects: [],
   },
 };

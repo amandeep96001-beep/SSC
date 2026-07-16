@@ -11,21 +11,26 @@ export function AdminWorkspace() {
   const [draft, setDraft] = useState('');
   const [allSubjects, setAllSubjects] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
+  const loadAllSubjects = async () => {
+    try {
+      const res = await apiService.get('/study/subjects?source=global');
+      const list = res?.data || [];
+      const names = (Array.isArray(list) ? list : [])
+        .map((s) => (typeof s === 'string' ? s : s.name))
+        .filter(Boolean);
+      setAllSubjects(names);
+    } catch {
+      setAllSubjects([]);
+    }
+  };
+
   useEffect(() => {
     refreshExamConfigs();
-    (async () => {
-      try {
-        const res = await apiService.get('/study/subjects?source=global');
-        const list = res?.data || [];
-        const names = (Array.isArray(list) ? list : []).map((s) => (typeof s === 'string' ? s : s.name)).filter(Boolean);
-        setAllSubjects(names);
-      } catch {
-        setAllSubjects([]);
-      }
-    })();
+    loadAllSubjects();
   }, [refreshExamConfigs]);
 
   useEffect(() => {
@@ -36,15 +41,45 @@ export function AdminWorkspace() {
 
   const selected = EXAM_LIST.find((e) => e.id === examId);
 
-  const addSubject = (name) => {
+  const ensureOfficialSubject = async (name) => {
+    const exists = allSubjects.some((s) => s.toLowerCase() === name.toLowerCase());
+    if (exists) return { ok: true };
+    try {
+      const res = await apiService.post('/study/subjects', { name, scope: 'global' });
+      if (res?.status === 'success') {
+        setAllSubjects((prev) => (prev.some((s) => s.toLowerCase() === name.toLowerCase()) ? prev : [...prev, name]));
+        return { ok: true, created: !res?.data?.alreadyExisted };
+      }
+      return { ok: false, message: res?.message || 'Could not create subject.' };
+    } catch (e) {
+      return { ok: false, message: e.message || 'Could not create subject.' };
+    }
+  };
+
+  const addSubject = async (name) => {
     const n = String(name || draft).trim();
-    if (!n) return;
+    if (!n || adding) return;
     if (subjects.some((s) => s.toLowerCase() === n.toLowerCase())) {
       setDraft('');
       return;
     }
+
+    setAdding(true);
+    setErr('');
+    const ensured = await ensureOfficialSubject(n);
+    setAdding(false);
+    if (!ensured.ok) {
+      setErr(ensured.message || 'Failed to add subject.');
+      return;
+    }
+
     setSubjects((prev) => [...prev, n]);
     setDraft('');
+    setMsg(
+      ensured.created
+        ? `Created “${n}” and added to ${selected?.name || examId}. Save to publish for students.`
+        : `Added “${n}” to ${selected?.name || examId}. Save to publish for students.`
+    );
   };
 
   const removeSubject = (name) => {
@@ -57,8 +92,11 @@ export function AdminWorkspace() {
     setErr('');
     const res = await saveExamSubjects(examId, subjects);
     setSaving(false);
-    if (res.success) setMsg('Saved. Students will see this subject list on What to study.');
-    else setErr(res.message || 'Save failed');
+    if (res.success) {
+      setMsg(`Saved for ${selected?.name || examId}. Students targeting this exam will see this subject list.`);
+    } else {
+      setErr(res.message || 'Save failed');
+    }
   };
 
   return (
@@ -66,7 +104,10 @@ export function AdminWorkspace() {
       <header className="admin-workspace__head">
         <p className="today-focus__eyebrow"><Shield size={14} /> Admin</p>
         <h1>Exam subjects</h1>
-        <p>Map subjects to each exam. Students open a subject to view the syllabus.</p>
+        <p>
+          Existing syllabus subjects belong to SSC. Choose another exam (Banking, Railways, …),
+          then add subjects for that exam and save.
+        </p>
       </header>
 
       <div className="admin-exam-tabs">
@@ -85,7 +126,10 @@ export function AdminWorkspace() {
 
       <section className="admin-panel">
         <h2>{selected?.fullName || examId}</h2>
-        <p className="admin-panel__hint">This list appears on the student What to study screen.</p>
+        <p className="admin-panel__hint">
+          Students who pick <strong>{selected?.name || examId}</strong> see only these subjects on
+          What to study and Official Syllabus.
+        </p>
 
         <div className="admin-subject-chips">
           {subjects.map((s) => (
@@ -96,14 +140,18 @@ export function AdminWorkspace() {
               </button>
             </span>
           ))}
-          {subjects.length === 0 && <p className="study-empty">No subjects yet. Add subjects below.</p>}
+          {subjects.length === 0 && (
+            <p className="study-empty">
+              No subjects for this exam yet. Add from the official list below, or type a new name.
+            </p>
+          )}
         </div>
 
         <div className="admin-add-row">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Subject name"
+            placeholder={`New subject for ${selected?.name || 'this exam'}`}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -111,14 +159,14 @@ export function AdminWorkspace() {
               }
             }}
           />
-          <button type="button" className="admin-btn" onClick={() => addSubject()}>
-            <Plus size={16} /> Add
+          <button type="button" className="admin-btn" onClick={() => addSubject()} disabled={adding}>
+            <Plus size={16} /> {adding ? 'Adding…' : 'Add'}
           </button>
         </div>
 
         {allSubjects.length > 0 && (
           <div className="admin-suggest">
-            <p>Quick add from official syllabus:</p>
+            <p>Quick add from official syllabus (shared notes &amp; topics):</p>
             <div className="admin-suggest__list">
               {allSubjects.map((name) => {
                 const on = subjects.some((s) => s.toLowerCase() === name.toLowerCase());
@@ -127,7 +175,7 @@ export function AdminWorkspace() {
                     key={name}
                     type="button"
                     className={`admin-suggest-btn${on ? ' is-on' : ''}`}
-                    disabled={on}
+                    disabled={on || adding}
                     onClick={() => addSubject(name)}
                   >
                     {name}
@@ -139,7 +187,7 @@ export function AdminWorkspace() {
         )}
 
         <button type="button" className="admin-save" onClick={save} disabled={saving}>
-          <Save size={16} /> {saving ? 'Saving…' : 'Save for students'}
+          <Save size={16} /> {saving ? 'Saving…' : `Save for ${selected?.name || 'exam'}`}
         </button>
         {msg && <p className="admin-ok">{msg}</p>}
         {err && <p className="admin-err">{err}</p>}

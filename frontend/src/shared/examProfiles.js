@@ -17,7 +17,18 @@ export const EXAM_PROFILES = {
     markingLabel: '+2 correct · −0.5 wrong',
     coachLabel: 'SSC Tier-I coach',
     pyqLabel: 'Previous year questions',
-    subjectsFocus: ['Quantitative Aptitude', 'English Comprehension', 'General Awareness', 'Reasoning'],
+    subjectsFocus: [
+      'Quantitative Aptitude',
+      'English Comprehension',
+      'General Awareness',
+      'Reasoning',
+      'GK - Biology',
+      'GK - Physics',
+      'GK - Chemistry',
+      'GK - Polity',
+      'GK - History',
+      'GK - Geography',
+    ],
     dailyGoals: [
       { id: 'drill', label: '20 speed drills', view: 'drill' },
       { id: 'notes', label: 'Revise 1 syllabus topic', view: 'subjects' },
@@ -48,7 +59,7 @@ export const EXAM_PROFILES = {
     markingLabel: '+1 correct · −0.25 wrong (typical prelims)',
     coachLabel: 'Banking prelims coach',
     pyqLabel: 'Banking PYQs',
-    subjectsFocus: ['Quantitative Aptitude', 'English Comprehension', 'Reasoning', 'General Awareness'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'drill', label: 'DI / simplification set', view: 'drill' },
       { id: 'notes', label: 'Banking awareness notes', view: 'subjects' },
@@ -79,7 +90,7 @@ export const EXAM_PROFILES = {
     markingLabel: '+1 correct · −⅓ wrong (typical CBT)',
     coachLabel: 'RRB CBT coach',
     pyqLabel: 'Railway PYQs',
-    subjectsFocus: ['Quantitative Aptitude', 'Reasoning', 'General Awareness'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'drill', label: 'Maths speed set', view: 'drill' },
       { id: 'notes', label: 'Science + static GK revision', view: 'subjects' },
@@ -110,7 +121,7 @@ export const EXAM_PROFILES = {
     markingLabel: '+2 correct · −⅔ wrong (GS Paper I)',
     coachLabel: 'UPSC Prelims coach',
     pyqLabel: 'UPSC PYQs',
-    subjectsFocus: ['General Awareness', 'English Comprehension', 'Reasoning'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'notes', label: '1 GS topic + short notes', view: 'subjects' },
       { id: 'drill', label: 'CSAT aptitude set', view: 'drill' },
@@ -141,7 +152,7 @@ export const EXAM_PROFILES = {
     markingLabel: '+3 correct · −1 wrong (CAT MCQ)',
     coachLabel: 'CAT aptitude coach',
     pyqLabel: 'MBA entrance PYQs',
-    subjectsFocus: ['Quantitative Aptitude', 'English Comprehension', 'Reasoning'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'drill', label: 'Quant / LR set', view: 'drill' },
       { id: 'notes', label: 'RC / grammar practice', view: 'subjects' },
@@ -172,7 +183,7 @@ export const EXAM_PROFILES = {
     markingLabel: '+1 correct · −0.25 wrong (typical)',
     coachLabel: 'State PSC coach',
     pyqLabel: 'State exam PYQs',
-    subjectsFocus: ['General Awareness', 'Quantitative Aptitude', 'English Comprehension', 'Reasoning'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'notes', label: 'State GK + GS notes', view: 'subjects' },
       { id: 'drill', label: 'Aptitude drills', view: 'drill' },
@@ -203,7 +214,7 @@ export const EXAM_PROFILES = {
     markingLabel: 'Custom — set marking in your mocks',
     coachLabel: 'Exam coach',
     pyqLabel: 'Previous year questions',
-    subjectsFocus: ['Quantitative Aptitude', 'English Comprehension', 'General Awareness', 'Reasoning'],
+    subjectsFocus: [],
     dailyGoals: [
       { id: 'drill', label: 'Practice drills', view: 'drill' },
       { id: 'notes', label: 'Cover syllabus topics', view: 'subjects' },

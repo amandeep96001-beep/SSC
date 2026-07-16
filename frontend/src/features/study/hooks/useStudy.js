@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 import { getListFromResponse } from '@/shared/utils/apiResponse';
+import { useExam } from '@/shared/context/useExam';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
 
@@ -15,7 +16,19 @@ function normalizeSubjects(list) {
   });
 }
 
+function filterByExamSubjects(list, examSubjects, isMine) {
+  if (isMine) return list;
+  const allowed = (examSubjects || []).map((s) => String(s).toLowerCase());
+  if (!allowed.length) return [];
+  const byName = new Map(list.map((s) => [s.name.toLowerCase(), s]));
+  // Preserve exam config order; include only subjects that exist in the catalog
+  return allowed
+    .map((key) => byName.get(key))
+    .filter(Boolean);
+}
+
 export function useStudy() {
+  const { examId, examSubjects } = useExam();
   const [activeView, setActiveView] = useState('home'); // home, drill, subjects, topics, notes, test, results, revision
   const [contentSource, setContentSourceState] = useState(() => {
     try {
@@ -25,7 +38,7 @@ export function useStudy() {
       return 'global';
     }
   });
-  const [subjects, setSubjects] = useState([]);
+  const [subjectsRaw, setSubjectsRaw] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
   // User Authentication state
@@ -79,8 +92,13 @@ export function useStudy() {
   const fetchSubjects = useCallback(async (sourceOverride) => {
     const source = sourceOverride || contentSourceRef.current;
     const result = await fetchSubjectsApi(source);
-    setSubjects(normalizeSubjects(getListFromResponse(result)));
+    setSubjectsRaw(normalizeSubjects(getListFromResponse(result)));
   }, [fetchSubjectsApi]);
+
+  const subjects = useMemo(
+    () => filterByExamSubjects(subjectsRaw, examSubjects, contentSource === 'mine'),
+    [subjectsRaw, examSubjects, contentSource]
+  );
 
   const setContentSource = useCallback(async (source) => {
     const next = source === 'mine' ? 'mine' : 'global';
@@ -510,6 +528,21 @@ export function useStudy() {
     subjectsLoadedForRef.current = cacheKey;
     fetchSubjects(contentSource);
   }, [user?.id, user?.username, contentSource, fetchSubjects]);
+
+  // If exam changes while viewing a subject that isn't on this exam, go back to the subject list
+  useEffect(() => {
+    if (contentSource !== 'global' || !selectedSubject) return;
+    const allowed = new Set((examSubjects || []).map((s) => String(s).toLowerCase()));
+    if (!allowed.has(String(selectedSubject).toLowerCase())) {
+      setSelectedSubject(null);
+      setTopicsList([]);
+      setSelectedTopicId(null);
+      setActiveNotes(null);
+      if (activeView === 'topics' || activeView === 'notes') {
+        setActiveView('subjects');
+      }
+    }
+  }, [examId, examSubjects, contentSource, selectedSubject, activeView]);
 
   const isMineMode = contentSource === 'mine';
 

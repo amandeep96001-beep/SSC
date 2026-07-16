@@ -49,6 +49,27 @@ export const addSubject = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: 'Subject name is required.' });
     }
 
+    const wantGlobal = String(req.body?.scope || '').toLowerCase() === 'global';
+    if (wantGlobal) {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ status: 'error', message: 'Admin access required to create official subjects.' });
+      }
+
+      const existing = await subjectRepository.findByName(name, true, null);
+      if (existing) {
+        return res.json({
+          status: 'success',
+          data: { name: existing.name, isOwned: false, ownerId: null, alreadyExisted: true }
+        });
+      }
+
+      const created = await subjectRepository.create({ name, ownerId: null });
+      return res.status(201).json({
+        status: 'success',
+        data: { name: created.name, isOwned: false, ownerId: null }
+      });
+    }
+
     const existing = await subjectRepository.findByName(name, true, req.user.id);
     if (existing) {
       return res.status(400).json({ status: 'error', message: 'You already have a subject with this name.' });

@@ -430,7 +430,7 @@ export function SyllabusWorkspace({
                 <p>
                   {isMineMode
                     ? 'Build your own subjects, topics, notes, and practice questions.'
-                    : 'Study from your institute\'s published syllabus — notes and topic tests.'}
+                    : 'Study from your institute\'s published syllabus for your target exam — notes and topic tests.'}
                 </p>
               </div>
               {isMineMode && (
@@ -513,7 +513,7 @@ export function SyllabusWorkspace({
                     </button>
                   </>
                 ) : (
-                  <p>No official subjects loaded yet. Try refreshing or check your connection.</p>
+                  <p>No official subjects for this exam yet. Ask your admin to add subjects for your target exam, or switch exam from the picker.</p>
                 )}
               </div>
             )}

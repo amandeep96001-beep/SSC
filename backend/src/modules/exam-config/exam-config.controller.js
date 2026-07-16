@@ -7,7 +7,10 @@ function mergeWithDefaults(docs) {
     examId,
     name: EXAM_DEFAULTS[examId].name,
     fullName: EXAM_DEFAULTS[examId].fullName,
-    subjects: byId[examId]?.length ? byId[examId] : EXAM_DEFAULTS[examId].subjects,
+    // Empty array is a valid admin override (e.g. Railway/Bank until subjects are added)
+    subjects: Object.prototype.hasOwnProperty.call(byId, examId)
+      ? byId[examId]
+      : EXAM_DEFAULTS[examId].subjects,
   }));
 }
 
