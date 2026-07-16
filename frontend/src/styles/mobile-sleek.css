@@ -94,6 +94,14 @@
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     padding-bottom: 20px !important;
+    scrollbar-width: none !important;
+  }
+
+  .today-focus::-webkit-scrollbar,
+  .admin-workspace::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
 
   .mobile-header {

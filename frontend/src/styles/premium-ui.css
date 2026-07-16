@@ -144,9 +144,9 @@
   border-radius: 36px;
   box-shadow: var(--shadow-float);
   padding: 32px 36px 36px;
-  /* Keep Y clip for rounded shell; allow X so card hover shadows aren't chopped */
+  /* Clip to radius; scroll lives in children so the bar doesn't hug the corner */
   overflow-x: visible;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 :root[data-theme="dark"] .workspace-card-enclosure {

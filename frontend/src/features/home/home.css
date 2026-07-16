@@ -166,6 +166,28 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 24px;
+  padding-right: 6px;
+  /* Soft inset scrollbar — doesn't cut the rounded shell */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border-color) 80%, transparent) transparent;
+}
+
+.today-focus::-webkit-scrollbar {
+  width: 5px;
+}
+
+.today-focus::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 18px;
+}
+
+.today-focus::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-color) 85%, transparent);
+  border-radius: 999px;
+}
+
+.today-focus::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .today-focus__hero {
