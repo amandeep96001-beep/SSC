@@ -9,24 +9,24 @@ const POLLINATIONS_URL = 'https://text.pollinations.ai/openai';
 const HF_URL = 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta';
 
 function buildPrompt(question, correctAnswer, explanation) {
-  return `You are an expert SSC CGL/CHSL exam coach. A student got this question WRONG. Provide a crisp, highly structured explanation optimized for SSC aspirants in easy-to-understand English.
+  return `You are an expert competitive-exam coach (SSC, Banking, Railways, UPSC Prelims, CAT, State PSC). A student got this question WRONG. Provide a crisp, highly structured explanation optimized for aspirants in easy-to-understand English.
 
 Question: ${question}
 Correct Answer: ${correctAnswer}
 ${explanation ? `Official Explanation: ${explanation}` : ''}
 
 Use this EXACT structure with very short, punchy points:
-**1. Core Concept:** (1 line naming the SSC topic & formula/rule. For Maths — write the exact formula with variables. For GK — name the exact sub-topic and category.)
+**1. Core Concept:** (1 line naming the topic & formula/rule. For Maths — write the exact formula with variables. For GK — name the exact sub-topic and category.)
 **2. Why This Answer:** (In 1-2 bullet points, explain WHY the correct answer is correct. For Maths, show the formula applied with numbers. For GK/English, give the factual reasoning.)
 **3. Pro Tip:** (What silly mistake to avoid next time, or a memory trick/mnemonic to remember this forever.)
-**4. Expected in SSC — 10 Related Facts/Questions:** (This is the MOST IMPORTANT section. Provide EXACTLY 10 highly relevant one-liner facts, formulas, or mini-questions from this EXACT sub-topic that frequently appear in SSC exams. Make each one independently useful so the student can learn the full topic just from this list.)
+**4. Expected in Exams — 10 Related Facts/Questions:** (This is the MOST IMPORTANT section. Provide EXACTLY 10 highly relevant one-liner facts, formulas, or mini-questions from this EXACT sub-topic that frequently appear in Indian competitive exams. Make each one independently useful so the student can learn the full topic just from this list.)
   - For GK: If the question is about Himachal folk dance, list 10 other states and their famous folk dances. If it's about a river, list 10 rivers with origin and endpoint.
   - For Maths: If it's about Profit & Loss, list 10 key formulas/shortcuts with examples. If it's about Trigonometry, list 10 important identities/values.
-  - For English: If it's about synonyms, list 10 high-frequency SSC vocabulary words with meanings. If it's an idiom, list 10 most repeated SSC idioms with meanings.
+  - For English: If it's about synonyms, list 10 high-frequency vocabulary words with meanings. If it's an idiom, list 10 most repeated idioms with meanings.
   - For Reasoning: If it's about coding-decoding, list 10 common patterns. If it's about series, list 10 frequently tested number/letter series patterns.
   Format each as: **1.** fact — detail
 
-Do not use long paragraphs. Use bullet points and bold text for readability. The "Expected in SSC" section should be detailed enough that a student can revise the entire sub-topic from it alone.`;
+Do not use long paragraphs. Use bullet points and bold text for readability. The "Expected in Exams" section should be detailed enough that a student can revise the entire sub-topic from it alone.`;
 }
 
 async function tryPollinations(prompt, retries = 3) {

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen, TrendingUp } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
+import { useExam } from '@/shared/context/useExam';
 
 function formatTopicLabel(topicId) {
   if (!topicId) return 'Unknown topic';
@@ -94,6 +95,7 @@ function HistoryCard({ title, attempt, tone, score, maxScore, statusLabel, elaps
 
 export function PerformanceWorkspace({ user }) {
   const [activeTab, setActiveTab] = useState('syllabus');
+  const { exam } = useExam();
 
   const progress = user.progress || [];
   const mockProgress = user.mockProgress || [];
@@ -271,7 +273,7 @@ export function PerformanceWorkspace({ user }) {
               )}
 
               {mockProgress.length > 0 && (
-                <p className="perf-footnote">Scoring: +2 correct, −0.5 wrong.</p>
+                <p className="perf-footnote">Scoring for {exam.name}: {exam.markingLabel}.</p>
               )}
             </section>
           </>

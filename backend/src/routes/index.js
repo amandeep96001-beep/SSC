@@ -6,6 +6,7 @@ import drillRoutes from '../modules/drill/drill.routes.js';
 import mockRoutes from '../modules/mock/mock.routes.js';
 import aiRoutes from '../modules/ai/ai.routes.js';
 import competitionRoutes from '../modules/competition/competition.routes.js';
+import examConfigRoutes from '../modules/exam-config/exam-config.routes.js';
 import { requireAuth } from '../shared/middleware/auth.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
 import { getEnvHealth } from '../config/env.config.js';
@@ -33,5 +34,6 @@ router.use('/drill', drillRoutes);
 router.use('/mock', mockRoutes);
 router.use('/ai', aiRoutes);
 router.use('/competition', competitionRoutes);
+router.use('/exam-config', examConfigRoutes);
 
 export default router;

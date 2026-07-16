@@ -540,12 +540,176 @@
   font-size: 0.85rem;
   color: var(--text-muted);
 }
+.wrong-q-answer-row--yours strong {
+  color: var(--color-danger);
+}
+.wrong-q-wrong-icon {
+  color: var(--color-danger);
+  flex-shrink: 0;
+}
 .wrong-q-correct-icon {
   color: var(--color-success);
   flex-shrink: 0;
 }
 .wrong-q-answer-row strong {
   color: var(--color-success);
+}
+.wrong-q-answer-row--yours strong {
+  color: var(--color-danger);
+}
+
+.wrong-q-card--vocab {
+  border-color: color-mix(in srgb, var(--color-danger) 22%, var(--border-color));
+}
+
+.wrong-vocab-word-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--bg-surface));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+  color: var(--color-danger);
+}
+.wrong-vocab-word-banner > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.wrong-vocab-word-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.wrong-vocab-word {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
+}
+
+.wrong-vocab-summary {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 22%, var(--border-color));
+  background: color-mix(in srgb, var(--color-danger) 6%, var(--bg-surface));
+}
+.wrong-vocab-summary__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--color-danger);
+}
+.wrong-vocab-summary__head > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.wrong-vocab-summary__head .btn-clear-wrong-log {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.wrong-vocab-summary__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-heading);
+}
+.wrong-vocab-summary__head p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.wrong-vocab-chip-row,
+.study-wrong-vocab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.wrong-vocab-chip,
+.study-wrong-vocab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 25%, var(--border-color));
+  background: var(--bg-surface);
+  font-size: 0.84rem;
+}
+.wrong-vocab-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 0;
+}
+.wrong-vocab-chip-remove:hover {
+  color: var(--color-danger);
+}
+.wrong-q-header__right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.wrong-q-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.wrong-q-remove-btn:hover {
+  color: var(--color-danger);
+  border-color: color-mix(in srgb, var(--color-danger) 40%, var(--border-color));
+}
+.wrong-vocab-chip strong,
+.study-wrong-vocab-chip strong {
+  color: var(--text-heading);
+  font-weight: 700;
+}
+.wrong-vocab-chip em,
+.study-wrong-vocab-chip em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.wrong-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.wrong-log-filter {
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.wrong-log-filter.active {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--border-color));
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--bg-surface));
+  color: var(--text-heading);
 }
 
 .wrong-q-hint {

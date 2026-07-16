@@ -7,6 +7,7 @@ import { signToken } from './token.util.js';
 function publicUserPayload(user, progress = [], mockProgress = [], token = null) {
   const payload = {
     username: user.username,
+    role: user.role || 'user',
     progress,
     mockProgress
   };
@@ -14,9 +15,17 @@ function publicUserPayload(user, progress = [], mockProgress = [], token = null)
   return payload;
 }
 
+function resolveRole(username, adminCode) {
+  const adminUser = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
+  const code = process.env.ADMIN_CODE || 'examprep-admin';
+  if (String(username).trim().toLowerCase() === adminUser) return 'admin';
+  if (adminCode && String(adminCode) === code) return 'admin';
+  return 'user';
+}
+
 export const register = async (req, res, next) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, adminCode } = req.body;
     if (!username || !password) {
       return res.status(400).json({
         status: 'error',
@@ -35,9 +44,11 @@ export const register = async (req, res, next) => {
     }
 
     const hashed = await hashPassword(password);
+    const role = resolveRole(trimmedUsername, adminCode);
     const newUser = await User.create({
       username: trimmedUsername,
-      password: hashed
+      password: hashed,
+      role
     });
 
     const token = signToken(newUser);
@@ -175,7 +186,11 @@ export const getMe = async (req, res, next) => {
 
     res.json({
       status: 'success',
-      data: publicUserPayload({ username }, progress, mockProgress)
+      data: publicUserPayload(
+        { username, role: req.user.role || 'user' },
+        progress,
+        mockProgress
+      )
     });
   } catch (error) {
     next(error);

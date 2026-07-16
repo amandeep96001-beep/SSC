@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Plus, Check, Play, BookOpen, Inbox, Trash2, XCircle, List } from 'lucide-react';
+import { useExam } from '@/shared/context/useExam';
 
 export function MockWorkspace({ mockTestsApi, startMockExam }) {
+  const { exam } = useExam();
   const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
   const [showAddForm, setShowAddForm] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -85,7 +87,10 @@ export function MockWorkspace({ mockTestsApi, startMockExam }) {
         <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
           <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
             <h1 style={{ margin: '0 0 6px 0' }}>Full Mock Exams</h1>
-            <p style={{ margin: 0 }}>Timed 100-question papers — 60 minutes, four sections. Upload your own mock papers.</p>
+            <p style={{ margin: 0 }}>
+              {exam.fullName}: typically {exam.mockQuestions} Q · {exam.mockMinutes} min · {exam.markingLabel}.
+              Upload your own JSON papers for any pattern.
+            </p>
           </div>
           <button className="btn-create-topic" style={{ marginLeft: 'auto' }} onClick={() => {
             setShowAddForm(!showAddForm);

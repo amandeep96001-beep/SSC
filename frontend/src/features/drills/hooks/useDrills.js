@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 
+function extractVocabWord(question = '') {
+  const m = String(question).match(/"([^"]+)"/);
+  return m ? m[1] : null;
+}
+
 export function useDrills(isAuthenticated = false) {
   const [drillType, setDrillType] = useState('table'); // table, fraction, percentage, vocab
   const [currentDrill, setCurrentDrill] = useState(null);
@@ -98,23 +103,31 @@ export function useDrills(isAuthenticated = false) {
           let updated;
           if (existingIdx >= 0) {
             updated = [...prev];
-            updated[existingIdx] = { ...updated[existingIdx], wrongCount: updated[existingIdx].wrongCount + 1 };
+            updated[existingIdx] = {
+              ...updated[existingIdx],
+              wrongCount: updated[existingIdx].wrongCount + 1,
+              userAnswer: finalAnswer,
+              lastWrongAt: Date.now(),
+            };
           } else {
             updated = [
               {
                 question: currentDrill.question,
                 correctAnswer: currentDrill.correctAnswer,
+                userAnswer: finalAnswer,
                 options: currentDrill.options || null,
                 placeholder: currentDrill.placeholder || null,
                 explanation: currentDrill.explanation || null,
                 category: currentDrill.category || null,
                 type: currentDrill.type,
+                word: currentDrill.word || extractVocabWord(currentDrill.question),
                 // vocab-specific reveal fields
                 revealDefinition: currentDrill.revealDefinition || null,
                 revealSynonyms: currentDrill.revealSynonyms || null,
                 revealAntonyms: currentDrill.revealAntonyms || null,
                 pos: currentDrill.pos || null,
-                wrongCount: 1
+                wrongCount: 1,
+                lastWrongAt: Date.now(),
               },
               ...prev
             ];
@@ -167,6 +180,15 @@ export function useDrills(isAuthenticated = false) {
 
   const clearWrongLog = () => setWrongQuestions([]);
 
+  const removeWrongQuestion = useCallback((question) => {
+    if (!question) return;
+    setWrongQuestions((prev) => prev.filter((wq) => wq.question !== question));
+  }, []);
+
+  const clearWrongVocab = useCallback(() => {
+    setWrongQuestions((prev) => prev.filter((wq) => wq.type !== 'vocab'));
+  }, []);
+
   return {
     drillType,
     currentDrill,
@@ -178,6 +200,8 @@ export function useDrills(isAuthenticated = false) {
     feedback,
     wrongQuestions,
     clearWrongLog,
+    removeWrongQuestion,
+    clearWrongVocab,
     loading: nextDrillLoading || verifyLoading,
     error: nextDrillError || verifyError,
     changeDrillType,

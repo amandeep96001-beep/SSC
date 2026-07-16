@@ -14,7 +14,7 @@ export async function requireAuth(req, res, next) {
     const token = header.slice(7);
     const payload = verifyToken(token);
 
-    const user = await User.findById(payload.userId).select('_id username').lean();
+    const user = await User.findById(payload.userId).select('_id username role').lean();
     if (!user) {
       return res.status(401).json({
         status: 'error',
@@ -22,7 +22,11 @@ export async function requireAuth(req, res, next) {
       });
     }
 
-    req.user = { id: user._id.toString(), username: user.username };
+    req.user = {
+      id: user._id.toString(),
+      username: user.username,
+      role: user.role || 'user',
+    };
     next();
   } catch {
     return res.status(401).json({
@@ -30,4 +34,14 @@ export async function requireAuth(req, res, next) {
       message: 'Invalid or expired session. Please sign in again.'
     });
   }
+}
+
+export function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Admin access required.',
+    });
+  }
+  next();
 }

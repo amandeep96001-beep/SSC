@@ -12,7 +12,11 @@ function getSecret() {
 
 export function signToken(user) {
   return jwt.sign(
-    { userId: user._id.toString(), username: user.username },
+    {
+      userId: user._id.toString(),
+      username: user.username,
+      role: user.role || 'user',
+    },
     getSecret(),
     { expiresIn: JWT_EXPIRES_IN }
   );

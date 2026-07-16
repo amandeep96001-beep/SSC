@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import {
   Flame, Zap, Percent, TrendingUp, BookOpen,
@@ -9,6 +9,12 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
 import '@/features/dashboard/Dashboard.css';
+
+function vocabWordFromWrong(wq) {
+  if (wq?.word) return wq.word;
+  const m = String(wq?.question || '').match(/"([^"]+)"/);
+  return m ? m[1] : null;
+}
 
 // ── Markdown Formatter ────────────────────────────────────────────────────────
 const formatAIText = (text) => {
@@ -30,7 +36,7 @@ const formatAIText = (text) => {
 };
 
 // ── Re-Attempt + Related Questions Card ───────────────────────────────────────
-function WrongQuestionCard({ wq }) {
+function WrongQuestionCard({ wq, onRemove }) {
   const [relatedQs, setRelatedQs]       = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedOpen, setRelatedOpen]    = useState(false);
@@ -140,8 +146,10 @@ function WrongQuestionCard({ wq }) {
 
   const resetRetry = () => { setRetryAnswer(''); setRetryResult(null); setAttempting(false); };
 
+  const vocabWord = wq.type === 'vocab' ? vocabWordFromWrong(wq) : null;
+
   return (
-    <div className={`wrong-q-card ${wq.wrongCount >= 3 ? 'wrong-q-card--danger' : wq.wrongCount >= 2 ? 'wrong-q-card--warn' : ''}`}>
+    <div className={`wrong-q-card ${wq.type === 'vocab' ? 'wrong-q-card--vocab' : ''} ${wq.wrongCount >= 3 ? 'wrong-q-card--danger' : wq.wrongCount >= 2 ? 'wrong-q-card--warn' : ''}`}>
 
       {/* Header */}
       <div className="wrong-q-header">
@@ -149,13 +157,43 @@ function WrongQuestionCard({ wq }) {
           {wq.category && <span className="wrong-q-category">{wq.category}</span>}
           <span className="wrong-q-type">{wq.type?.replace('-mcq', ' MCQ')}</span>
         </div>
-        <div className={`wrong-q-count-badge ${wq.wrongCount >= 3 ? 'badge-danger' : wq.wrongCount >= 2 ? 'badge-warn' : 'badge-default'}`}>
-          <AlertTriangle size={11} /> {wq.wrongCount}× incorrect
+        <div className="wrong-q-header__right">
+          <div className={`wrong-q-count-badge ${wq.wrongCount >= 3 ? 'badge-danger' : wq.wrongCount >= 2 ? 'badge-warn' : 'badge-default'}`}>
+            <AlertTriangle size={11} /> {wq.wrongCount}× incorrect
+          </div>
+          {typeof onRemove === 'function' && (
+            <button
+              type="button"
+              className="wrong-q-remove-btn"
+              aria-label="Remove from revise list"
+              title="Remove"
+              onClick={() => onRemove(wq.question)}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       </div>
 
+      {vocabWord && (
+        <div className="wrong-vocab-word-banner">
+          <BookOpen size={16} />
+          <div>
+            <span className="wrong-vocab-word-label">Weak vocabulary</span>
+            <strong className="wrong-vocab-word">{vocabWord}</strong>
+          </div>
+        </div>
+      )}
+
       {/* Question */}
       <p className="wrong-q-question">{wq.question}</p>
+
+      {wq.userAnswer && (
+        <div className="wrong-q-answer-row wrong-q-answer-row--yours">
+          <XCircle size={14} className="wrong-q-wrong-icon" />
+          <span>Your answer: <strong>{wq.userAnswer}</strong></span>
+        </div>
+      )}
 
       {/* Correct answer */}
       <div className="wrong-q-answer-row">
@@ -255,7 +293,7 @@ function WrongQuestionCard({ wq }) {
               ? <><Loader2 size={14} className="spin-inline" /> Loading Related Questions...</>
               : relatedQs.length > 0
                 ? <>{relatedOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Related Questions {relatedOpen ? 'Hide' : 'View'}</>
-                : <><BookOpen size={14} /> {wq.type === 'vocab' ? 'Show Related Vocab Words' : 'Show Related TCS Questions'}</>
+                : <><BookOpen size={14} /> {wq.type === 'vocab' ? 'Show Related Vocab Words' : 'Show Related PYQs'}</>
             }
           </button>
         </div>
@@ -276,7 +314,7 @@ function WrongQuestionCard({ wq }) {
               <div className="related-questions-badge" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <BookOpen size={12} />
-                  <span>{relatedQs.length} Related TCS PYQs — {wq.category || wq.type}</span>
+                  <span>{relatedQs.length} Related PYQs — {wq.category || wq.type}</span>
                 </div>
                 <button
                   type="button"
@@ -424,12 +462,29 @@ const MCQ_TYPES = ['vocab', 'gk', 'english-mcq', 'maths-mcq', 'reasoning-mcq'];
 export function DrillWorkspace({
   drillType, currentDrill, userAnswer, setUserAnswer,
   maxTableBase, setMaxTableBase, drillStats, drillFeedback,
-  wrongQuestions, clearWrongLog,
-  changeDrillType, submitDrillAnswer, skipDrillQuestion, loadNextDrill
+  wrongQuestions, clearWrongLog, removeWrongQuestion, clearWrongVocab,
+  changeDrillType, submitDrillAnswer, skipDrillQuestion, loadNextDrill,
+  initialTab = 'drill',
+  onConsumedInitialTab,
 }) {
-  const [activeTab, setActiveTab] = useState('drill');
+  const [activeTab, setActiveTab] = useState(initialTab === 'wronglog' ? 'wronglog' : 'drill');
+  const [wrongFilter, setWrongFilter] = useState(initialTab === 'wronglog' ? 'vocab' : 'all'); // all | vocab | other
+
+  useEffect(() => {
+    if (initialTab !== 'wronglog') return;
+    setActiveTab('wronglog');
+    setWrongFilter('vocab');
+    onConsumedInitialTab?.();
+  }, [initialTab, onConsumedInitialTab]);
 
   const switchDrill = (type) => { setActiveTab('drill'); changeDrillType(type); };
+
+  const vocabWrongs = wrongQuestions.filter((wq) => wq.type === 'vocab');
+  const otherWrongs = wrongQuestions.filter((wq) => wq.type !== 'vocab');
+  const filteredWrongs =
+    wrongFilter === 'vocab' ? vocabWrongs
+      : wrongFilter === 'other' ? otherWrongs
+        : wrongQuestions;
 
   const TABS = [
     { key: 'table',         label: 'Jumping Tables',   Icon: Zap },
@@ -567,6 +622,9 @@ export function DrillWorkspace({
                           </div>
                           {drillType === 'vocab' && (
                             <div className="drill-error-vocab-details">
+                              {currentDrill.word && (
+                                <div className="drill-error-vocab-row"><strong>Word:</strong> {currentDrill.word}</div>
+                              )}
                               <div className="drill-error-vocab-row"><strong>Meaning:</strong> {currentDrill.revealDefinition}</div>
                               {currentDrill.revealSynonyms?.length > 0 && <div className="drill-error-vocab-row"><strong>Synonyms:</strong> {currentDrill.revealSynonyms.join(', ')}</div>}
                               {currentDrill.revealAntonyms?.length > 0 && <div className="drill-error-vocab-last-row"><strong>Antonyms:</strong> {currentDrill.revealAntonyms.join(', ')}</div>}
@@ -646,16 +704,85 @@ export function DrillWorkspace({
               )}
             </div>
 
+            {vocabWrongs.length > 0 && (
+              <div className="wrong-vocab-summary">
+                <div className="wrong-vocab-summary__head">
+                  <BookOpen size={18} />
+                  <div>
+                    <h3>Weak vocabulary</h3>
+                    <p>{vocabWrongs.length} word{vocabWrongs.length > 1 ? 's' : ''} to strengthen — remove after practice</p>
+                  </div>
+                  {typeof clearWrongVocab === 'function' && (
+                    <button type="button" className="btn-clear-wrong-log" onClick={clearWrongVocab}>
+                      <Trash2 size={14} /> Clear weak vocab
+                    </button>
+                  )}
+                </div>
+                <div className="wrong-vocab-chip-row">
+                  {vocabWrongs.map((wq, idx) => {
+                    const word = vocabWordFromWrong(wq) || 'Word';
+                    return (
+                      <span key={`${word}-${idx}`} className="wrong-vocab-chip">
+                        <strong>{word}</strong>
+                        <em>{wq.wrongCount}×</em>
+                        {typeof removeWrongQuestion === 'function' && (
+                          <button
+                            type="button"
+                            className="wrong-vocab-chip-remove"
+                            aria-label={`Remove ${word}`}
+                            onClick={() => removeWrongQuestion(wq.question)}
+                          >
+                            <XCircle size={13} />
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {wrongQuestions.length > 0 && (
+              <div className="wrong-log-filters" role="tablist" aria-label="Filter wrong questions">
+                {[
+                  { key: 'all', label: `All (${wrongQuestions.length})` },
+                  { key: 'vocab', label: `Weak vocab (${vocabWrongs.length})` },
+                  { key: 'other', label: `Other (${otherWrongs.length})` },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={wrongFilter === key}
+                    className={`wrong-log-filter ${wrongFilter === key ? 'active' : ''}`}
+                    onClick={() => setWrongFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {wrongQuestions.length === 0 ? (
               <div className="wrong-log-empty">
                 <CheckCircle size={48} className="wrong-log-empty-icon" />
                 <h3>All Correct!</h3>
                 <p>No incorrect answers this session — keep drilling!</p>
               </div>
+            ) : filteredWrongs.length === 0 ? (
+              <div className="wrong-log-empty">
+                <BookOpen size={40} className="wrong-log-empty-icon" />
+                <h3>No items in this filter</h3>
+                <p>Try another filter or keep drilling.</p>
+              </div>
             ) : (
               <div className="wrong-q-list">
-                {wrongQuestions.map((wq, idx) => (
-                  <WrongQuestionCard key={`${wq.question}-${idx}`} wq={wq} />
+                {filteredWrongs.map((wq, idx) => (
+                  <WrongQuestionCard
+                    key={`${wq.question}-${idx}`}
+                    wq={wq}
+                    onRemove={removeWrongQuestion}
+                  />
                 ))}
               </div>
             )}

@@ -158,7 +158,7 @@ export function CompetitionWorkspace({ user }) {
         startTimeRef.current = Date.now();
         setScreen('quiz');
       } else {
-        throw new Error('Unable to load questions. Please ensure the database has been seeded with TCS PYQ questions.');
+        throw new Error('Unable to load questions. Please ensure the database has been seeded with PYQ questions.');
       }
     } catch (err) {
       setError(err.message || 'Could not connect to the server. Please verify if the backend is running.');
@@ -285,7 +285,7 @@ export function CompetitionWorkspace({ user }) {
         </h3>
         <p className="loading-subtext">
           {screen === 'loading' 
-            ? 'Fetching matching TCS PYQs from database...' 
+            ? 'Fetching matching PYQs from database...' 
             : 'Submitting your score to the global leaderboard...'}
         </p>
       </div>

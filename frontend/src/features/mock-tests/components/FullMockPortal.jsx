@@ -4,10 +4,12 @@ import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ArrowLeft, Ban } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
 import { apiService } from '@/shared/services/apiService';
+import { useExam } from '@/shared/context/useExam';
 
 const SECTIONS = ['English', 'GK', 'Quant', 'Reasoning'];
 
 export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
+  const { exam } = useExam();
   const [loading, setLoading] = useState(true);
   const [mockData, setMockData] = useState(null);
   
@@ -268,7 +270,9 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
               <div className="avatar">{user?.username ? user.username.slice(0, 2).toUpperCase() : 'US'}</div>
               <div>
                 <div className="exam-user-name">{user?.username || 'Guest User'}</div>
-                <div className="exam-user-meta">100 Questions | 60 Mins</div>
+                <div className="exam-user-meta">
+                  {mockData?.questions?.length || exam.mockQuestions} Q · {exam.mockMinutes} min pattern · {exam.name}
+                </div>
               </div>
             </div>
             

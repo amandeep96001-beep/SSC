@@ -28,8 +28,13 @@ import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal'
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
 import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
+import { TodayFocusWorkspace } from '@/features/home/components/TodayFocusWorkspace';
+import { ExamPicker } from '@/features/home/components/ExamPicker';
+import { AdminWorkspace } from '@/features/admin/components/AdminWorkspace';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
+import '@/features/home/home.css';
+import '@/features/admin/admin.css';
 
 const VIEW_PARENT = {
   notes: 'topics',
@@ -37,6 +42,8 @@ const VIEW_PARENT = {
 };
 
 const VALID_VIEWS = new Set([
+  'home',
+  'admin',
   'drill',
   'subjects',
   'topics',
@@ -105,6 +112,8 @@ export function Dashboard() {
     error: drillError,
     wrongQuestions,
     clearWrongLog,
+    removeWrongQuestion,
+    clearWrongVocab,
     changeDrillType,
     submitAnswer: submitDrillAnswer,
     skipQuestion: skipDrillQuestion,
@@ -113,6 +122,7 @@ export function Dashboard() {
 
   const mockTestsHooks = useMockTests();
   const [activeMockTestId, setActiveMockTestId] = useState(null);
+  const [openWrongLogOnce, setOpenWrongLogOnce] = useState(false);
 
   const workspaceRef = useRef(null);
 
@@ -733,6 +743,26 @@ export function Dashboard() {
         )}
 
         <div className="workspace-card-enclosure" ref={workspaceRef}>
+          {activeView === 'home' && (
+            <TodayFocusWorkspace
+              user={user}
+              setActiveView={setActiveView}
+              skipToSubjects={skipToSubjects}
+              selectSubject={selectSubject}
+              wrongQuestions={wrongQuestions}
+              onReviewWrongVocab={() => {
+                setOpenWrongLogOnce(true);
+                setActiveView('drill');
+              }}
+              onRemoveWrongVocab={removeWrongQuestion}
+              onClearWrongVocab={clearWrongVocab}
+            />
+          )}
+
+          {activeView === 'admin' && user?.role === 'admin' && (
+            <AdminWorkspace />
+          )}
+
           {activeView === 'drill' && (
             <DrillWorkspace 
               drillType={drillType}
@@ -745,10 +775,14 @@ export function Dashboard() {
               drillFeedback={drillFeedback}
               wrongQuestions={wrongQuestions}
               clearWrongLog={clearWrongLog}
+              removeWrongQuestion={removeWrongQuestion}
+              clearWrongVocab={clearWrongVocab}
               changeDrillType={changeDrillType}
               submitDrillAnswer={submitDrillAnswer}
               skipDrillQuestion={skipDrillQuestion}
               loadNextDrill={loadNextDrill}
+              initialTab={openWrongLogOnce ? 'wronglog' : 'drill'}
+              onConsumedInitialTab={() => setOpenWrongLogOnce(false)}
             />
           )}
 
@@ -837,6 +871,7 @@ export function Dashboard() {
       </main>
 
       <NotesFloatingDock openSignal={notesDockSignal} />
+      <ExamPicker />
 
       {/* --- ADD CUSTOM SUBJECT MODAL --- */}
       {subjectModalOpen && (

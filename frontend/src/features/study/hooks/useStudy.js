@@ -16,7 +16,7 @@ function normalizeSubjects(list) {
 }
 
 export function useStudy() {
-  const [activeView, setActiveView] = useState('drill'); // drill, subjects, topics, notes, test, results, revision
+  const [activeView, setActiveView] = useState('home'); // home, drill, subjects, topics, notes, test, results, revision
   const [contentSource, setContentSourceState] = useState(() => {
     try {
       const stored = localStorage.getItem(CONTENT_SOURCE_KEY);
@@ -110,8 +110,8 @@ export function useStudy() {
     return { success: false, message: loginApi.error || 'Login verification failed.' };
   }, [loginApi]);
 
-  const registerUser = useCallback(async (username, password) => {
-    const res = await registerApi.execute({ username, password });
+  const registerUser = useCallback(async (username, password, adminCode) => {
+    const res = await registerApi.execute({ username, password, adminCode: adminCode || undefined });
     if (res.success && res.data?.data) {
       persistUser(res.data.data);
       return { success: true };
@@ -123,7 +123,7 @@ export function useStudy() {
     setUser(null);
     localStorage.removeItem('ssc_user');
     localStorage.removeItem('ssc_token');
-    setActiveView('drill');
+    setActiveView('home');
   }, []);
 
   const skipToSubjects = useCallback(() => {
@@ -167,12 +167,12 @@ export function useStudy() {
 
       if (userAns === null) {
         unattemptedCount++;
-        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n[Unattempted]\n[Correct Key]: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [Topic area: ${item.state || 'GK'}] ${item.q}\n[Unattempted]\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       } else if (userAns === correctAns) {
         correctCount++;
       } else {
         wrongCount++;
-        errorLog += `Q${index + 1} [TCS Hidden Target State: ${item.state || 'GK'}] ${item.q}\n[Your Input]: ${item.o[userAns]}\n[Correct Key]: ${item.o[correctAns]}\n\n`;
+        errorLog += `Q${index + 1} [Topic area: ${item.state || 'GK'}] ${item.q}\n[Your Input]: ${item.o[userAns]}\n[Correct Key]: ${item.o[correctAns]}\n\n`;
       }
     });
 

@@ -94,7 +94,7 @@ export function ResultsPortal({
                 <b>Your Choice:</b> {userText}
               </p>
               <p className="review-official-key">
-                <b>Official TCS Key:</b> {correctText}
+                <b>Official answer key:</b> {correctText}
               </p>
               <div className="review-core-logic">
                 <b>Official Core Logic:</b> {item.e}

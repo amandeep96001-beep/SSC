@@ -64,6 +64,39 @@
   color: var(--color-primary);
 }
 
+.sidebar-exam-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--exam-accent, var(--color-primary)) 28%, transparent);
+  background: color-mix(in srgb, var(--exam-accent, var(--color-primary)) 10%, transparent);
+  color: var(--sidebar-fg, var(--text-primary));
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-exam-switch__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-exam-switch__text strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.sidebar-exam-switch__text small {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
 /* ----------------------------------------------------
    Topic Accuracy Progress Indicator Dots
    ---------------------------------------------------- */

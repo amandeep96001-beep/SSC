@@ -140,6 +140,7 @@ export const getNextDrill = async (req, res, next) => {
           type,
           question,
           isIdiom,
+          word: wordData.word,
           revealDefinition: wordData.definition,
           revealSynonyms: wordData.synonyms,
           revealAntonyms: wordData.antonyms,

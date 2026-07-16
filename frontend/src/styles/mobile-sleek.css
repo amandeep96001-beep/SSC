@@ -86,6 +86,16 @@
     visibility: visible !important;
   }
 
+  .today-focus,
+  .admin-workspace {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 20px !important;
+  }
+
   .mobile-header {
     min-height: 0 !important;
     width: auto !important;

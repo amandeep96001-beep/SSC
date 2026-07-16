@@ -9,6 +9,7 @@ export function AuthPanel({ loginUser, registerUser }) {
   const [authMode, setAuthMode] = useState('login');
   const [authUsername, setAuthUsername] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [adminCode, setAdminCode] = useState('');
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,6 +20,7 @@ export function AuthPanel({ loginUser, registerUser }) {
     setAuthError('');
     setAuthUsername('');
     setAuthPassword('');
+    setAdminCode('');
   };
 
   const handleAuthSubmit = async (e) => {
@@ -37,12 +39,14 @@ export function AuthPanel({ loginUser, registerUser }) {
         return;
       }
 
-      const action = authMode === 'login' ? loginUser : registerUser;
-      const res = await action(authUsername, authPassword);
+      const res = authMode === 'login'
+        ? await loginUser(authUsername, authPassword)
+        : await registerUser(authUsername, authPassword, adminCode);
 
       if (res.success) {
         setAuthUsername('');
         setAuthPassword('');
+        setAdminCode('');
       } else {
         setAuthError(res.message || 'Authentication failed. Please try again.');
       }
@@ -150,6 +154,25 @@ export function AuthPanel({ loginUser, registerUser }) {
               <p className="field-hint">Minimum 8 characters with letters and numbers</p>
             )}
           </div>
+
+          {authMode === 'register' && (
+            <div className="form-group">
+              <label htmlFor="adminCode">Admin code (optional)</label>
+              <div className="input-with-icon">
+                <Lock size={16} className="field-icon" aria-hidden />
+                <input
+                  id="adminCode"
+                  type="password"
+                  autoComplete="off"
+                  placeholder="Only for institute admin"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+              <p className="field-hint">Leave empty for student. Admin gets Exam → Subjects panel.</p>
+            </div>
+          )}
 
           <button type="submit" className="btn-auth-submit" disabled={isSubmitting}>
             {isSubmitting ? (
