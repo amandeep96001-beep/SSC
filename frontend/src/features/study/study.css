@@ -1,0 +1,8 @@
+/**
+ * Study feature styles barrel
+ * Import this from SyllabusWorkspace / RevisionWorkspace
+ */
+@import './syllabus-notes.css';
+@import './notes-premium.css';
+@import './revision.css';
+@import './notes-mobile.css';

@@ -539,7 +539,9 @@
   }
 
   .notes-reader {
-    padding: 16px 14px 24px !important;
+    padding: 18px 16px 28px !important;
+    font-size: 1.08rem !important;
+    line-height: 1.8 !important;
   }
 
   .notes-sheet-footer {

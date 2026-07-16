@@ -17,6 +17,11 @@ class QuestionRepository {
   async deleteByTopicId(topicId) {
     return await Question.deleteMany({ topicId });
   }
+
+  async deleteByTopicIds(topicIds) {
+    if (!topicIds?.length) return { deletedCount: 0 };
+    return await Question.deleteMany({ topicId: { $in: topicIds } });
+  }
 }
 
 export default new QuestionRepository();

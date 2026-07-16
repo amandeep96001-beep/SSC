@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Vocab } from '../modules/study/vocab.model.js';
+import Subject from '../modules/study/subject.model.js';
 
 let isDbConnected = false;
 
@@ -152,6 +153,17 @@ export const connectDB = async () => {
     });
     isDbConnected = true;
     console.log('🔥 MongoDB connected successfully!');
+
+    // Drop legacy unique-on-name index so users can create personal subjects
+    try {
+      await Subject.collection.dropIndex('name_1');
+      console.log('🧹 Dropped legacy Subject.name unique index');
+    } catch (err) {
+      if (err?.codeName !== 'IndexNotFound' && err?.code !== 27) {
+        console.warn('Subject index migrate note:', err.message);
+      }
+    }
+    await Subject.syncIndexes();
 
     const vocabCount = await Vocab.countDocuments();
     if (vocabCount === 0) {

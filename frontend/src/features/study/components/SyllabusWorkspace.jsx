@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
+import { NotesFloatingDock } from './NotesFloatingDock';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -21,12 +22,26 @@ import {
   ChevronUp,
   ChevronDown,
   AlignJustify,
-  Settings2
+  Settings2,
+  StickyNote,
+  Bold,
+  Italic,
+  Underline,
+  Heading2,
+  Heading3,
+  ListOrdered,
+  Copy,
+  Download,
+  RotateCcw,
+  Bookmark
 } from 'lucide-react';
 
 export function SyllabusWorkspace({
   activeView,
   setActiveView,
+  contentSource,
+  setContentSource,
+  isMineMode,
   subjects,
   selectSubject,
   selectedSubject,
@@ -34,8 +49,10 @@ export function SyllabusWorkspace({
   selectTopic,
   user,
   setModalOpen,
+  setSubjectModalOpen,
   handleOpenEditModal,
   handleDeleteClick,
+  handleDeleteSubjectClick,
   activeNotes,
   startTest,
   updateCustomTopic
@@ -65,6 +82,17 @@ export function SyllabusWorkspace({
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
   const [searchMatchCount, setSearchMatchCount] = useState(0);
   const searchHitsRef = useRef([]);
+  const [dockOpenSignal, setDockOpenSignal] = useState(0);
+  const [bookmarks, setBookmarks] = useState(() => {
+    if (!activeNotes?.id) return [];
+    try {
+      const bm = localStorage.getItem(`ssc_bookmarks_${activeNotes.id}`);
+      return bm ? JSON.parse(bm) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [manageFlash, setManageFlash] = useState('');
 
   if (activeNotes !== prevActiveNotes) {
     setPrevActiveNotes(activeNotes);
@@ -76,6 +104,14 @@ export function SyllabusWorkspace({
     setSearchMatchIdx(0);
     setSearchMatchCount(0);
     searchHitsRef.current = [];
+    setIsEditingNotes(false);
+    setManageFlash('');
+    try {
+      const bm = activeNotes ? localStorage.getItem(`ssc_bookmarks_${activeNotes.id}`) : null;
+      setBookmarks(bm ? JSON.parse(bm) : []);
+    } catch {
+      setBookmarks([]);
+    }
   }
 
   useEffect(() => {
@@ -230,92 +266,155 @@ export function SyllabusWorkspace({
     setIsEditingNotes(prev => !prev);
   };
 
-  const handleSaveNotes = useCallback(async () => {
-    if (!notesRef.current) return;
-    setIsSaving(true);
-    const newHtml = notesRef.current.innerHTML;
+  const persistNotesHtml = useCallback(async (newHtml, { closeEditor = false } = {}) => {
+    if (!activeNotes?.id) return { success: false };
     localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
+    setLocalNotesHtml(newHtml);
+
+    // Official syllabus is read-only on server; personal edits stay local
+    if (!activeNotes.isOwned) {
+      if (closeEditor) setIsEditingNotes(false);
+      return { success: true, localOnly: true };
+    }
+
     const res = await updateCustomTopic(activeNotes.id, {
       name: activeNotes.name,
       notes: newHtml,
       questions: []
     });
-    setIsSaving(false);
-    if (res.success) {
-      setLocalNotesHtml(newHtml);
-      setIsEditingNotes(false);
-    } else {
-      alert(res.message || "Failed to save notes");
-    }
+    if (res.success && closeEditor) setIsEditingNotes(false);
+    return res;
   }, [activeNotes, updateCustomTopic]);
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!notesRef.current) return;
+    setIsSaving(true);
+    const newHtml = notesRef.current.innerHTML;
+    const res = await persistNotesHtml(newHtml, { closeEditor: true });
+    setIsSaving(false);
+    if (!res.success) {
+      alert(res.message || 'Failed to save notes');
+    }
+  }, [persistNotesHtml]);
 
   const handleHighlight = useCallback(async (color) => {
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed) return;
-    
+
     const range = selection.getRangeAt(0);
     const mark = document.createElement('mark');
     mark.className = `hl-${color}`;
-    
+
     try {
       range.surroundContents(mark);
       selection.removeAllRanges();
-      // Auto-save the highlight
       if (notesRef.current) {
-        const newHtml = notesRef.current.innerHTML;
-        localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
-        const res = await updateCustomTopic(activeNotes.id, {
-          name: activeNotes.name,
-          notes: newHtml,
-          questions: []
-        });
-        if (res.success) {
-          setLocalNotesHtml(newHtml);
-        }
+        await persistNotesHtml(notesRef.current.innerHTML);
       }
     } catch {
-      alert("Please select text within a single line to highlight.");
+      alert('Please select text within a single line to highlight.');
     }
-  }, [activeNotes, updateCustomTopic]);
+  }, [persistNotesHtml]);
 
   const handleRemoveHighlight = useCallback(async () => {
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed) {
-      alert("Please click inside or select the highlighted text you want to remove.");
+      alert('Please click inside or select the highlighted text you want to remove.');
       return;
     }
-    
+
     let node = selection.anchorNode;
-    // Walk up to find the <mark> tag
     while (node && node.nodeName !== 'MARK' && node.id !== 'notes-content-view') {
       node = node.parentNode;
     }
-    
+
     if (node && node.nodeName === 'MARK') {
-      // Unwrap the <mark> tag
       const parent = node.parentNode;
       while (node.firstChild) {
         parent.insertBefore(node.firstChild, node);
       }
       parent.removeChild(node);
-      
-      // Auto-save the un-highlight
+
       if (notesRef.current) {
-        const newHtml = notesRef.current.innerHTML;
-        localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
-        const res = await updateCustomTopic(activeNotes.id, {
-          name: activeNotes.name,
-          notes: newHtml,
-          questions: []
-        });
-        if (res.success) {
-          setLocalNotesHtml(newHtml);
-        }
+        await persistNotesHtml(notesRef.current.innerHTML);
       }
     } else {
-      alert("Please click inside an existing highlight to remove it.");
+      alert('Please click inside an existing highlight to remove it.');
     }
-  }, [activeNotes, updateCustomTopic]);
+  }, [persistNotesHtml]);
+
+  const runFormat = useCallback((command, value = null) => {
+    if (!isEditingNotes || !notesRef.current) return;
+    notesRef.current.focus();
+    try {
+      document.execCommand(command, false, value);
+    } catch {
+      // older browsers / unsupported command
+    }
+  }, [isEditingNotes]);
+
+  const flashManage = useCallback((msg) => {
+    setManageFlash(msg);
+    setTimeout(() => setManageFlash(''), 1800);
+  }, []);
+
+  const handleCopyNotes = useCallback(async () => {
+    const text = notesRef.current?.innerText || activeNotes?.notes || '';
+    try {
+      await navigator.clipboard.writeText(text);
+      flashManage('Notes copied');
+    } catch {
+      flashManage('Copy failed');
+    }
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleExportNotes = useCallback(() => {
+    const text = notesRef.current?.innerText || activeNotes?.notes || '';
+    const blob = new Blob([`# ${activeNotes?.name || 'Notes'}\n\n${text}`], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(activeNotes?.name || 'notes').replace(/[^\w\-]+/g, '_').slice(0, 48)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    flashManage('Exported as .txt');
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleResetLocalEdits = useCallback(() => {
+    if (!activeNotes?.id) return;
+    if (!window.confirm('Reset local edits & highlights for this topic? Sticky notes stay.')) return;
+    localStorage.removeItem(`ssc_notes_${activeNotes.id}`);
+    setLocalNotesHtml(prepareNotesHtml(activeNotes.notes || ''));
+    setIsEditingNotes(false);
+    flashManage('Local edits reset');
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleAddBookmark = useCallback(() => {
+    if (!activeNotes?.id || !notesScrollRef.current) return;
+    const scrollTop = notesScrollRef.current.scrollTop;
+    const label = `Bookmark @ ${readingProgress}%`;
+    const next = [
+      { id: `bm-${Date.now()}`, label, scrollTop, createdAt: Date.now() },
+      ...bookmarks
+    ].slice(0, 8);
+    setBookmarks(next);
+    localStorage.setItem(`ssc_bookmarks_${activeNotes.id}`, JSON.stringify(next));
+    flashManage('Bookmark saved');
+  }, [activeNotes, bookmarks, readingProgress, flashManage]);
+
+  const jumpToBookmark = useCallback((bm) => {
+    notesScrollRef.current?.scrollTo({ top: bm.scrollTop, behavior: 'smooth' });
+  }, []);
+
+  const removeBookmark = useCallback((id) => {
+    if (!activeNotes?.id) return;
+    const next = bookmarks.filter((b) => b.id !== id);
+    setBookmarks(next);
+    localStorage.setItem(`ssc_bookmarks_${activeNotes.id}`, JSON.stringify(next));
+  }, [activeNotes, bookmarks]);
 
   return (
     <>
@@ -323,24 +422,92 @@ export function SyllabusWorkspace({
       {activeView === 'subjects' && (
         <div className="study-workspace syllabus-flow">
           <header className="syllabus-page-header">
-            <h1>Select Subject Area</h1>
-            <p>Browse the SSC syllabus — notes, topic tests, and PYQ-style practice in one place.</p>
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <h1>Syllabus & Notes</h1>
+                <p>
+                  {isMineMode
+                    ? 'Build your own subjects, topics, notes, and practice questions.'
+                    : 'Study from the official SSC syllabus — notes and topic tests ready to go.'}
+                </p>
+              </div>
+              {isMineMode && (
+                <div className="syllabus-page-header__actions">
+                  <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
+                    <Plus size={16} /> Add Subject
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="content-source-toggle" role="tablist" aria-label="Content source">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contentSource === 'global'}
+                className={`content-source-btn${contentSource === 'global' ? ' active' : ''}`}
+                onClick={() => setContentSource('global')}
+              >
+                Official Syllabus
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contentSource === 'mine'}
+                className={`content-source-btn${contentSource === 'mine' ? ' active' : ''}`}
+                onClick={() => setContentSource('mine')}
+              >
+                My Notes
+              </button>
+            </div>
           </header>
           <div className="syllabus-page-body">
-            <div className="subjects-grid">
-              {subjects.map((sub) => (
-                <div key={sub} className="subject-selection-card" onClick={() => selectSubject(sub)}>
-                  <div className="subject-icon-box">
-                    <BookMarked size={24} />
-                  </div>
-                  <div className="subject-content">
-                    <h3>{sub}</h3>
-                    <p>Read detailed syllabus points and practice mock tests.</p>
-                  </div>
-                  <ChevronRight className="arrow-icon" size={18} />
-                </div>
-              ))}
-            </div>
+            {subjects.length > 0 ? (
+              <div className="subjects-grid">
+                {subjects.map((sub) => {
+                  const name = typeof sub === 'string' ? sub : sub.name;
+                  return (
+                    <div key={name} className="subject-selection-card" onClick={() => selectSubject(name)}>
+                      <div className="subject-icon-box">
+                        <BookMarked size={24} />
+                      </div>
+                      <div className="subject-content">
+                        <h3>{name}</h3>
+                        <p>
+                          {isMineMode
+                            ? 'Your custom topics, notes, and Q&A.'
+                            : 'Read detailed syllabus points and practice mock tests.'}
+                        </p>
+                      </div>
+                      {isMineMode && (
+                        <button
+                          type="button"
+                          className="btn-topic-action delete subject-delete-btn"
+                          title="Delete subject"
+                          onClick={(e) => handleDeleteSubjectClick(e, name)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      <ChevronRight className="arrow-icon" size={18} />
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-syllabus empty-syllabus--cta">
+                {isMineMode ? (
+                  <>
+                    <p>No personal subjects yet. Create one and add your own topics & questions.</p>
+                    <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
+                      <Plus size={16} /> Create your first subject
+                    </button>
+                  </>
+                ) : (
+                  <p>No official subjects loaded yet. Try refreshing or check your connection.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -352,15 +519,21 @@ export function SyllabusWorkspace({
             <div className="syllabus-page-header__row">
               <div className="syllabus-page-header__text">
                 <h1>{selectedSubject} — Topics</h1>
-                <p>Open a topic for revision notes, then attempt a timed speed test.</p>
+                <p>
+                  {isMineMode
+                    ? 'Add topics with notes and MCQs — fully under your control.'
+                    : 'Open a topic for revision notes, then attempt a timed speed test.'}
+                </p>
               </div>
               <div className="syllabus-page-header__actions">
                 <button type="button" className="btn-back" onClick={() => setActiveView('subjects')}>
                   All Subjects
                 </button>
-                <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
-                  <Plus size={16} /> Add Topic
-                </button>
+                {isMineMode && (
+                  <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
+                    <Plus size={16} /> Add Topic
+                  </button>
+                )}
               </div>
             </div>
           </header>
@@ -373,6 +546,7 @@ export function SyllabusWorkspace({
                 const status = progressRecord?.status || 'gray';
                 const score = progressRecord?.score;
                 const maxScore = progressRecord?.maxScore || 50;
+                const canManage = isMineMode && topic.isOwned;
 
                 return (
                   <div 
@@ -392,12 +566,13 @@ export function SyllabusWorkspace({
                         )}
                         <h3>{topic.name}</h3>
                       </div>
+                      {canManage && (
                       <div className="topic-actions-bar" style={{ display: 'flex', gap: '8px', marginLeft: 'auto', marginRight: '12px' }}>
                         <button 
                           type="button" 
                           className="btn-topic-action edit"
                           onClick={(e) => handleOpenEditModal(e, topic)}
-                          title="Edit Notes"
+                          title="Edit Notes & Questions"
                           style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
                         >
                           <Edit2 size={16} />
@@ -412,6 +587,7 @@ export function SyllabusWorkspace({
                           <Trash2 size={16} />
                         </button>
                       </div>
+                      )}
                       <ChevronRight className="arrow-icon" size={16} />
                     </div>
                     <p className="topic-desc">{topic.syllabus}</p>
@@ -425,8 +601,17 @@ export function SyllabusWorkspace({
                 );
               })
             ) : (
-              <div className="empty-syllabus">
-                <p>No active topics are seeded under this subject yet.</p>
+              <div className="empty-syllabus empty-syllabus--cta">
+                {isMineMode ? (
+                  <>
+                    <p>No topics in this subject yet. Add notes and practice questions.</p>
+                    <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
+                      <Plus size={16} /> Add your first topic
+                    </button>
+                  </>
+                ) : (
+                  <p>No active topics are seeded under this subject yet.</p>
+                )}
               </div>
             )}
             </div>
@@ -441,10 +626,23 @@ export function SyllabusWorkspace({
           <header className="syllabus-page-header notes-toolbar-header">
             <div className="syllabus-page-header__row">
               <div className="syllabus-page-header__text">
-                <span className="notes-breadcrumb">Revision Notes</span>
+                <span className="notes-breadcrumb">
+                  {activeNotes.isOwned ? 'My Notes' : 'Official Syllabus'} · Revision Notes
+                </span>
                 <h1>{activeNotes.name}</h1>
+                {!activeNotes.isOwned && (
+                  <p className="notes-local-hint">Highlights & edits on official notes stay on this device only.</p>
+                )}
               </div>
               <div className="syllabus-page-header__actions notes-toolbar-actions">
+                <button
+                  type="button"
+                  className="btn-add sticky-launch-btn"
+                  onClick={() => setDockOpenSignal((n) => n + 1)}
+                >
+                  <StickyNote size={16} />
+                  Stickies
+                </button>
                 <button type="button" className="btn-add" onClick={() => setShowActionsMenu(!showActionsMenu)}>
                   Actions <ChevronRight size={16} style={{ transform: showActionsMenu ? 'rotate(90deg)' : 'rotate(0deg)', transition: '0.2s', marginLeft: '4px' }} />
                 </button>
@@ -464,6 +662,18 @@ export function SyllabusWorkspace({
                         {isSaving ? 'Saving...' : 'Save Changes'}
                       </button>
                     )}
+                    <button type="button" className="notes-action-btn" onClick={handleCopyNotes}>
+                      <Copy size={16} /> Copy text
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleExportNotes}>
+                      <Download size={16} /> Export .txt
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleAddBookmark}>
+                      <Bookmark size={16} /> Bookmark position
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleResetLocalEdits}>
+                      <RotateCcw size={16} /> Reset local edits
+                    </button>
                     <button type="button" className="btn-take-test" onClick={() => { startTest(); setShowActionsMenu(false); }}>
                       <ClipboardList size={16} />
                       Take Topic Test
@@ -479,6 +689,7 @@ export function SyllabusWorkspace({
                         <button type="button" className="hl-btn hl-clear" onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
                       </div>
                     </div>
+                    {manageFlash && <p className="notes-manage-flash">{manageFlash}</p>}
                   </div>
                 )}
               </div>
@@ -526,6 +737,17 @@ export function SyllabusWorkspace({
                       {notesFocus ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                       {notesFocus ? 'Exit' : 'Focus'}
                     </button>
+                    <button
+                      type="button"
+                      className="notes-ctrl-btn"
+                      onClick={() => setDockOpenSignal((n) => n + 1)}
+                      title="Sticky notes"
+                    >
+                      <StickyNote size={14} /> Stickies
+                    </button>
+                    <button type="button" className="notes-ctrl-btn" onClick={handleAddBookmark} title="Bookmark current position">
+                      <Bookmark size={14} /> Mark
+                    </button>
                     <span className="notes-reading-controls__label notes-reading-pct notes-reading-pct--desktop">{readingProgress}%</span>
                   </div>
                   <form className="notes-search-bar" onSubmit={handleSearchSubmit}>
@@ -567,6 +789,41 @@ export function SyllabusWorkspace({
                         </li>
                       ))}
                     </ul>
+                    {bookmarks.length > 0 && (
+                      <div className="notes-bookmarks">
+                        <p className="notes-toc__title">Bookmarks</p>
+                        <ul className="notes-toc__list">
+                          {bookmarks.map((bm) => (
+                            <li key={bm.id} className="notes-bookmark-row">
+                              <button type="button" className="notes-toc__link" onClick={() => jumpToBookmark(bm)}>
+                                {bm.label}
+                              </button>
+                              <button type="button" className="notes-bookmark-del" onClick={() => removeBookmark(bm.id)} aria-label="Remove bookmark">
+                                <X size={12} />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </aside>
+                )}
+
+                {!showToc && bookmarks.length > 0 && (
+                  <aside className="notes-toc notes-toc--bookmarks-only">
+                    <p className="notes-toc__title">Bookmarks</p>
+                    <ul className="notes-toc__list">
+                      {bookmarks.map((bm) => (
+                        <li key={bm.id} className="notes-bookmark-row">
+                          <button type="button" className="notes-toc__link" onClick={() => jumpToBookmark(bm)}>
+                            {bm.label}
+                          </button>
+                          <button type="button" className="notes-bookmark-del" onClick={() => removeBookmark(bm.id)} aria-label="Remove bookmark">
+                            <X size={12} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </aside>
                 )}
 
@@ -583,12 +840,24 @@ export function SyllabusWorkspace({
 
                 {isEditingNotes && (
                   <div className="notes-inline-toolbar" role="toolbar" aria-label="Note formatting">
+                    <span className="notes-toolbar-label">Write</span>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('bold')} title="Bold"><Bold size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('italic')} title="Italic"><Italic size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('underline')} title="Underline"><Underline size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h2')} title="Heading"><Heading2 size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h3')} title="Subheading"><Heading3 size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertUnorderedList')} title="Bullet list"><List size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertOrderedList')} title="Numbered list"><ListOrdered size={15} /></button>
+                    <span className="notes-toolbar-sep" aria-hidden />
                     <span className="notes-toolbar-label">Highlight</span>
                     <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
                     <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
                     <button type="button" className="hl-btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
                     <button type="button" className="hl-btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
                     <button type="button" className="hl-btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight"><Eraser size={16}/></button>
+                    <button type="button" className="notes-fmt-btn notes-fmt-btn--save" onClick={handleSaveNotes} disabled={isSaving} title="Save">
+                      <Save size={15} /> {isSaving ? '…' : 'Save'}
+                    </button>
                   </div>
                 )}
 
@@ -618,7 +887,19 @@ export function SyllabusWorkspace({
                 <ArrowUp size={20} />
               </button>
             )}
+            {manageFlash && !showActionsMenu && (
+              <div className="notes-toast">{manageFlash}</div>
+            )}
           </div>
+
+          <NotesFloatingDock
+            topicId={activeNotes.id}
+            topicName={activeNotes.name}
+            notesHtml={localNotesHtml}
+            serverNotes={activeNotes.notes}
+            openSignal={dockOpenSignal}
+            openSignalTab="stickies"
+          />
         </div>
       )}
     </>

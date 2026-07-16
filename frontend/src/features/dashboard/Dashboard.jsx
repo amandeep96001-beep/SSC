@@ -8,6 +8,11 @@ import { useStudy } from '@/features/study/hooks/useStudy';
 import { RefreshCw, XCircle, X, Menu } from 'lucide-react';
 import { apiService } from '@/shared/services/apiService';
 import './Dashboard.css';
+import '@/features/study/study.css';
+import '@/features/analytics/performance.css';
+import '@/features/drills/drills.css';
+import '@/features/exam/exam.css';
+import '@/features/competition/competition.css';
 
 import { AuthPanel } from '@/features/auth/components/AuthPanel';
 import { ExamPortal } from '@/features/exam/components/ExamPortal';
@@ -46,9 +51,13 @@ export function Dashboard() {
   const {
     activeView,
     setActiveView,
+    contentSource,
+    setContentSource,
+    isMineMode,
     subjects,
     selectedSubject,
     topicsList,
+    selectedTopicId,
     activeNotes,
     testQuestions,
     currentQuestionIdx,
@@ -71,6 +80,8 @@ export function Dashboard() {
     submitExam,
     submitMockExam,
     addCustomTopic,
+    addCustomSubject,
+    deleteCustomSubject,
     loginUser,
     registerUser,
     logoutUser,
@@ -145,8 +156,14 @@ export function Dashboard() {
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicSyllabus, setNewTopicSyllabus] = useState('');
   const [newTopicNotes, setNewTopicNotes] = useState('');
+  const [newTopicQuestionsJson, setNewTopicQuestionsJson] = useState('[]');
   const [topicAddSuccess, setTopicAddSuccess] = useState('');
   const [topicAddError, setTopicAddError] = useState('');
+
+  const [subjectModalOpen, setSubjectModalOpen] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [subjectFormError, setSubjectFormError] = useState('');
+  const [subjectFormSuccess, setSubjectFormSuccess] = useState('');
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingTopicId, setEditingTopicId] = useState('');
@@ -157,6 +174,8 @@ export function Dashboard() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTopicId, setDeletingTopicId] = useState('');
+  const [deleteSubjectConfirmOpen, setDeleteSubjectConfirmOpen] = useState(false);
+  const [deletingSubjectName, setDeletingSubjectName] = useState('');
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -518,34 +537,89 @@ export function Dashboard() {
     setDeleteConfirmOpen(true);
   };
 
+  const handleDeleteSubjectClick = (e, subjectName) => {
+    e.stopPropagation();
+    setDeletingSubjectName(subjectName);
+    setDeleteSubjectConfirmOpen(true);
+  };
+
+  const parseQuestionsJson = (raw, setError) => {
+    if (!raw?.trim() || raw.trim() === '[]') return [];
+    try {
+      const parsed = JSON.parse(raw.trim());
+      if (!Array.isArray(parsed)) {
+        setError('MCQ must be a JSON array format (i.e. [ ... ])!');
+        return null;
+      }
+      for (let i = 0; i < parsed.length; i++) {
+        const q = parsed[i];
+        if (!q.q || !Array.isArray(q.o) || typeof q.a !== 'number' || !q.e) {
+          setError(`Invalid MCQ object at index ${i}! Check structure: { q, o: [...], a, e }`);
+          return null;
+        }
+        q.o = q.o.map(opt => (typeof opt === 'string' ? opt : JSON.stringify(opt)));
+      }
+      return parsed;
+    } catch (err) {
+      setError('Invalid MCQ JSON syntax! Please check parsing: ' + err.message);
+      return null;
+    }
+  };
+
+  const handleCreateSubjectSubmit = async (e) => {
+    e.preventDefault();
+    setSubjectFormError('');
+    setSubjectFormSuccess('');
+    if (!newSubjectName.trim()) {
+      setSubjectFormError('Subject name is required.');
+      return;
+    }
+    const res = await addCustomSubject(newSubjectName.trim());
+    if (res.success) {
+      setSubjectFormSuccess('Subject created! Add topics next.');
+      setNewSubjectName('');
+      setTimeout(() => {
+        setSubjectModalOpen(false);
+        setSubjectFormSuccess('');
+      }, 1200);
+    } else {
+      setSubjectFormError(res.message || 'Failed to create subject.');
+    }
+  };
+
   const handleCreateTopicSubmit = async (e) => {
     e.preventDefault();
     setTopicAddSuccess('');
     setTopicAddError('');
 
     if (!newTopicName.trim() || !newTopicNotes.trim()) {
-      setTopicAddError("Heading and notes are mandatory!");
+      setTopicAddError('Heading and notes are mandatory!');
       return;
     }
 
+    const parsedQuestions = parseQuestionsJson(newTopicQuestionsJson, setTopicAddError);
+    if (parsedQuestions === null) return;
+
     const payload = {
       name: newTopicName.trim(),
-      syllabus: newTopicSyllabus.trim() || "Custom added user revision notes.",
-      notes: newTopicNotes
+      syllabus: newTopicSyllabus.trim() || 'Custom added user revision notes.',
+      notes: newTopicNotes,
+      questions: parsedQuestions
     };
 
     const res = await addCustomTopic(payload);
     if (res.success) {
-      setTopicAddSuccess("Topic successfully saved to database!");
+      setTopicAddSuccess('Topic saved to your notes!');
       setNewTopicName('');
       setNewTopicSyllabus('');
       setNewTopicNotes('');
+      setNewTopicQuestionsJson('[]');
       setTimeout(() => {
         setModalOpen(false);
         setTopicAddSuccess('');
       }, 1500);
     } else {
-      setTopicAddError(res.message || "Failed to add custom topic to database.");
+      setTopicAddError(res.message || 'Failed to add custom topic.');
     }
   };
 
@@ -557,6 +631,8 @@ export function Dashboard() {
     return (
       <ExamPortal 
         selectedSubject={selectedSubject}
+        selectedTopicId={selectedTopicId}
+        activeNotes={activeNotes}
         timer={timer}
         testQuestions={testQuestions}
         currentQuestionIdx={currentQuestionIdx}
@@ -670,6 +746,9 @@ export function Dashboard() {
             <SyllabusWorkspace 
               activeView={activeView}
               setActiveView={setActiveView}
+              contentSource={contentSource}
+              setContentSource={setContentSource}
+              isMineMode={isMineMode}
               subjects={subjects}
               selectSubject={selectSubject}
               selectedSubject={selectedSubject}
@@ -677,8 +756,10 @@ export function Dashboard() {
               selectTopic={selectTopic}
               user={user}
               setModalOpen={setModalOpen}
+              setSubjectModalOpen={setSubjectModalOpen}
               handleOpenEditModal={handleOpenEditModal}
               handleDeleteClick={handleDeleteClick}
+              handleDeleteSubjectClick={handleDeleteSubjectClick}
               activeNotes={activeNotes}
               startTest={startTest}
               updateCustomTopic={updateCustomTopic}
@@ -744,12 +825,48 @@ export function Dashboard() {
         </div>
       </main>
 
+      {/* --- ADD CUSTOM SUBJECT MODAL --- */}
+      {subjectModalOpen && (
+        <div className="modal-overlay" onClick={() => setSubjectModalOpen(false)}>
+          <div className="modal-content-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create Your Subject</h3>
+              <button className="btn-close-modal" onClick={() => setSubjectModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form className="modal-form" onSubmit={handleCreateSubjectSubmit}>
+              <div className="form-group">
+                <label>Subject Name *</label>
+                <input
+                  type="text"
+                  value={newSubjectName}
+                  onChange={e => setNewSubjectName(e.target.value)}
+                  required
+                  placeholder="e.g. Polity Shortcuts, My Quant Formulas"
+                />
+              </div>
+              {subjectFormError && (
+                <p style={{ color: '#f87171', fontSize: '0.85rem', margin: 0 }}>{subjectFormError}</p>
+              )}
+              {subjectFormSuccess && (
+                <p style={{ color: '#4ade80', fontSize: '0.85rem', margin: 0 }}>{subjectFormSuccess}</p>
+              )}
+              <div className="modal-footer-actions">
+                <button type="button" className="btn-cancel" onClick={() => setSubjectModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-save-topic">Create Subject</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* --- ADD CUSTOM TOPIC DIALOG MODAL --- */}
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal-content-card" onClick={e => e.stopPropagation()}>
+          <div className="modal-content-card modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Create Custom Revision Topic</h3>
+              <h3>Create Topic — Notes & Questions</h3>
               <button className="btn-close-modal" onClick={() => setModalOpen(false)}>
                 <X size={20} />
               </button>
@@ -775,13 +892,28 @@ export function Dashboard() {
                 />
               </div>
               <div className="form-group">
-                <label>Comprehensive Revision Notes (Markdown / Text) *</label>
+                <label>Comprehensive Revision Notes (Markdown / HTML) *</label>
                 <textarea 
                   rows="6" 
                   value={newTopicNotes} 
                   onChange={e => setNewTopicNotes(e.target.value)} 
                   required 
                   placeholder="Draft your detailed formulas, logic steps, and tricks here..."
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  Practice MCQs (optional JSON array)
+                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
+                    Example: <code>{`[ { "q": "Question?", "o": ["A","B","C","D"], "a": 0, "e": "Why" } ]`}</code>
+                  </span>
+                </label>
+                <textarea
+                  rows="4"
+                  value={newTopicQuestionsJson}
+                  onChange={e => setNewTopicQuestionsJson(e.target.value)}
+                  placeholder='[ { "q": "...", "o": ["..."], "a": 0, "e": "..." } ]'
+                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
                 />
               </div>
               
@@ -798,7 +930,7 @@ export function Dashboard() {
 
               <div className="modal-footer-actions">
                 <button type="button" className="btn-cancel" onClick={() => setModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-save-topic">Commit to Atlas Database</button>
+                <button type="submit" className="btn-save-topic">Save to My Notes</button>
               </div>
             </form>
           </div>
@@ -875,7 +1007,7 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* --- DELETE CONFIRMATION MODAL --- */}
+      {/* --- DELETE TOPIC CONFIRMATION --- */}
       {deleteConfirmOpen && (
         <div className="modal-overlay">
           <div className="modal-content-card" style={{ maxWidth: '400px', borderTop: '4px solid #ef4444' }}>
@@ -887,7 +1019,7 @@ export function Dashboard() {
             </div>
             
             <div style={{ padding: '20px 0', color: '#cbd5e1' }}>
-              Are you completely sure you want to permanently delete this topic and all its associated MCQs? 
+              Delete this topic and all its MCQs from your notes?
               <br/><br/>
               <strong>This cannot be undone!</strong>
             </div>
@@ -911,6 +1043,46 @@ export function Dashboard() {
                 }}
               >
                 Yes, Delete It
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DELETE SUBJECT CONFIRMATION --- */}
+      {deleteSubjectConfirmOpen && (
+        <div className="modal-overlay">
+          <div className="modal-content-card" style={{ maxWidth: '420px', borderTop: '4px solid #ef4444' }}>
+            <div className="modal-header">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', margin: 0 }}>
+                <XCircle size={20} />
+                Delete Subject
+              </h3>
+            </div>
+            <div style={{ padding: '20px 0', color: '#cbd5e1' }}>
+              Delete <strong>{deletingSubjectName}</strong> and all topics/questions under it?
+              <br/><br/>
+              <strong>This cannot be undone!</strong>
+            </div>
+            <div className="modal-footer-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <button
+                type="button"
+                className="btn-cancel"
+                style={{ flex: 1 }}
+                onClick={() => setDeleteSubjectConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-save-topic"
+                style={{ backgroundColor: '#ef4444', flex: 1 }}
+                onClick={async () => {
+                  setDeleteSubjectConfirmOpen(false);
+                  await deleteCustomSubject(deletingSubjectName);
+                }}
+              >
+                Yes, Delete Subject
               </button>
             </div>
           </div>

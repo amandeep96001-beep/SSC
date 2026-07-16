@@ -2,9 +2,13 @@ import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle } from 'lucide-react';
 import '@/features/dashboard/Dashboard.css';
+import '@/features/study/study.css';
+import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
 
 export function ExamPortal({
   selectedSubject,
+  selectedTopicId,
+  activeNotes,
   timer,
   testQuestions,
   currentQuestionIdx,
@@ -205,6 +209,12 @@ export function ExamPortal({
           </div>
         </div>
       )}
+      <NotesFloatingDock
+        topicId={activeNotes?.id || selectedTopicId}
+        topicName={activeNotes?.name}
+        serverNotes={activeNotes?.notes}
+        lockBodyScroll={false}
+      />
     </div>
   );
 }

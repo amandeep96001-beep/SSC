@@ -1,0 +1,106 @@
+/* Extracted from App.css — sidebar-user.css (lines 2937-3040) */
+
+/* ----------------------------------------------------
+   User Profile in Sidebar & Authentication UI
+   ---------------------------------------------------- */
+.user-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  max-width: 100%;
+}
+
+.user-profile-card .avatar-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-inverse);
+  flex-shrink: 0;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+.username-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  word-wrap: break-word;
+  width: 100%;
+  line-height: 1.2;
+}
+
+.btn-logout {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  margin-top: 2px;
+  transition: color 0.2s;
+}
+
+.btn-logout:hover {
+  color: var(--color-primary);
+}
+
+/* ----------------------------------------------------
+   Topic Accuracy Progress Indicator Dots
+   ---------------------------------------------------- */
+.progress-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.progress-status-dot.green {
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.progress-status-dot.yellow {
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.progress-status-dot.red {
+  background: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.progress-status-dot.gray {
+  display: none;
+}
+
+.topic-score-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+

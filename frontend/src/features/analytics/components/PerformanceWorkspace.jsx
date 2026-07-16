@@ -1,212 +1,284 @@
-import { useState } from 'react';
-import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen, TrendingUp } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
+
+function formatTopicLabel(topicId) {
+  if (!topicId) return 'Unknown topic';
+  let slug = String(topicId);
+  slug = slug.replace(/^u-[a-z0-9]+-/i, '');
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function formatTimestamp(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function statusMeta(status) {
+  if (status === 'green') return { label: 'Mastered', tone: 'green' };
+  if (status === 'yellow') return { label: 'Reviewing', tone: 'yellow' };
+  if (status === 'red') return { label: 'Needs work', tone: 'red' };
+  return { label: 'Logged', tone: 'gray' };
+}
+
+function ScoreRing({ score, maxScore, tone }) {
+  const max = maxScore || 50;
+  const pct = max > 0 ? Math.min(100, Math.max(0, Math.round((score / max) * 100))) : 0;
+  const r = 18;
+  const c = 2 * Math.PI * r;
+  const offset = c - (pct / 100) * c;
+
+  return (
+    <div className={`perf-score-ring perf-score-ring--${tone}`} aria-label={`Score ${score} of ${max}`}>
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle className="perf-score-ring__track" cx="26" cy="26" r={r} />
+        <circle
+          className="perf-score-ring__fill"
+          cx="26"
+          cy="26"
+          r={r}
+          strokeDasharray={c}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <div className="perf-score-ring__label">
+        <strong>{score}</strong>
+        <span>/{max}</span>
+      </div>
+    </div>
+  );
+}
+
+function HistoryCard({ title, attempt, tone, score, maxScore, statusLabel, elapsed, timestamp, children, index }) {
+  return (
+    <article
+      className={`perf-log-card perf-log-card--${tone}`}
+      style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
+    >
+      <div className="perf-log-card__accent" aria-hidden />
+      <ScoreRing score={score} maxScore={maxScore} tone={tone} />
+      <div className="perf-log-card__body">
+        <div className="perf-log-card__top">
+          <div className="perf-log-card__titles">
+            <h4 className="perf-log-card__title" title={title}>{title}</h4>
+            <span className="perf-attempt-chip">Attempt {attempt}</span>
+          </div>
+          <span className={`status-badge-pill ${tone}`}>{statusLabel}</span>
+        </div>
+        <div className="perf-log-card__meta">
+          <span className="perf-time">
+            <Clock size={13} aria-hidden />
+            {elapsed || '—'}
+          </span>
+          <span className="perf-date">{formatTimestamp(timestamp)}</span>
+        </div>
+        {children}
+      </div>
+    </article>
+  );
+}
 
 export function PerformanceWorkspace({ user }) {
   const [activeTab, setActiveTab] = useState('syllabus');
 
-  // Syllabus stats
-  const progressCount = user.progress?.length || 0;
-  const averageScore = progressCount > 0 
-    ? Math.round(user.progress.reduce((sum, curr) => sum + curr.score, 0) / progressCount) 
-    : 0;
-  const averageMaxScore = progressCount > 0
-    ? Math.round(user.progress.reduce((sum, curr) => sum + (curr.maxScore || 50), 0) / progressCount)
-    : 50;
-  const masteredCount = user.progress?.filter(p => p.status === 'green').length || 0;
-  const reviewingCount = user.progress?.filter(p => p.status === 'yellow').length || 0;
-  const revisionNeededCount = user.progress?.filter(p => p.status === 'red').length || 0;
+  const progress = user.progress || [];
+  const mockProgress = user.mockProgress || [];
 
-  // Mock stats
-  const mockCount = user.mockProgress?.length || 0;
-  const averageMockScore = mockCount > 0 
-    ? (user.mockProgress.reduce((sum, curr) => sum + curr.score, 0) / mockCount).toFixed(1) 
-    : "0.0";
-  const averageMockAccuracy = mockCount > 0 
-    ? Math.round(user.mockProgress.reduce((sum, curr) => sum + curr.accuracy, 0) / mockCount) 
-    : 0;
-  const totalMockCorrect = user.mockProgress?.reduce((sum, curr) => sum + curr.correct, 0) || 0;
-  const totalMockWrong = user.mockProgress?.reduce((sum, curr) => sum + curr.wrong, 0) || 0;
+  const syllabusStats = useMemo(() => {
+    const progressCount = progress.length;
+    const averageScore = progressCount > 0
+      ? Math.round(progress.reduce((sum, curr) => sum + curr.score, 0) / progressCount)
+      : 0;
+    const averageMaxScore = progressCount > 0
+      ? Math.round(progress.reduce((sum, curr) => sum + (curr.maxScore || 50), 0) / progressCount)
+      : 50;
+    return {
+      progressCount,
+      averageScore,
+      averageMaxScore,
+      masteredCount: progress.filter(p => p.status === 'green').length,
+      reviewingCount: progress.filter(p => p.status === 'yellow').length,
+      revisionNeededCount: progress.filter(p => p.status === 'red').length
+    };
+  }, [progress]);
+
+  const mockStats = useMemo(() => {
+    const mockCount = mockProgress.length;
+    return {
+      mockCount,
+      averageMockScore: mockCount > 0
+        ? (mockProgress.reduce((sum, curr) => sum + curr.score, 0) / mockCount).toFixed(1)
+        : '0.0',
+      averageMockAccuracy: mockCount > 0
+        ? Math.round(mockProgress.reduce((sum, curr) => sum + curr.accuracy, 0) / mockCount)
+        : 0,
+      totalMockCorrect: mockProgress.reduce((sum, curr) => sum + curr.correct, 0),
+      totalMockWrong: mockProgress.reduce((sum, curr) => sum + curr.wrong, 0)
+    };
+  }, [mockProgress]);
 
   return (
-    <div className="study-workspace">
+    <div className="study-workspace perf-workspace">
       <div className="workspace-header-sticky">
-        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1>
-            Performance Tracker
-          </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Syllabus coverage, mock averages, and weak areas at a glance.</p>
+        <div className="section-header perf-hero-header">
+          <div>
+            <p className="perf-eyebrow">
+              <TrendingUp size={14} aria-hidden /> Progress radar
+            </p>
+            <h1>Performance Tracker</h1>
+            <p className="section-header-sub">Syllabus coverage, mock averages, and weak areas at a glance.</p>
+          </div>
+        </div>
+
+        <div className="perf-mode-toggle" role="tablist" aria-label="Performance mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'syllabus'}
+            className={`perf-mode-btn ${activeTab === 'syllabus' ? 'active' : ''}`}
+            onClick={() => setActiveTab('syllabus')}
+          >
+            Syllabus Practice
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'mock'}
+            className={`perf-mode-btn ${activeTab === 'mock' ? 'active' : ''}`}
+            onClick={() => setActiveTab('mock')}
+          >
+            Full Mock Exams
+          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="revision-sub-tabs" style={{ marginBottom: '24px' }}>
-        <button 
-          className={`revision-sub-tab ${activeTab === 'syllabus' ? 'active' : ''}`}
-          onClick={() => setActiveTab('syllabus')}
-        >
-          Syllabus Practice (25 Qs)
-        </button>
-        <button 
-          className={`revision-sub-tab ${activeTab === 'mock' ? 'active' : ''}`}
-          onClick={() => setActiveTab('mock')}
-        >
-          Full Mock Exams (100 Qs)
-        </button>
-      </div>
-      </div>
-
       <div className="workspace-scrollable-content">
-      {activeTab === 'syllabus' ? (
-        <>
-          <div className="stats-row">
-            <StatCard icon={ClipboardList} label="Tests Completed" value={progressCount} variant="blue" />
-            <StatCard icon={Target} label="Average Score" value={`${averageScore} / ${averageMaxScore}`} variant="lavender" />
-            <StatCard icon={Award} label="Mastered (Green)" value={masteredCount} variant="mint" />
-            <StatCard icon={BookOpen} label="Reviewing (Yellow)" value={reviewingCount} variant="peach" />
-            <StatCard icon={AlertCircle} label="Needs Help (Red)" value={revisionNeededCount} variant="rose" />
-          </div>
+        {activeTab === 'syllabus' ? (
+          <>
+            <div className="stats-row">
+              <StatCard icon={ClipboardList} label="Tests Completed" value={syllabusStats.progressCount} variant="blue" />
+              <StatCard icon={Target} label="Average Score" value={`${syllabusStats.averageScore} / ${syllabusStats.averageMaxScore}`} variant="lavender" />
+              <StatCard icon={Award} label="Mastered" value={syllabusStats.masteredCount} variant="mint" />
+              <StatCard icon={BookOpen} label="Reviewing" value={syllabusStats.reviewingCount} variant="peach" />
+              <StatCard icon={AlertCircle} label="Needs Help" value={syllabusStats.revisionNeededCount} variant="rose" />
+            </div>
 
-          <div className="performance-history-card">
-            <h3>Syllabus Test Log History</h3>
-            <div className="table-responsive">
-              {user.progress && user.progress.length > 0 ? (
-                <table className="performance-table">
-                  <thead>
-                    <tr>
-                      <th>Topic Code</th>
-                      <th>Recorded Score</th>
-                      <th>Accuracy Grade Status</th>
-                      <th>Time Taken</th>
-                      <th>Completion Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.progress.map((record, i) => (
-                      <tr key={i} style={{ transition: 'background 0.2s', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td>
-                          <code style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '4px 8px', borderRadius: '4px' }}>{record.topicId}</code>
-                          <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: 'var(--color-primary)', background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
-                            Attempt {record.attemptNumber || 1}
-                          </span>
-                        </td>
-                        <td><strong>{record.score} / {record.maxScore || 50}</strong></td>
-                        <td>
-                          <span className={`status-badge-pill ${record.status}`} style={{ padding: '6px 12px', fontSize: '0.8rem', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                            {record.status === 'green' && 'Mastered'}
-                            {record.status === 'yellow' && 'Reviewing'}
-                            {record.status === 'red' && 'Action Needed'}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--color-primary)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Clock size={14} /> {record.elapsedTime || 'N/A'}
-                        </td>
-                        <td style={{ color: 'var(--text-muted)' }}>{new Date(record.timestamp).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <section className="performance-history-card">
+              <div className="perf-history-head">
+                <h3>Syllabus test history</h3>
+                <span className="perf-count-chip">{progress.length} logged</span>
+              </div>
+
+              {progress.length > 0 ? (
+                <div className="perf-log-list">
+                  {progress.map((record, i) => {
+                    const meta = statusMeta(record.status);
+                    return (
+                      <HistoryCard
+                        key={`${record.topicId}-${record.attemptNumber || 1}-${i}`}
+                        index={i}
+                        title={formatTopicLabel(record.topicId)}
+                        attempt={record.attemptNumber || 1}
+                        tone={meta.tone}
+                        score={record.score}
+                        maxScore={record.maxScore || 50}
+                        statusLabel={meta.label}
+                        elapsed={record.elapsedTime}
+                        timestamp={record.timestamp}
+                      />
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="empty-state">
-                  <p>No tests taken yet. Head over to Syllabus & Notes and start a Mock Exam!</p>
+                  <p>No tests taken yet. Head over to Syllabus & Notes and start a topic test.</p>
                 </div>
               )}
+            </section>
+          </>
+        ) : (
+          <>
+            <div className="stats-row">
+              <StatCard icon={ClipboardList} label="Mocks Completed" value={mockStats.mockCount} variant="blue" />
+              <StatCard icon={Target} label="Average Mock Score" value={`${mockStats.averageMockScore} / 200`} variant="lavender" />
+              <StatCard icon={Award} label="Average Accuracy" value={`${mockStats.averageMockAccuracy}%`} variant="mint" />
+              <StatCard icon={CheckCircle} label="Total Correct" value={mockStats.totalMockCorrect} variant="peach" />
+              <StatCard icon={XCircle} label="Total Wrong" value={mockStats.totalMockWrong} variant="rose" />
             </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="stats-row">
-            <StatCard icon={ClipboardList} label="Mocks Completed" value={mockCount} variant="blue" />
-            <StatCard icon={Target} label="Average Mock Score" value={`${averageMockScore} / 200`} variant="lavender" />
-            <StatCard icon={Award} label="Average Accuracy" value={`${averageMockAccuracy}%`} variant="mint" />
-            <StatCard icon={CheckCircle} label="Total Correct Answers" value={totalMockCorrect} variant="peach" />
-            <StatCard icon={XCircle} label="Total Wrong Answers" value={totalMockWrong} variant="rose" />
-          </div>
 
-          <div className="performance-history-card">
-            <h3>Full Mock Exam Log History</h3>
-            <div className="table-responsive">
-              {user.mockProgress && user.mockProgress.length > 0 ? (
-                <table className="performance-table">
-                  <thead>
-                    <tr>
-                      <th>Mock Test Title</th>
-                      <th>Official Score</th>
-                      <th>Section-wise Stats Breakdown</th>
-                      <th>Accuracy %</th>
-                      <th>Time Tracking</th>
-                      <th>Completion Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.mockProgress.map((record, i) => (
-                      <tr key={i} style={{ transition: 'background 0.2s', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td>
-                          <strong style={{ color: '#f8fafc' }}>{record.title}</strong>
-                          <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--color-primary)' }}>
-                            <span style={{ background: 'rgba(59,130,246,0.15)', padding: '2px 6px', borderRadius: '4px' }}>
-                              Attempt {record.attemptNumber || 1}
-                            </span>
-                          </div>
-                        </td>
-                        <td><strong style={{ fontSize: '1.1rem', color: 'var(--text-primary)' }}>{record.score} <span style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>/ 200</span></strong></td>
-                        <td>
-                          <div style={{ fontSize: '0.85rem', background: 'rgba(0,0,0,0.2)', padding: '6px 12px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ color: '#2ecc71', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <CheckCircle size={14} /> {record.correct}
-                            </span> 
-                            <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>
-                            <span style={{ color: '#e74c3c', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <XCircle size={14} /> {record.wrong}
-                            </span> 
-                            <span style={{color: 'rgba(255,255,255,0.2)'}}>|</span>
-                            <span style={{ color: '#7f8c8d', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <MinusCircle size={14} /> {record.blank}
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`status-badge-pill ${record.accuracy >= 80 ? 'green' : record.accuracy >= 50 ? 'yellow' : 'red'}`} style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                            {record.accuracy}% Accuracy
+            <section className="performance-history-card">
+              <div className="perf-history-head">
+                <h3>Full mock exam history</h3>
+                <span className="perf-count-chip">{mockProgress.length} logged</span>
+              </div>
+
+              {mockProgress.length > 0 ? (
+                <div className="perf-log-list">
+                  {mockProgress.map((record, i) => {
+                    const tone = record.accuracy >= 80 ? 'green' : record.accuracy >= 50 ? 'yellow' : 'red';
+                    return (
+                      <HistoryCard
+                        key={`${record.mockTestId || record.title}-${record.attemptNumber || 1}-${i}`}
+                        index={i}
+                        title={record.title}
+                        attempt={record.attemptNumber || 1}
+                        tone={tone}
+                        score={record.score}
+                        maxScore={200}
+                        statusLabel={`${record.accuracy}% accuracy`}
+                        elapsed={record.elapsedTime}
+                        timestamp={record.timestamp}
+                      >
+                        <div className="perf-breakdown">
+                          <span className="perf-breakdown-item ok">
+                            <CheckCircle size={13} /> {record.correct} correct
                           </span>
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: '500', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Clock size={14} /> {record.elapsedTime || 'N/A'}
+                          <span className="perf-breakdown-item bad">
+                            <XCircle size={13} /> {record.wrong} wrong
+                          </span>
+                          <span className="perf-breakdown-item blank">
+                            <MinusCircle size={13} /> {record.blank} blank
+                          </span>
+                        </div>
+                        {record.sectionTimes && (
+                          <div className="perf-section-times">
+                            {Object.entries(record.sectionTimes).map(([sec, secs]) => (
+                              <span key={sec} className="perf-section-chip">
+                                {sec.slice(0, 3)} {Math.floor(secs / 60)}m {secs % 60}s
+                              </span>
+                            ))}
                           </div>
-                          {record.sectionTimes && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginTop: '8px', fontSize: '0.75rem' }}>
-                              {Object.entries(record.sectionTimes).map(([sec, secs]) => (
-                                <div key={sec} style={{ background: 'rgba(255,255,255,0.05)', padding: '4px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                  <span style={{ color: 'var(--text-muted)' }}>{sec.slice(0,3)}:</span> <span style={{ color: 'var(--text-primary)' }}>{Math.floor(secs / 60)}m {secs % 60}s</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </td>
-                        <td style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{new Date(record.timestamp).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan="5" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', paddingTop: '10px' }}>
-                        * Mock exam grades are computed on the official exam scheme: +2 for correct, -0.5 for wrong answers.
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                        )}
+                      </HistoryCard>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="empty-state">
-                  <p>No full mock exams taken yet. Navigate to Full Mock section, upload or select a test, and test your speed!</p>
+                  <p>No full mock exams taken yet. Open Full Mock, pick a test, and start.</p>
                 </div>
               )}
-            </div>
-          </div>
-        </>
-      )}
+
+              {mockProgress.length > 0 && (
+                <p className="perf-footnote">Scoring: +2 correct, −0.5 wrong.</p>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

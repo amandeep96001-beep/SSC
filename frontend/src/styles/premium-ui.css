@@ -625,6 +625,11 @@
   overflow: hidden;
 }
 
+.notes-reading-layout--with-stickies .notes-sheet--premium {
+  flex: 1;
+  min-width: 0;
+}
+
 .notes-reader-panel {
   position: relative;
   flex: 1;

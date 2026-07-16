@@ -1,5 +1,25 @@
 @import './premium-ui.css';
+@import './layout.css';
+@import './workspace.css';
+@import './modals.css';
+@import './sidebar-user.css';
+@import './mobile-layout.css';
 @import './mobile-sleek.css';
+
+/*
+  CSS map
+  --------
+  styles/                 shared shell (tokens, layout, modals, mobile)
+  features/study/         syllabus, notes, stickies, revision  → study.css
+  features/drills/        daily drills
+  features/exam/          TCS exam portal
+  features/analytics/     performance tracker
+  features/competition/   battle mode
+  features/auth/          login/register
+  features/dashboard/     Dashboard.css shell extras
+
+  Feature CSS is imported from Dashboard.jsx.
+*/
 
 :root {
   /* Classy smooth typography — Outfit (display) + Manrope (UI) */

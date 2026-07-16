@@ -1,0 +1,286 @@
+/* Extracted from App.css — mobile-layout.css (lines 3418-3701) */
+
+/* ----------------------------------------------------
+   Mobile Responsiveness (Added)
+   ---------------------------------------------------- */
+
+.mobile-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .lms-container {
+    flex-direction: column;
+  }
+
+  .lms-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+    margin: 0;
+    width: min(300px, 86vw);
+    height: 100dvh;
+    height: 100svh;
+    max-height: 100dvh;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-top: max(20px, env(safe-area-inset-top, 0px));
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  .lms-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .lms-sidebar .sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .lms-sidebar .sidebar-footer {
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+
+  .lms-sidebar .sidebar-brand {
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  .lms-sidebar .user-profile-card,
+  .lms-sidebar .connection-card {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .lms-sidebar .nav-item {
+    padding: 10px 12px;
+  }
+
+  .sidebar-mobile-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1040;
+    backdrop-filter: blur(2px);
+  }
+
+  .lms-workspace {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 12px 8px;
+    padding-top: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px);
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    z-index: 300;
+    margin: 0;
+    min-height: 0;
+    width: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .mobile-header h2 {
+    display: none;
+  }
+
+  .btn-mobile-toggle {
+    pointer-events: auto;
+    background: var(--color-primary-muted);
+    border: none;
+    color: var(--color-primary);
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
+  }
+
+  .btn-mobile-toggle:active {
+    transform: scale(0.96);
+  }
+
+  .workspace-card-enclosure {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-top: 4px;
+  }
+
+  /* Adjust grids for mobile */
+  .stats-row,
+  .subjects-grid,
+  .options-selector-grid,
+  .palette-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Exam Portal fixes */
+  #exam-portal .main-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  #exam-portal .left-panel {
+    width: 100%;
+    border-right: none;
+    border-bottom: 2px solid #ccc;
+    min-height: 50vh;
+  }
+
+  #exam-portal .right-panel {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Modal scaling */
+  .modal-content-card {
+    width: 95%;
+    padding: 20px;
+  }
+
+}
+
+/* Notes Toolbar Strip */
+.notes-toolbar-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+.notes-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Highlighter Palette */
+.highlight-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-surface);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+.palette-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.hl-btn {
+  background: none;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.hl-btn:hover {
+  transform: scale(1.15);
+  background: var(--nav-hover-bg);
+}
+.hl-btn.hl-yellow { color: #eab308; }
+.hl-btn.hl-green { color: #22c55e; }
+.hl-btn.hl-pink { color: #ec4899; }
+.hl-btn.hl-blue { color: #3b82f6; }
+
+/* Notes Action Buttons */
+.notes-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.notes-action-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+.notes-action-btn.active {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+.notes-action-btn.save {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+.notes-action-btn.save:hover {
+  background: rgba(34, 197, 94, 0.25);
+}
+.notes-action-btn.save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* In-text Highlights (notes reader) */
+mark.hl-yellow { background-color: rgba(253, 224, 71, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-green { background-color: rgba(134, 239, 172, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-pink { background-color: rgba(249, 168, 212, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+

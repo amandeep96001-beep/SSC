@@ -1,0 +1,379 @@
+/* Extracted from App.css — performance.css (lines 3041-3417) */
+
+/* ----------------------------------------------------
+   Performance History — activity log
+   ---------------------------------------------------- */
+@keyframes perfCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.perf-workspace .section-header-sub,
+.section-header-sub {
+  color: var(--text-muted);
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.perf-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.perf-mode-toggle {
+  display: inline-flex;
+  margin-top: 16px;
+  padding: 4px;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.perf-mode-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.perf-mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.perf-mode-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 6px 16px var(--color-primary-glow);
+}
+
+.performance-history-card {
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 48%),
+    var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 22px;
+  padding: 22px 22px 18px;
+  margin-top: 24px;
+  text-align: left;
+  box-shadow: var(--shadow-card);
+}
+
+.performance-history-card h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  color: var(--text-primary);
+}
+
+.perf-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.perf-count-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+  background: var(--color-primary-muted);
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.perf-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.perf-log-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: center;
+  padding: 14px 16px 14px 18px;
+  border-radius: 16px;
+  background: var(--bg-surface, var(--bg-main));
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  animation: perfCardIn 0.4s ease both;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.perf-log-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.22);
+  box-shadow: 0 10px 28px rgba(30, 50, 100, 0.08);
+}
+
+.perf-log-card__accent {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: #94a3b8;
+}
+
+.perf-log-card--green .perf-log-card__accent { background: #10b981; }
+.perf-log-card--yellow .perf-log-card__accent { background: #f59e0b; }
+.perf-log-card--red .perf-log-card__accent { background: #ef4444; }
+
+.perf-score-ring {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+}
+
+.perf-score-ring svg {
+  transform: rotate(-90deg);
+}
+
+.perf-score-ring__track {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 4;
+}
+
+.perf-score-ring__fill {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.perf-score-ring--green .perf-score-ring__fill { stroke: #10b981; }
+.perf-score-ring--yellow .perf-score-ring__fill { stroke: #f59e0b; }
+.perf-score-ring--red .perf-score-ring__fill { stroke: #ef4444; }
+.perf-score-ring--gray .perf-score-ring__fill { stroke: #94a3b8; }
+
+.perf-score-ring__label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.05;
+  pointer-events: none;
+}
+
+.perf-score-ring__label strong {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.perf-score-ring__label span {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.perf-log-card__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perf-log-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.perf-log-card__titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.perf-log-card__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.perf-attempt-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.14);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.perf-log-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.perf-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.perf-time svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.perf-date {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.perf-breakdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.perf-breakdown-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.perf-breakdown-item.ok { color: #059669; }
+.perf-breakdown-item.bad { color: #dc2626; }
+.perf-breakdown-item.blank { color: var(--text-muted); }
+
+.perf-section-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.perf-section-chip {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  background: var(--bg-input, rgba(15, 23, 42, 0.04));
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.perf-footnote {
+  margin: 14px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.status-badge-pill {
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.status-badge-pill.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.status-badge-pill.yellow {
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+.status-badge-pill.red {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.status-badge-pill.gray {
+  background: rgba(100, 116, 139, 0.12);
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .performance-history-card {
+    padding: 16px;
+  }
+
+  .perf-log-card {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 12px 12px 14px;
+  }
+
+  .perf-score-ring,
+  .perf-score-ring svg {
+    width: 46px;
+    height: 46px;
+  }
+
+  .perf-log-card__top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .perf-mode-toggle {
+    width: 100%;
+  }
+
+  .perf-mode-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 10px;
+    font-size: 0.8rem;
+  }
+}
+

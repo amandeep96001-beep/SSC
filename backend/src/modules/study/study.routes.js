@@ -1,11 +1,13 @@
 import express from 'express';
-import { 
-  getSubjects, 
-  getTopics, 
-  getTopicNotes, 
-  getTopicTest, 
-  addTopic, 
-  updateTopic, 
+import {
+  getSubjects,
+  addSubject,
+  deleteSubject,
+  getTopics,
+  getTopicNotes,
+  getTopicTest,
+  addTopic,
+  updateTopic,
   deleteTopic,
   getVocab,
   addVocab,
@@ -16,6 +18,8 @@ import {
 const router = express.Router();
 
 router.get('/subjects', getSubjects);
+router.post('/subjects', addSubject);
+router.delete('/subjects/:subjectName', deleteSubject);
 router.get('/subjects/:subjectName/topics', getTopics);
 router.post('/subjects/:subjectName/topics', addTopic);
 router.get('/topics/:topicId/notes', getTopicNotes);

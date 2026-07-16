@@ -7,13 +7,84 @@ import TopicDto from './topic.dto.js';
 import VocabDto from './vocab.dto.js';
 import { shuffle } from '../../shared/utils/shuffle.js';
 
+function parseSource(req) {
+  const source = String(req.query.source || 'global').toLowerCase();
+  return source === 'mine' ? 'mine' : 'global';
+}
+
+function ownerScope(req) {
+  const source = parseSource(req);
+  return source === 'mine' ? req.user.id : null;
+}
+
+function isUserOwned(doc, userId) {
+  return Boolean(doc?.ownerId && doc.ownerId === userId);
+}
+
 export const getSubjects = async (req, res, next) => {
   try {
-    const subjects = await subjectRepository.findAll('name');
+    const source = parseSource(req);
+    const subjects = source === 'mine'
+      ? await subjectRepository.findByOwner(req.user.id, 'name ownerId')
+      : await subjectRepository.findGlobal('name ownerId');
+
     res.json({
       status: 'success',
-      data: subjects.map(s => s.name)
+      data: subjects.map(s => ({
+        name: s.name,
+        isOwned: Boolean(s.ownerId),
+        ownerId: s.ownerId || null
+      })),
+      meta: { source }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addSubject = async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ status: 'error', message: 'Subject name is required.' });
+    }
+
+    const existing = await subjectRepository.findByName(name, true, req.user.id);
+    if (existing) {
+      return res.status(400).json({ status: 'error', message: 'You already have a subject with this name.' });
+    }
+
+    const created = await subjectRepository.create({
+      name,
+      ownerId: req.user.id
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: { name: created.name, isOwned: true, ownerId: created.ownerId }
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ status: 'error', message: 'You already have a subject with this name.' });
+    }
+    next(error);
+  }
+};
+
+export const deleteSubject = async (req, res, next) => {
+  try {
+    const { subjectName } = req.params;
+    const deleted = await subjectRepository.deleteByNameAndOwner(subjectName, req.user.id);
+    if (!deleted) {
+      return res.status(404).json({ status: 'error', message: 'Subject not found or not owned by you.' });
+    }
+
+    const topicDocs = await topicRepository.findIdsBySubjectAndOwner(subjectName, req.user.id);
+    const topicIds = topicDocs.map(t => t.id);
+    await questionRepository.deleteByTopicIds(topicIds);
+    await topicRepository.deleteBySubjectAndOwner(subjectName, req.user.id);
+
+    res.json({ status: 'success', message: 'Subject and related topics deleted.' });
   } catch (error) {
     next(error);
   }
@@ -22,20 +93,22 @@ export const getSubjects = async (req, res, next) => {
 export const getTopics = async (req, res, next) => {
   try {
     const { subjectName } = req.params;
-    const subject = await subjectRepository.findByName(subjectName, true);
+    const ownerId = ownerScope(req);
+    const subject = await subjectRepository.findByName(subjectName, true, ownerId);
     if (!subject) {
-      return res.json({ status: 'success', data: [] });
+      return res.json({ status: 'success', data: [], meta: { source: parseSource(req) } });
     }
 
-    const topics = await topicRepository.findBySubjectName(subjectName);
-    
+    const topics = await topicRepository.findBySubjectName(subjectName, ownerId);
+
     const mappedTopics = topics.map(t => ({
       id: t.id,
       name: t.name,
-      syllabus: t.syllabus
+      syllabus: t.syllabus,
+      isOwned: isUserOwned(t, req.user.id)
     }));
 
-    res.json({ status: 'success', data: mappedTopics });
+    res.json({ status: 'success', data: mappedTopics, meta: { source: parseSource(req) } });
   } catch (error) {
     next(error);
   }
@@ -49,15 +122,22 @@ export const getTopicNotes = async (req, res, next) => {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
+    // Personal topics are private to the owner
+    if (topic.ownerId && topic.ownerId !== req.user.id) {
+      return res.status(403).json({ status: 'error', message: 'You do not have access to this topic.' });
+    }
+
     const questions = await questionRepository.findByTopicId(topicId);
-    
+
     res.json({
       status: 'success',
       data: {
         id: topic.id,
         name: topic.name,
         notes: topic.notes,
-        questions: questions
+        questions,
+        isOwned: isUserOwned(topic, req.user.id),
+        ownerId: topic.ownerId || null
       }
     });
   } catch (error) {
@@ -73,8 +153,12 @@ export const getTopicTest = async (req, res, next) => {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
+    if (topic.ownerId && topic.ownerId !== req.user.id) {
+      return res.status(403).json({ status: 'error', message: 'You do not have access to this topic.' });
+    }
+
     const questions = await questionRepository.findByTopicId(topicId);
-    
+
     let testQuestions = questions.map(q => ({
       q: q.q,
       o: q.o,
@@ -97,21 +181,26 @@ export const getTopicTest = async (req, res, next) => {
 export const addTopic = async (req, res, next) => {
   try {
     const { subjectName } = req.params;
-    
+    const userId = req.user.id;
+
     const dto = new TopicDto(req.body);
     const errors = dto.validate();
     if (errors.length > 0) {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
     }
 
-    const subject = await subjectRepository.findByName(subjectName);
+    // Custom topics only under the user's own subjects
+    const subject = await subjectRepository.findByName(subjectName, true, userId);
     if (!subject) {
-      return res.status(404).json({ status: 'error', message: 'Subject not found.' });
+      return res.status(404).json({
+        status: 'error',
+        message: 'Subject not found in your notes. Switch to My Notes and create a subject first.'
+      });
     }
 
-    const existingTopics = await topicRepository.findBySubjectName(subjectName);
-    const rawId = `${subjectName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const finalId = existingTopics.some(t => t.id === rawId) 
+    const existingTopics = await topicRepository.findBySubjectName(subjectName, userId);
+    const rawId = `u-${userId.slice(-6)}-${subjectName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const finalId = existingTopics.some(t => t.id === rawId)
       ? `${rawId}-${Date.now()}`
       : rawId;
 
@@ -120,22 +209,32 @@ export const addTopic = async (req, res, next) => {
       subjectName,
       name: dto.name,
       syllabus: dto.syllabus || 'Custom added user revision topic.',
-      notes: dto.notes
+      notes: dto.notes,
+      ownerId: userId
     };
 
     await topicRepository.create(newTopic);
 
-    await questionRepository.create({
-      topicId: finalId,
-      q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
-      o: ["Yes, completely", "No, need review", "Will study again", "Passed"],
-      a: 0,
-      e: "This is a custom-seeded question to verify study progress for custom notes."
-    });
+    const seedQuestions = Array.isArray(dto.questions) && dto.questions.length > 0
+      ? dto.questions.map(q => ({ ...q, topicId: finalId }))
+      : [{
+          topicId: finalId,
+          q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+          o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+          a: 0,
+          e: 'This is a custom-seeded question to verify study progress for custom notes.'
+        }];
+
+    await questionRepository.insertMany(seedQuestions);
 
     res.status(201).json({
       status: 'success',
-      data: { id: finalId, name: dto.name, syllabus: newTopic.syllabus }
+      data: {
+        id: finalId,
+        name: dto.name,
+        syllabus: newTopic.syllabus,
+        isOwned: true
+      }
     });
   } catch (error) {
     next(error);
@@ -145,7 +244,7 @@ export const addTopic = async (req, res, next) => {
 export const updateTopic = async (req, res, next) => {
   try {
     const { topicId } = req.params;
-    
+
     const dto = new TopicDto(req.body);
     const errors = dto.validate();
     if (errors.length > 0) {
@@ -155,6 +254,13 @@ export const updateTopic = async (req, res, next) => {
     const topic = await topicRepository.findById(topicId);
     if (!topic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
+    }
+
+    if (!isUserOwned(topic, req.user.id)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Official syllabus topics are read-only. Switch to My Notes to edit your own content.'
+      });
     }
 
     const updateData = {
@@ -172,7 +278,7 @@ export const updateTopic = async (req, res, next) => {
 
     res.json({
       status: 'success',
-      data: { id: topicId, name: dto.name, syllabus: updateData.syllabus }
+      data: { id: topicId, name: dto.name, syllabus: updateData.syllabus, isOwned: true }
     });
   } catch (error) {
     next(error);
@@ -182,12 +288,20 @@ export const updateTopic = async (req, res, next) => {
 export const deleteTopic = async (req, res, next) => {
   try {
     const { topicId } = req.params;
-    const deletedTopic = await topicRepository.deleteById(topicId);
-    
-    if (!deletedTopic) {
+    const topic = await topicRepository.findById(topicId);
+
+    if (!topic) {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
+    if (!isUserOwned(topic, req.user.id)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Official syllabus topics cannot be deleted.'
+      });
+    }
+
+    await topicRepository.deleteById(topicId);
     await questionRepository.deleteByTopicId(topicId);
 
     res.json({ status: 'success', message: 'Topic deleted successfully.' });
@@ -199,12 +313,12 @@ export const deleteTopic = async (req, res, next) => {
 export const getVocab = async (req, res, next) => {
   try {
     const { category, search, page = 1, limit = 30 } = req.query;
-    
+
     const query = {};
     if (category && category !== 'All') {
       query.category = category;
     }
-    
+
     if (search) {
       const searchRegex = new RegExp(search, 'i');
       query.$or = [
@@ -217,9 +331,9 @@ export const getVocab = async (req, res, next) => {
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const result = await vocabRepository.findAll(query, skip, parseInt(limit, 10));
-    
-    res.json({ 
-      status: 'success', 
+
+    res.json({
+      status: 'success',
       data: result.data,
       meta: {
         total: result.total,
@@ -290,17 +404,12 @@ export const addVocabBulk = async (req, res, next) => {
       return dto;
     });
 
-    // 1. Get all words from the incoming array
     const incomingWords = processedArray.map(item => item.word);
-
-    // 2. Find which of these already exist in the database
     const existingItems = await Vocab.find({ word: { $in: incomingWords } }).select('word').lean();
     const existingWordsSet = new Set(existingItems.map(item => item.word.toLowerCase()));
 
-    // 3. Filter out words that already exist in DB
     let newVocabsToInsert = processedArray.filter(item => !existingWordsSet.has(item.word.toLowerCase()));
 
-    // 4. Remove duplicates within the JSON array itself (if user pasted the same word twice)
     const uniqueMap = new Map();
     newVocabsToInsert.forEach(item => {
       if (!uniqueMap.has(item.word.toLowerCase())) {
@@ -310,22 +419,21 @@ export const addVocabBulk = async (req, res, next) => {
     const finalArrayToInsert = Array.from(uniqueMap.values());
 
     if (finalArrayToInsert.length === 0) {
-      return res.status(200).json({ 
-        status: 'success', 
-        message: 'No new words added. All words in the JSON already exist in the database.', 
-        data: [] 
+      return res.status(200).json({
+        status: 'success',
+        message: 'No new words added. All words in the JSON already exist in the database.',
+        data: []
       });
     }
 
     const result = await vocabRepository.insertMany(finalArrayToInsert);
-    res.status(201).json({ 
-      status: 'success', 
-      message: `Successfully inserted ${result.length} new words. (${processedArray.length - result.length} duplicates ignored)`, 
-      data: result 
+    res.status(201).json({
+      status: 'success',
+      message: `Successfully inserted ${result.length} new words. (${processedArray.length - result.length} duplicates ignored)`,
+      data: result
     });
   } catch (error) {
     if (error.code === 11000) {
-      // Some duplicate occurred but Mongoose insertMany with ordered:false will throw this at the end
       return res.status(207).json({ status: 'partial_success', message: 'Bulk insert finished, but some duplicate words were skipped.' });
     }
     return res.status(400).json({ status: 'error', message: error.message });

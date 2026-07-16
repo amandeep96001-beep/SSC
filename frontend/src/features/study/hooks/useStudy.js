@@ -3,11 +3,31 @@ import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 import { getListFromResponse } from '@/shared/utils/apiResponse';
 
+const CONTENT_SOURCE_KEY = 'ssc_content_source';
+
+function normalizeSubjects(list) {
+  return (list || []).map((item) => {
+    if (typeof item === 'string') return { name: item, isOwned: false };
+    return {
+      name: item.name,
+      isOwned: Boolean(item.isOwned || item.ownerId)
+    };
+  });
+}
+
 export function useStudy() {
   const [activeView, setActiveView] = useState('drill'); // drill, subjects, topics, notes, test, results, revision
+  const [contentSource, setContentSourceState] = useState(() => {
+    try {
+      const stored = localStorage.getItem(CONTENT_SOURCE_KEY);
+      return stored === 'mine' ? 'mine' : 'global';
+    } catch {
+      return 'global';
+    }
+  });
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
-  
+
   // User Authentication state
   const [user, setUser] = useState(() => {
     try {
@@ -34,16 +54,21 @@ export function useStudy() {
   const timerValueRef = useRef(900);
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
+  const contentSourceRef = useRef(contentSource);
+  contentSourceRef.current = contentSource;
 
   // APIs
   const { execute: fetchSubjectsApi, loading: subjectsLoading, error: subjectsError } = useApi(
-    useCallback(() => apiService.get('/study/subjects'), [])
+    useCallback((source) => apiService.get(`/study/subjects?source=${encodeURIComponent(source || 'global')}`), [])
   );
-  const getTopicsApi = useApi(useCallback((subName) => apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics`), []));
+  const getTopicsApi = useApi(useCallback((subName, source) =>
+    apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics?source=${encodeURIComponent(source || 'global')}`), []));
   const getNotesApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/notes`), []));
   const getTestApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/test`), []));
   const addTopicApi = useApi(useCallback(({ subjectName, body }) => apiService.post(`/study/subjects/${encodeURIComponent(subjectName)}/topics`, body), []));
-  
+  const addSubjectApi = useApi(useCallback((body) => apiService.post('/study/subjects', body), []));
+  const deleteSubjectApi = useApi(useCallback((subjectName) => apiService.delete(`/study/subjects/${encodeURIComponent(subjectName)}`), []));
+
   const loginApi = useApi(useCallback((body) => apiService.post('/auth/login', body), []));
   const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
   const updateProgressApi = useApi(useCallback((body) => apiService.post('/auth/progress', body), []));
@@ -51,13 +76,24 @@ export function useStudy() {
   const updateTopicApi = useApi(useCallback(({ topicId, body }) => apiService.put(`/study/topics/${topicId}`, body), []));
   const deleteTopicApi = useApi(useCallback((topicId) => apiService.delete(`/study/topics/${topicId}`), []));
 
-  // Load all subjects on mount
-  const fetchSubjects = useCallback(async () => {
-    const result = await fetchSubjectsApi();
-    setSubjects(getListFromResponse(result));
+  const fetchSubjects = useCallback(async (sourceOverride) => {
+    const source = sourceOverride || contentSourceRef.current;
+    const result = await fetchSubjectsApi(source);
+    setSubjects(normalizeSubjects(getListFromResponse(result)));
   }, [fetchSubjectsApi]);
 
-  // Auth helper methods
+  const setContentSource = useCallback(async (source) => {
+    const next = source === 'mine' ? 'mine' : 'global';
+    setContentSourceState(next);
+    localStorage.setItem(CONTENT_SOURCE_KEY, next);
+    setSelectedSubject(null);
+    setTopicsList([]);
+    setSelectedTopicId(null);
+    setActiveNotes(null);
+    setActiveView('subjects');
+    await fetchSubjects(next);
+  }, [fetchSubjects]);
+
   const persistUser = (userData) => {
     const { token, ...profile } = userData;
     if (token) localStorage.setItem('ssc_token', token);
@@ -90,21 +126,18 @@ export function useStudy() {
     setActiveView('drill');
   }, []);
 
-  // Navigate to subjects view
   const skipToSubjects = useCallback(() => {
     fetchSubjects();
     setActiveView('subjects');
   }, [fetchSubjects]);
 
-  // Select Subject -> Load Topics
   const selectSubject = useCallback(async (subName) => {
     setSelectedSubject(subName);
-    const result = await getTopicsApi.execute(subName);
+    const result = await getTopicsApi.execute(subName, contentSourceRef.current);
     setTopicsList(getListFromResponse(result));
     setActiveView('topics');
   }, [getTopicsApi]);
 
-  // Select Topic -> Load Study Notes
   const selectTopic = useCallback(async (topicId) => {
     setSelectedTopicId(topicId);
     const result = await getNotesApi.execute(topicId);
@@ -114,7 +147,6 @@ export function useStudy() {
     }
   }, [getNotesApi]);
 
-  // Submit Exam Calculations
   const submitExam = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -146,8 +178,8 @@ export function useStudy() {
 
     const totalScore = (correctCount * 2) - (wrongCount * 0.5);
     const maxScore = testQuestions.length * 2;
-    const accuracy = correctCount + wrongCount > 0 
-      ? Math.round((correctCount / (correctCount + wrongCount)) * 100) 
+    const accuracy = correctCount + wrongCount > 0
+      ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
       : 0;
 
     const summaryText = `Time Taken: ${elapsedMins} Mins ${elapsedSecs} Secs | Correct: ${correctCount} | Wrong: ${wrongCount} | Blank: ${unattemptedCount}`;
@@ -164,7 +196,6 @@ export function useStudy() {
       errorLog: totalScore === maxScore ? "Perfect Score! Excellent performance!" : errorLog
     });
 
-    // Save progress user metrics to MongoDB Atlas
     if (user && selectedTopicId) {
       updateProgressApi.execute({
         topicId: selectedTopicId,
@@ -186,7 +217,6 @@ export function useStudy() {
     setActiveView('results');
   }, [testQuestions, selectedAnswers, user, selectedTopicId, updateProgressApi]);
 
-  // Submit mock test
   const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0, sectionTimes = null) => {
     const elapsedSeconds = 3600 - remainingTimer;
     const elapsedMins = Math.floor(elapsedSeconds / 60);
@@ -213,8 +243,8 @@ export function useStudy() {
     });
 
     const totalScore = (correctCount * 2) - (wrongCount * 0.5);
-    const accuracy = correctCount + wrongCount > 0 
-      ? Math.round((correctCount / (correctCount + wrongCount)) * 100) 
+    const accuracy = correctCount + wrongCount > 0
+      ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
       : 0;
 
     const summaryText = `Time Taken: ${elapsedMins} Mins ${elapsedSecs} Secs | Correct: ${correctCount} | Wrong: ${wrongCount} | Blank: ${unattemptedCount}`;
@@ -234,7 +264,7 @@ export function useStudy() {
     });
 
     setTestQuestions(mockData.questions);
-    
+
     const answersArray = Array(100).fill(null);
     Object.keys(answers).forEach((idx) => {
       answersArray[Number(idx)] = answers[idx];
@@ -267,28 +297,25 @@ export function useStudy() {
     setActiveView('results');
   }, [user, updateMockProgressApi]);
 
-  // Start 25-Question Test
   const startTest = useCallback(async () => {
     if (!selectedTopicId) return;
     const result = await getTestApi.execute(selectedTopicId);
-    console.log(result,"getting result")
     if (result.success && result.data.data) {
       const qLen = result.data.data.length;
       setTestQuestions(result.data.data);
       setCurrentQuestionIdx(0);
       setSelectedAnswers(Array(qLen).fill(null));
-      
+
       const initialStatuses = Array(qLen).fill('not-visited');
       if (qLen > 0) initialStatuses[0] = 'not-answered';
       setQuestionStatuses(initialStatuses);
 
-      setTimer(900); // 15 Mins
+      setTimer(900);
       startTimeRef.current = Date.now();
       setActiveView('test');
     }
   }, [selectedTopicId, getTestApi]);
 
-  // Cancel Test — return to notes without saving progress
   const cancelTest = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -302,7 +329,6 @@ export function useStudy() {
     setActiveView('notes');
   }, []);
 
-  // Jump to specific question
   const jumpToQuestion = useCallback((idx) => {
     setCurrentQuestionIdx(idx);
     setQuestionStatuses((prev) => {
@@ -314,7 +340,6 @@ export function useStudy() {
     });
   }, []);
 
-  // Update selected answer for active question
   const selectOptionValue = useCallback((optIdx) => {
     setSelectedAnswers((prev) => {
       const next = [...prev];
@@ -323,7 +348,6 @@ export function useStudy() {
     });
   }, [currentQuestionIdx]);
 
-  // Save current selection & advance index
   const saveAndNext = useCallback(() => {
     setQuestionStatuses((prev) => {
       const next = [...prev];
@@ -345,7 +369,6 @@ export function useStudy() {
     }
   }, [currentQuestionIdx, selectedAnswers, testQuestions.length]);
 
-  // Mark for review & advance index
   const markForReview = useCallback(() => {
     setQuestionStatuses((prev) => {
       const next = [...prev];
@@ -367,7 +390,6 @@ export function useStudy() {
     }
   }, [currentQuestionIdx, testQuestions.length]);
 
-  // Clear active question answer
   const clearResponse = useCallback(() => {
     setSelectedAnswers((prev) => {
       const next = [...prev];
@@ -385,7 +407,6 @@ export function useStudy() {
     timerValueRef.current = timer;
   }, [timer]);
 
-  // Timer countdown hook
   useEffect(() => {
     if (activeView === 'test') {
       timerRef.current = setInterval(() => {
@@ -406,22 +427,54 @@ export function useStudy() {
     };
   }, [activeView, submitExam]);
 
-  // Add Custom User Topic
+  const refreshTopics = useCallback(async () => {
+    if (!selectedSubject) return;
+    const topicsResult = await getTopicsApi.execute(selectedSubject, contentSourceRef.current);
+    setTopicsList(getListFromResponse(topicsResult));
+  }, [selectedSubject, getTopicsApi]);
+
   const addCustomTopic = useCallback(async (topicData) => {
     if (!selectedSubject) return { success: false, message: 'No active subject selected.' };
+    if (contentSourceRef.current !== 'mine') {
+      return { success: false, message: 'Switch to My Notes to create custom topics.' };
+    }
     const result = await addTopicApi.execute({
       subjectName: selectedSubject,
       body: topicData
     });
     if (result.success && result.data.data) {
-      const topicsResult = await getTopicsApi.execute(selectedSubject);
-      if (topicsResult.success && topicsResult.data.data) {
-        setTopicsList(topicsResult.data.data);
-      }
+      await refreshTopics();
       return { success: true };
     }
     return { success: false, message: addTopicApi.error || 'Failed to create custom topic.' };
-  }, [selectedSubject, addTopicApi, getTopicsApi]);
+  }, [selectedSubject, addTopicApi, refreshTopics]);
+
+  const addCustomSubject = useCallback(async (name) => {
+    const result = await addSubjectApi.execute({ name });
+    if (result.success && result.data?.data) {
+      if (contentSourceRef.current !== 'mine') {
+        await setContentSource('mine');
+      } else {
+        await fetchSubjects('mine');
+      }
+      return { success: true, data: result.data.data };
+    }
+    return { success: false, message: addSubjectApi.error || 'Failed to create subject.' };
+  }, [addSubjectApi, setContentSource, fetchSubjects]);
+
+  const deleteCustomSubject = useCallback(async (subjectName) => {
+    const result = await deleteSubjectApi.execute(subjectName);
+    if (result.success) {
+      await fetchSubjects('mine');
+      if (selectedSubject === subjectName) {
+        setSelectedSubject(null);
+        setTopicsList([]);
+        setActiveView('subjects');
+      }
+      return { success: true };
+    }
+    return { success: false, message: deleteSubjectApi.error || 'Failed to delete subject.' };
+  }, [deleteSubjectApi, fetchSubjects, selectedSubject]);
 
   const updateCustomTopic = useCallback(async (topicId, topicData) => {
     const result = await updateTopicApi.execute({
@@ -429,48 +482,43 @@ export function useStudy() {
       body: topicData
     });
     if (result.success && result.data.data) {
-      if (selectedSubject) {
-        const topicsResult = await getTopicsApi.execute(selectedSubject);
-        if (topicsResult.success && topicsResult.data.data) {
-          setTopicsList(topicsResult.data.data);
-        }
-      }
+      await refreshTopics();
       return { success: true };
     }
     return { success: false, message: updateTopicApi.error || 'Failed to update custom topic.' };
-  }, [selectedSubject, updateTopicApi, getTopicsApi]);
+  }, [updateTopicApi, refreshTopics]);
 
   const deleteCustomTopic = useCallback(async (topicId) => {
     const result = await deleteTopicApi.execute(topicId);
     if (result.success) {
-      if (selectedSubject) {
-        const topicsResult = await getTopicsApi.execute(selectedSubject);
-        if (topicsResult.success && topicsResult.data.data) {
-          setTopicsList(topicsResult.data.data);
-        }
-      }
+      await refreshTopics();
       return { success: true };
     }
     return { success: false, message: deleteTopicApi.error || 'Failed to delete topic.' };
-  }, [selectedSubject, deleteTopicApi, getTopicsApi]);
+  }, [deleteTopicApi, refreshTopics]);
 
   const subjectsLoadedForRef = useRef(null);
 
-  // Fetch subjects once per login (stable id — not whole user object)
   useEffect(() => {
     const userKey = user?.id ?? user?.username ?? null;
     if (!userKey) {
       subjectsLoadedForRef.current = null;
       return;
     }
-    if (subjectsLoadedForRef.current === userKey) return;
-    subjectsLoadedForRef.current = userKey;
-    fetchSubjects();
-  }, [user?.id, user?.username, fetchSubjects]);
+    const cacheKey = `${userKey}:${contentSource}`;
+    if (subjectsLoadedForRef.current === cacheKey) return;
+    subjectsLoadedForRef.current = cacheKey;
+    fetchSubjects(contentSource);
+  }, [user?.id, user?.username, contentSource, fetchSubjects]);
+
+  const isMineMode = contentSource === 'mine';
 
   return {
     activeView,
     setActiveView,
+    contentSource,
+    setContentSource,
+    isMineMode,
     subjects,
     selectedSubject,
     topicsList,
@@ -483,8 +531,8 @@ export function useStudy() {
     timer,
     testSummary,
     user,
-    loading: subjectsLoading || getTopicsApi.loading || getNotesApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading,
-    error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error,
+    loading: subjectsLoading || getTopicsApi.loading || getNotesApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
+    error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
     skipToSubjects,
     selectSubject,
     selectTopic,
@@ -498,6 +546,8 @@ export function useStudy() {
     submitExam,
     submitMockExam,
     addCustomTopic,
+    addCustomSubject,
+    deleteCustomSubject,
     loginUser,
     registerUser,
     logoutUser,

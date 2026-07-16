@@ -1,0 +1,211 @@
+/* ============================================================
+   Notes readability + sticky notes (desktop + mobile)
+   Keep reading first — tools stay out of the way on small screens
+   ============================================================ */
+
+/* ---- Readable defaults ---- */
+.notes-reader {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+}
+
+.notes-reader--size-sm { font-size: 0.95rem; line-height: 1.7; }
+.notes-reader--size-md { font-size: 1.0625rem; line-height: 1.75; }
+.notes-reader--size-lg { font-size: 1.2rem; line-height: 1.8; }
+
+.notes-reader--spacing-relaxed {
+  line-height: 1.9 !important;
+}
+
+.notes-reader p {
+  margin: 0 0 1em;
+  max-width: 68ch;
+}
+
+.notes-reader li {
+  margin-bottom: 0.35em;
+  max-width: 68ch;
+}
+
+/* Sticky overlay backdrop (mobile sheet) */
+.sticky-backdrop {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  html.sticky-sheet-open,
+  html.sticky-sheet-open body {
+    overflow: hidden !important;
+  }
+
+  .notes-reading-layout--with-stickies {
+    flex-direction: column !important;
+  }
+
+  /* Don't squeeze the article — stickies open as a sheet */
+  .notes-reading-layout--with-stickies .notes-sheet--premium {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .notes-reading-layout--with-stickies .sticky-panel,
+  .sticky-panel.sticky-panel--sheet {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    z-index: 1200 !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: min(72dvh, 560px) !important;
+    padding-bottom: max(14px, env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28) !important;
+    order: unset !important;
+  }
+
+  .sticky-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 10, 18, 0.45);
+    z-index: 1190;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  /* Reading comfort on phones */
+  .notes-flow .notes-toolbar-header h1 {
+    font-size: 1.15rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .notes-local-hint {
+    font-size: 0.75rem !important;
+    line-height: 1.4 !important;
+  }
+
+  .notes-sheet-header {
+    padding: 14px 16px 10px !important;
+  }
+
+  .notes-reader {
+    padding: 18px 16px 28px !important;
+    font-size: 1.08rem !important;
+    line-height: 1.8 !important;
+  }
+
+  .notes-reader--size-sm { font-size: 1rem !important; }
+  .notes-reader--size-md { font-size: 1.08rem !important; }
+  .notes-reader--size-lg { font-size: 1.22rem !important; }
+
+  .notes-reader p,
+  .notes-reader li {
+    max-width: none !important;
+  }
+
+  .notes-reader h2 {
+    font-size: 1.2rem !important;
+    margin: 1.25em 0 0.5em !important;
+    line-height: 1.35 !important;
+  }
+
+  .notes-reader h3 {
+    font-size: 1.05rem !important;
+    margin: 1.1em 0 0.4em !important;
+  }
+
+  .notes-inline-toolbar {
+    padding: 10px 12px !important;
+    gap: 6px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 5 !important;
+  }
+
+  .notes-fmt-btn,
+  .notes-inline-toolbar .hl-btn {
+    min-width: 40px !important;
+    height: 40px !important;
+  }
+
+  .notes-fmt-btn--save {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 4px;
+    min-height: 40px;
+  }
+
+  .notes-toolbar-header .syllabus-page-header__actions {
+    flex-wrap: wrap !important;
+  }
+
+  .sticky-launch-btn {
+    order: -1;
+    flex: 1 1 100% !important;
+  }
+
+  .notes-reading-controls {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .notes-ctrl-btn {
+    min-height: 36px !important;
+    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .notes-search-bar {
+    width: 100% !important;
+  }
+
+  .notes-toc,
+  .notes-toc--bookmarks-only {
+    max-height: 140px !important;
+    width: 100% !important;
+  }
+
+  .perf-log-card {
+    grid-template-columns: 46px minmax(0, 1fr) !important;
+  }
+
+  .subjects-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .subject-selection-card {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .topic-outline-card {
+    padding: 14px !important;
+  }
+
+  .content-source-toggle {
+    width: 100%;
+    display: flex;
+  }
+
+  .content-source-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+  }
+}
+
+/* Dark mode sticky cards stay readable */
+:root[data-theme="dark"] .sticky-card__text {
+  color: #0f172a;
+}
+
+:root[data-theme="dark"] .sticky-icon-btn {
+  background: rgba(255, 255, 255, 0.7);
+}

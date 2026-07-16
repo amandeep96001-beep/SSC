@@ -1,8 +1,15 @@
 import Topic from './topic.model.js';
 
+const globalOwnerFilter = {
+  $or: [{ ownerId: null }, { ownerId: { $exists: false } }]
+};
+
 class TopicRepository {
-  async findBySubjectName(subjectName) {
-    return await Topic.find({ subjectName }).lean();
+  async findBySubjectName(subjectName, ownerId = null) {
+    const filter = ownerId
+      ? { subjectName, ownerId }
+      : { subjectName, ...globalOwnerFilter };
+    return await Topic.find(filter).lean();
   }
 
   async findById(id) {
@@ -20,6 +27,14 @@ class TopicRepository {
 
   async deleteById(id) {
     return await Topic.findOneAndDelete({ id });
+  }
+
+  async deleteBySubjectAndOwner(subjectName, ownerId) {
+    return await Topic.deleteMany({ subjectName, ownerId });
+  }
+
+  async findIdsBySubjectAndOwner(subjectName, ownerId) {
+    return await Topic.find({ subjectName, ownerId }).select('id').lean();
   }
 
   async insertMany(topics) {
