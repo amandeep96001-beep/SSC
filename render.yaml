@@ -16,5 +16,9 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      # Exact browser origin of the Vercel app (no trailing slash). Required for CORS.
       - key: FRONTEND_URL
+        value: https://myexamprep-theta.vercel.app
+      # Optional: comma-separated extra origins (preview deployments, custom domains)
+      - key: FRONTEND_URLS
         sync: false

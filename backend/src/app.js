@@ -50,6 +50,23 @@ export function createApp() {
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
   }));
   app.use(compression());
+
+  // Reject disallowed Origin early so OPTIONS never falls through to auth (401 without ACAO).
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (!origin) return next();
+    const normalized = normalizeOrigin(origin);
+    if (allowedOrigins.includes(normalized)) return next();
+    console.warn(`[cors] Blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || '(none)'}`);
+    if (req.method === 'OPTIONS') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'CORS origin not allowed. Set FRONTEND_URL on the API host to your deployed frontend origin.',
+      });
+    }
+    return next();
+  });
+
   app.use(cors({
     origin(origin, callback) {
       // Non-browser clients (curl, server-to-server) send no Origin
@@ -58,7 +75,7 @@ export function createApp() {
       if (allowedOrigins.includes(normalized)) {
         return callback(null, true);
       }
-      console.warn(`[cors] Blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || '(none)'}`);
+      // Should rarely hit — blocked above — keep cors from reflecting the origin
       return callback(null, false);
     },
     credentials: true,

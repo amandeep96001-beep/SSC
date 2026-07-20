@@ -34,6 +34,12 @@ async function start() {
     } else {
       console.warn('⚠️ FRONTEND_URL not set — browsers from other origins will be blocked in strict CORS mode.');
     }
+    const nonLocalOrigins = origins.filter((o) => !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(o));
+    if (process.env.NODE_ENV === 'production' && nonLocalOrigins.length === 0) {
+      console.warn(
+        '⚠️ FRONTEND_URL is missing or only localhost — set it to your Vercel origin (e.g. https://myexamprep-theta.vercel.app) or browsers will get CORS errors.',
+      );
+    }
     if (process.env.GOOGLE_CLIENT_ID) {
       console.log('🔐 Google Sign-In: enabled (GIS ID token via POST /api/auth/google)');
     } else {
