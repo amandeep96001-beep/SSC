@@ -15,6 +15,16 @@ function normalizeOrigin(url) {
   return String(url || '').trim().replace(/\/+$/, '');
 }
 
+/** True for Vercel production + preview hosts (e.g. myapp.vercel.app, myapp-git-main-team.vercel.app) */
+function isVercelOrigin(origin) {
+  try {
+    const { protocol, hostname } = new URL(origin);
+    return protocol === 'https:' && (hostname === 'vercel.app' || hostname.endsWith('.vercel.app'));
+  } catch {
+    return false;
+  }
+}
+
 /** Build allowlist from FRONTEND_URL + optional comma-separated FRONTEND_URLS */
 function getAllowedOrigins() {
   const fromEnv = [
@@ -24,14 +34,21 @@ function getAllowedOrigins() {
     .map(normalizeOrigin)
     .filter(Boolean);
 
-  const localDev = [
+  const bakedIn = [
+    // Always allow the known production frontend (Render FRONTEND_URL is often left as localhost)
+    'https://myexamprep-theta.vercel.app',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:4173',
     'http://127.0.0.1:4173',
   ];
 
-  return [...new Set([...localDev, ...fromEnv])];
+  return [...new Set([...bakedIn, ...fromEnv])];
+}
+
+function isOriginAllowed(origin, allowedOrigins) {
+  const normalized = normalizeOrigin(origin);
+  return allowedOrigins.includes(normalized) || isVercelOrigin(normalized);
 }
 
 export function createApp() {
@@ -55,8 +72,7 @@ export function createApp() {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (!origin) return next();
-    const normalized = normalizeOrigin(origin);
-    if (allowedOrigins.includes(normalized)) return next();
+    if (isOriginAllowed(origin, allowedOrigins)) return next();
     console.warn(`[cors] Blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || '(none)'}`);
     if (req.method === 'OPTIONS') {
       return res.status(403).json({
@@ -71,8 +87,7 @@ export function createApp() {
     origin(origin, callback) {
       // Non-browser clients (curl, server-to-server) send no Origin
       if (!origin) return callback(null, true);
-      const normalized = normalizeOrigin(origin);
-      if (allowedOrigins.includes(normalized)) {
+      if (isOriginAllowed(origin, allowedOrigins)) {
         return callback(null, true);
       }
       // Should rarely hit — blocked above — keep cors from reflecting the origin

@@ -1,5 +1,16 @@
-const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-const BASE_URL = rawApiUrl.endsWith('/api') ? rawApiUrl : `${rawApiUrl}/api`;
+function resolveApiBase() {
+  const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
+  if (fromEnv) {
+    return fromEnv.endsWith('/api') ? fromEnv : `${fromEnv.replace(/\/+$/, '')}/api`;
+  }
+  // Same-origin /api (Vercel rewrite → Render) when no VITE_API_URL is baked in
+  if (typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')) {
+    return '/api';
+  }
+  return 'http://localhost:5000/api';
+}
+
+const BASE_URL = resolveApiBase();
 
 function getAuthHeaders() {
   try {
