@@ -6,61 +6,35 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
-import { useGoogleLogin, useGoogleOAuth } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { showAppToast } from '@/shared/utils/appToast';
 import '../auth.css';
 
 const OTP_LEN = 6;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
-function GoogleSignInButton({ disabled, onCode, onError }) {
-  const { scriptLoadedSuccessfully } = useGoogleOAuth();
-  const startGoogleLogin = useGoogleLogin({
-    flow: 'auth-code',
-    ux_mode: 'popup',
-    scope: 'openid email profile',
-    // Avoid FedCM — many browsers/environments don't support it
-    use_fedcm_for_prompt: false,
-    use_fedcm_for_button: false,
-    onSuccess: async (response) => {
-      if (!response?.code) {
-        onError?.('Google did not return an auth code.');
-        return;
-      }
-      await onCode(response.code);
-    },
-    onError: (err) => {
-      onError?.(err?.error_description || err?.error || 'Google sign-in failed.');
-    },
-    onNonOAuthError: (err) => {
-      const type = err?.type;
-      if (type === 'popup_closed') {
-        onError?.('Google sign-in popup was closed.');
-        return;
-      }
-      if (type === 'popup_failed_to_open') {
-        onError?.('Popup blocked. Allow popups for localhost and try again.');
-        return;
-      }
-      onError?.(type || 'Google sign-in failed.');
-    },
-  });
-
+function GoogleSignInButton({ disabled, onCredential, onError }) {
   return (
-    <button
-      type="button"
-      className="auth-google-btn"
-      disabled={disabled || !scriptLoadedSuccessfully}
-      onClick={() => startGoogleLogin()}
-    >
-      <svg className="auth-google-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-      </svg>
-      <span>{scriptLoadedSuccessfully ? 'Sign in with Google' : 'Loading Google…'}</span>
-    </button>
+    <div className={`auth-google-wrap${disabled ? ' is-disabled' : ''}`}>
+      <GoogleLogin
+        onSuccess={(response) => {
+          if (!response?.credential) {
+            onError?.('Google did not return a credential.');
+            return;
+          }
+          onCredential(response.credential);
+        }}
+        onError={() => {
+          onError?.('Google sign-in failed. Check Authorized JavaScript origins for this site.');
+        }}
+        useOneTap={false}
+        theme="outline"
+        size="large"
+        text="signin_with"
+        shape="rectangular"
+        width="360"
+      />
+    </div>
   );
 }
 
@@ -157,14 +131,14 @@ export function AuthPanel({
     requestAnimationFrame(() => focusOtp(0));
   };
 
-  const handleGoogleCode = async (code) => {
+  const handleGoogleCredential = async (credential) => {
     if (!loginWithGoogle) {
       showAppToast('Google sign-in is not wired up.', { variant: 'error' });
       return;
     }
     setIsSubmitting(true);
     try {
-      const res = await loginWithGoogle({ code });
+      const res = await loginWithGoogle({ credential });
       if (!res.success) {
         showAppToast(res.message || 'Google sign-in failed.', { variant: 'error' });
       }
@@ -176,8 +150,10 @@ export function AuthPanel({
   };
 
   const handleGoogleError = (message) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'this site';
     showAppToast(
-      message || 'Google sign-in failed. Allow popups for localhost, and ensure Authorized JavaScript origins includes http://localhost:5173.',
+      message
+        || `Google sign-in failed. In Google Cloud → Credentials, add ${origin} under Authorized JavaScript origins.`,
       { variant: 'error', durationMs: 10000 },
     );
   };
@@ -783,7 +759,7 @@ export function AuthPanel({
             <div className="auth-divider"><span>or</span></div>
             <GoogleSignInButton
               disabled={isSubmitting}
-              onCode={handleGoogleCode}
+              onCredential={handleGoogleCredential}
               onError={handleGoogleError}
             />
             {import.meta.env.DEV && (
@@ -802,16 +778,19 @@ export function AuthPanel({
                   <li>
                     Under <strong>Authorized JavaScript origins</strong>, add exactly:
                     <code>http://localhost:5173</code>
+                    {' '}and{' '}
+                    <code>https://myexamprep-theta.vercel.app</code>
                   </li>
                   <li>
-                    Copy Client ID + Client Secret into <code>backend/.env</code>, and the same Client ID into{' '}
-                    <code>frontend/.env.local</code> as <code>VITE_GOOGLE_CLIENT_ID</code>
+                    Copy Client ID into <code>backend/.env</code> as <code>GOOGLE_CLIENT_ID</code>, and the same
+                    Client ID into <code>frontend/.env.local</code> as <code>VITE_GOOGLE_CLIENT_ID</code>
+                    (also set both on Render / Vercel)
                   </li>
                   <li>
                     OAuth consent screen → if status is Testing, add your Gmail as a{' '}
                     <strong>Test user</strong>
                   </li>
-                  <li>Allow popups for localhost, then hard-refresh this page</li>
+                  <li>Hard-refresh this page after saving origins</li>
                 </ol>
                 <p className="auth-google-hint">
                   Current Client ID: <code>{GOOGLE_CLIENT_ID}</code>
