@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   GraduationCap, Mail, Lock, Eye, EyeOff, Loader2, Sun, Moon,
