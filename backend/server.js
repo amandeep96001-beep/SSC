@@ -5,8 +5,13 @@ import { connectDB, getDBStatus } from './src/config/db.config.js';
 import { validateEnv } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 
-// Always load backend/.env next to this file (works even when cwd is repo root)
-dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.env') });
+// Local only — on Render, use dashboard env vars (never override with a stray .env)
+if (!process.env.RENDER) {
+  dotenv.config({
+    path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.env'),
+    override: false,
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 
