@@ -144,7 +144,7 @@
   }
 
   .lms-workspace {
-    padding: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px) 12px 8px !important;
+    padding: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px) 8px 8px !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
     min-height: 0 !important;
@@ -247,7 +247,7 @@
 
   .syllabus-page-header {
     margin-bottom: 12px !important;
-    padding-left: var(--mobile-menu-clear, 56px) !important;
+    padding-left: 0 !important;
     box-sizing: border-box !important;
   }
 
@@ -345,8 +345,28 @@
   .workspace-header-sticky {
     margin-bottom: 0 !important;
     padding-bottom: 6px !important;
-    padding-left: var(--mobile-menu-clear, 56px) !important;
+    padding-left: 0 !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
     box-sizing: border-box !important;
+  }
+  .workspace-header-sticky > .section-header,
+  .workspace-header-sticky > .page-header,
+  .syllabus-page-header,
+  .notes-toolbar-header {
+    padding-left: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .workspace-header-sticky .tabs-header,
+  .workspace-header-sticky .tabs-header--scroll {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
   }
   .section-header {
     margin-bottom: 8px !important;

@@ -162,11 +162,15 @@
   gap: 18px;
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding-bottom: 24px;
-  padding-right: 6px;
+  padding-right: 0;
   /* Soft inset scrollbar — doesn't cut the rounded shell */
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--border-color) 80%, transparent) transparent;
@@ -705,5 +709,49 @@
 
   .today-card {
     padding: 14px;
+  }
+
+  .today-focus__hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-left: 0;
+  }
+
+  .today-focus__hero-text {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .today-focus__hero h1 {
+    font-size: 1.45rem;
+    word-break: break-word;
+  }
+
+  .today-focus__sub {
+    max-width: 100%;
+    font-size: 0.9rem;
+  }
+
+  .today-focus__exam-chip {
+    align-self: flex-start;
+    max-width: 100%;
+  }
+
+  .study-block,
+  .study-status-grid,
+  .edp-simple {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .study-block__head--row {
+    flex-wrap: wrap;
+    align-items: center;
   }
 }

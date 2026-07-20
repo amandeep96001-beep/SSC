@@ -65,6 +65,7 @@
   min-height: 100vh;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   overflow-x: hidden;
   background-color: var(--bg-main);
 }
@@ -229,15 +230,15 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-/* Right Workspace container */
+/* Right Workspace container — flex + min-width:0 (never calc(100% - sidebar)) */
 .lms-workspace {
-  flex-grow: 1;
+  flex: 1 1 auto;
   padding: 40px;
   box-sizing: border-box;
-  overflow-x: visible;
+  overflow-x: hidden;
   overflow-y: hidden;
-  max-width: calc(100% - 300px);
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   height: 100vh;
   min-height: 0;
@@ -297,9 +298,12 @@
 /* Quick Statistics Row */
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 28px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .stat-box {
@@ -338,9 +342,13 @@
   color: #f59e0b;
 }
 
-/* Tabs list container */
+/* Tabs list container — page never scrolls horizontally; only .tabs-header--scroll does */
 .tabs-header {
   margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .drill-tabs {
@@ -359,9 +367,13 @@
 
 .tabs-header--scroll {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
+  overscroll-behavior-x: contain;
 }
 
 .tabs-header--scroll::-webkit-scrollbar {
@@ -373,12 +385,26 @@
   border-radius: 4px;
 }
 
-/* Mobile-only: single-row horizontal scroll for tabs */
+/* Mobile-only: single-row horizontal scroll for tabs (contained by .tabs-header--scroll) */
 @media (max-width: 768px) {
+  .tabs-header--scroll {
+    scrollbar-width: none;
+  }
+
+  .tabs-header--scroll::-webkit-scrollbar {
+    display: none;
+  }
+
   .tabs-header--scroll .drill-tabs {
     flex-wrap: nowrap;
     width: max-content;
     max-width: none;
+    overflow: visible;
+  }
+
+  .tabs-header--scroll .drill-tab {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 }
 
@@ -434,12 +460,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 12px 20px;
   margin-bottom: 24px;
-  max-width: 600px;
+  width: 100%;
+  max-width: min(600px, 100%);
+  box-sizing: border-box;
   box-shadow: var(--shadow-card);
 }
 

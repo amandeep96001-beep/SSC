@@ -8,11 +8,12 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   width: 100%;
   max-width: 100%;
   border-radius: 36px;
-  /* visible X so hover shadows/borders aren't chopped; Y scrolls inside children */
-  overflow-x: visible;
+  /* Clip X so wide children (tabs) cannot expand the page; Y scrolls in children */
+  overflow-x: hidden;
   overflow-y: hidden;
   padding: 32px 36px 36px;
   box-sizing: border-box;
@@ -31,17 +32,25 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   height: 100%;
-  overflow-x: visible;
+  overflow-x: hidden;
   overflow-y: hidden;
 }
 
 .workspace-header-sticky {
   flex-shrink: 0;
   padding-bottom: 10px;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: visible;
   position: relative;
   z-index: 2;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .workspace-header-sticky .section-header h1 {
@@ -94,12 +103,16 @@
 .workspace-scrollable-content {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   padding-top: 10px;
   padding-right: 12px;
   padding-left: 4px;
   padding-bottom: 40px;
+  box-sizing: border-box;
 }
 
 /* Custom Scrollbar for workspaces — inset so it clears the 36px radius */

@@ -11,20 +11,28 @@
 @media (max-width: 768px) {
   .lms-container {
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   .lms-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
     z-index: 1050;
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
-    margin: 0;
-    width: min(300px, 86vw);
-    height: 100dvh;
-    height: 100svh;
-    max-height: 100dvh;
+    margin: 0 !important;
+    flex: none !important;
+    width: min(300px, 86vw) !important;
+    max-width: 86vw !important;
+    height: 100dvh !important;
+    height: 100svh !important;
+    max-height: 100dvh !important;
     border-radius: 0 18px 18px 0;
     overflow: hidden;
     display: flex;
@@ -37,10 +45,12 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       inset 0 -2px 16px rgba(0, 0, 0, 0.18),
       inset 4px 0 18px rgba(0, 0, 0, 0.12);
+    pointer-events: none;
   }
 
   .lms-sidebar.mobile-open {
     transform: translateX(0);
+    pointer-events: auto;
   }
 
   .lms-sidebar .sidebar-nav {
@@ -86,8 +96,10 @@
   .lms-workspace {
     max-width: 100%;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-    padding: 0 12px 8px;
+    /* Tight side gutters — no wasted left strip */
+    padding: 0 8px 8px;
     padding-top: calc(var(--mobile-header-h) + env(safe-area-inset-top, 0px) + 4px);
     height: 100dvh;
     max-height: 100dvh;
@@ -156,24 +168,110 @@
   .workspace-card-enclosure {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
-    margin-top: 4px;
+    margin: 4px 0 0;
+    padding: 12px 10px 14px;
+    border-radius: 20px;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
-  /* Keep page titles clear of the floating hamburger */
+  .study-workspace,
+  .drill-workspace,
+  .revision-workspace {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: hidden;
+  }
+
+  .workspace-scrollable-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  /*
+    Hamburger sits ABOVE the card (workspace padding-top clears it).
+    Do NOT add padding-left for menu clear — that was the useless left gap.
+  */
   .workspace-header-sticky,
+  .workspace-header-sticky > .section-header,
+  .workspace-header-sticky > .page-header,
   .syllabus-page-header,
-  .notes-toolbar-header {
-    padding-left: var(--mobile-menu-clear, 56px);
+  .notes-toolbar-header,
+  .today-focus__hero,
+  .admin-workspace > .section-header,
+  .admin-workspace__head {
+    padding-left: 0;
+  }
+
+  .workspace-header-sticky {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .workspace-header-sticky .tabs-header,
+  .workspace-header-sticky .tabs-header--scroll {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    padding-left: 0;
+    box-sizing: border-box;
+  }
+
+  .today-focus,
+  .admin-workspace {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    padding-right: 0;
+  }
+
+  .today-focus__hero,
+  .today-focus__hero-text,
+  .today-focus__grid,
+  .study-block,
+  .study-status-grid,
+  .edp-simple {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
   }
 
   /* Adjust grids for mobile */
-  .stats-row,
   .subjects-grid,
   .options-selector-grid,
   .palette-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .stat-box,
+  .stat-card-premium {
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* Exam Portal fixes */
