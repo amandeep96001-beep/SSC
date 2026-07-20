@@ -50,6 +50,8 @@ router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, 
 
 router.post('/otp/request', otpLimiter, requireDb, otpRequestValidation, validateRequest, requestOtp);
 router.post('/otp/verify', authLimiter, requireDb, otpVerifyValidation, validateRequest, verifyOtp);
+
+// Google Identity Services — frontend sends ID token, backend verifies
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);
 
 router.get('/me', requireAuth, getMe);

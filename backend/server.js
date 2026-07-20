@@ -1,9 +1,12 @@
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { connectDB, getDBStatus } from './src/config/db.config.js';
 import { validateEnv } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 
-dotenv.config();
+// Always load backend/.env next to this file (works even when cwd is repo root)
+dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.env') });
 
 const PORT = process.env.PORT || 5000;
 
@@ -22,6 +25,11 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
+    if (process.env.GOOGLE_CLIENT_ID) {
+      console.log('🔐 Google Sign-In: enabled (GIS ID token via POST /api/auth/google)');
+    } else {
+      console.warn('⚠️ GOOGLE_CLIENT_ID not set — Google Sign-In disabled.');
+    }
     if (!getDBStatus()) {
       console.warn('⚠️ Database not connected — auth and data routes will return 503.');
     }

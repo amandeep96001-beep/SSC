@@ -5,7 +5,7 @@ import OtpChallenge from './otp.model.js';
 import { hashPassword, verifyPassword, isLegacyHash } from './password.util.js';
 import { signToken } from './token.util.js';
 import { sendOtpEmail } from './mail.util.js';
-import { verifyGoogleIdToken } from './google.util.js';
+import { verifyGoogleIdToken, exchangeGoogleAuthCode } from './google.util.js';
 import {
   normalizeEmail,
   isValidEmail,
@@ -426,20 +426,33 @@ export const verifyOtp = async (req, res, next) => {
   }
 };
 
-/** POST /auth/google */
+/**
+ * POST /auth/google
+ * Body: { code } — GIS popup auth code (preferred)
+ *    or { credential } — GIS ID token (legacy button)
+ */
 export const loginWithGoogle = async (req, res, next) => {
   try {
-    const { credential } = req.body;
-    if (!credential) {
+    if (!process.env.GOOGLE_CLIENT_ID?.trim()) {
+      return res.status(503).json({
+        status: 'error',
+        message: 'Google sign-in is not configured on the server (GOOGLE_CLIENT_ID missing).',
+      });
+    }
+
+    const { code, credential } = req.body || {};
+    if (!code && !credential) {
       return res.status(400).json({
         status: 'error',
-        message: 'Google credential is required.',
+        message: 'Google code or credential is required.',
       });
     }
 
     let profile;
     try {
-      profile = await verifyGoogleIdToken(credential);
+      profile = code
+        ? await exchangeGoogleAuthCode(String(code))
+        : await verifyGoogleIdToken(String(credential));
     } catch (err) {
       return res.status(401).json({
         status: 'error',
@@ -451,6 +464,7 @@ export const loginWithGoogle = async (req, res, next) => {
       email: profile.email,
       googleId: profile.googleId,
       displayName: profile.name,
+      emailVerified: true,
     });
     return issueSession(user, res);
   } catch (error) {

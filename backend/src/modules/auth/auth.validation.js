@@ -48,7 +48,14 @@ export const otpVerifyValidation = [
 ];
 
 export const googleAuthValidation = [
-  body('credential').trim().notEmpty().withMessage('Google credential is required.'),
+  body('code').optional({ values: 'falsy' }).trim().isString(),
+  body('credential').optional({ values: 'falsy' }).trim().isString(),
+  body().custom((_, { req }) => {
+    if (!req.body?.code && !req.body?.credential) {
+      throw new Error('Google code or credential is required.');
+    }
+    return true;
+  }),
 ];
 
 export const progressValidation = [

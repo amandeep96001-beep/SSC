@@ -6,44 +6,62 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
+import { useGoogleLogin, useGoogleOAuth } from '@react-oauth/google';
 import { showAppToast } from '@/shared/utils/appToast';
 import '../auth.css';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 const OTP_LEN = 6;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
-function GoogleGlyph() {
-  return (
-    <svg className="auth-google-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  );
-}
-
-function loadGoogleScript() {
-  return new Promise((resolve, reject) => {
-    if (window.google?.accounts?.id) {
-      resolve();
-      return;
-    }
-    const existing = document.getElementById('google-gsi');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      existing.addEventListener('error', reject);
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'google-gsi';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google Sign-In'));
-    document.head.appendChild(script);
+function GoogleSignInButton({ disabled, onCode, onError }) {
+  const { scriptLoadedSuccessfully } = useGoogleOAuth();
+  const startGoogleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    ux_mode: 'popup',
+    scope: 'openid email profile',
+    // Avoid FedCM — many browsers/environments don't support it
+    use_fedcm_for_prompt: false,
+    use_fedcm_for_button: false,
+    onSuccess: async (response) => {
+      if (!response?.code) {
+        onError?.('Google did not return an auth code.');
+        return;
+      }
+      await onCode(response.code);
+    },
+    onError: (err) => {
+      onError?.(err?.error_description || err?.error || 'Google sign-in failed.');
+    },
+    onNonOAuthError: (err) => {
+      const type = err?.type;
+      if (type === 'popup_closed') {
+        onError?.('Google sign-in popup was closed.');
+        return;
+      }
+      if (type === 'popup_failed_to_open') {
+        onError?.('Popup blocked. Allow popups for localhost and try again.');
+        return;
+      }
+      onError?.(type || 'Google sign-in failed.');
+    },
   });
+
+  return (
+    <button
+      type="button"
+      className="auth-google-btn"
+      disabled={disabled || !scriptLoadedSuccessfully}
+      onClick={() => startGoogleLogin()}
+    >
+      <svg className="auth-google-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+      </svg>
+      <span>{scriptLoadedSuccessfully ? 'Sign in with Google' : 'Loading Google…'}</span>
+    </button>
+  );
 }
 
 function maskEmail(email) {
@@ -62,9 +80,7 @@ export function AuthPanel({ loginUser, registerUser, requestOtp, verifyOtp, logi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [debugOtp, setDebugOtp] = useState('');
   const [resendIn, setResendIn] = useState(0);
-  const [googleReady, setGoogleReady] = useState(false);
   const otpRefs = useRef([]);
-  const googleInitRef = useRef(false);
   const { theme, toggleTheme } = useTheme();
   const otpValue = otpDigits.join('');
 
@@ -73,80 +89,6 @@ export function AuthPanel({ loginUser, registerUser, requestOtp, verifyOtp, logi
     const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
     return () => clearTimeout(t);
   }, [resendIn]);
-
-  const handleGoogleCredential = useCallback(async (response) => {
-    if (!response?.credential || !loginWithGoogle) {
-      showAppToast('Google sign-in was cancelled.', { variant: 'warn' });
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const res = await loginWithGoogle(response.credential);
-      if (!res.success) {
-        showAppToast(res.message || 'Unable to sign in with Google.', { variant: 'error' });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [loginWithGoogle]);
-
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID || !loginWithGoogle) {
-      setGoogleReady(false);
-      return undefined;
-    }
-    let cancelled = false;
-    loadGoogleScript()
-      .then(() => {
-        if (cancelled || !window.google?.accounts?.id) return;
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleCredential,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          context: 'signin',
-          ux_mode: 'popup',
-        });
-        googleInitRef.current = true;
-        setGoogleReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) setGoogleReady(false);
-      });
-    return () => { cancelled = true; };
-  }, [handleGoogleCredential, loginWithGoogle]);
-
-  const handleGoogleClick = () => {
-    if (!GOOGLE_CLIENT_ID || !googleReady || !window.google?.accounts?.id) {
-      showAppToast('Add VITE_GOOGLE_CLIENT_ID to enable Google Sign-In.', {
-        variant: 'info',
-        title: 'Google Sign-In',
-      });
-      return;
-    }
-    // Official GIS account chooser (Sign in with Google)
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
-        // Fallback: open FedCM-less button flow via temporary render + click
-        const host = document.createElement('div');
-        host.style.position = 'fixed';
-        host.style.left = '-9999px';
-        document.body.appendChild(host);
-        window.google.accounts.id.renderButton(host, {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'rectangular',
-          logo_alignment: 'left',
-          width: 320,
-        });
-        const btn = host.querySelector('div[role="button"]');
-        if (btn) btn.click();
-        setTimeout(() => host.remove(), 2000);
-      }
-    });
-  };
 
   const focusOtp = (index) => {
     otpRefs.current[index]?.focus();
@@ -201,6 +143,31 @@ export function AuthPanel({ loginUser, registerUser, requestOtp, verifyOtp, logi
       });
     }
     requestAnimationFrame(() => focusOtp(0));
+  };
+
+  const handleGoogleCode = async (code) => {
+    if (!loginWithGoogle) {
+      showAppToast('Google sign-in is not wired up.', { variant: 'error' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await loginWithGoogle({ code });
+      if (!res.success) {
+        showAppToast(res.message || 'Google sign-in failed.', { variant: 'error' });
+      }
+    } catch (err) {
+      showAppToast(err?.message || 'Google sign-in failed.', { variant: 'error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleError = (message) => {
+    showAppToast(
+      message || 'Google sign-in failed. Allow popups for localhost, and ensure Authorized JavaScript origins includes http://localhost:5173.',
+      { variant: 'error', durationMs: 10000 },
+    );
   };
 
   const handleLogin = async (e) => {
@@ -543,18 +510,46 @@ export function AuthPanel({ loginUser, registerUser, requestOtp, verifyOtp, logi
           </form>
         )}
 
-        {mode !== 'verify' && (
+        {mode !== 'verify' && GOOGLE_CLIENT_ID && (
           <>
             <div className="auth-divider"><span>or</span></div>
-            <button
-              type="button"
-              className="auth-google-btn"
-              onClick={handleGoogleClick}
+            <GoogleSignInButton
               disabled={isSubmitting}
-            >
-              <GoogleGlyph />
-              <span>Sign in with Google</span>
-            </button>
+              onCode={handleGoogleCode}
+              onError={handleGoogleError}
+            />
+            {import.meta.env.DEV && (
+              <details className="auth-google-setup">
+                <summary>Google sign-in setup (required once)</summary>
+                <ol>
+                  <li>
+                    Open{' '}
+                    <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">
+                      Google Cloud → Credentials
+                    </a>
+                  </li>
+                  <li>
+                    Create / open an OAuth client of type <strong>Web application</strong>
+                  </li>
+                  <li>
+                    Under <strong>Authorized JavaScript origins</strong>, add exactly:
+                    <code>http://localhost:5173</code>
+                  </li>
+                  <li>
+                    Copy Client ID + Client Secret into <code>backend/.env</code>, and the same Client ID into{' '}
+                    <code>frontend/.env.local</code> as <code>VITE_GOOGLE_CLIENT_ID</code>
+                  </li>
+                  <li>
+                    OAuth consent screen → if status is Testing, add your Gmail as a{' '}
+                    <strong>Test user</strong>
+                  </li>
+                  <li>Allow popups for localhost, then hard-refresh this page</li>
+                </ol>
+                <p className="auth-google-hint">
+                  Current Client ID: <code>{GOOGLE_CLIENT_ID}</code>
+                </p>
+              </details>
+            )}
           </>
         )}
       </div>

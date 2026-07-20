@@ -23,5 +23,6 @@ export function getEnvHealth() {
     hasMongoUri: Boolean(process.env.MONGODB_URI?.trim()),
     hasJwtSecret: Boolean(process.env.JWT_SECRET?.trim()),
     hasFrontendUrl: Boolean(process.env.FRONTEND_URL?.trim()),
+    hasGoogleClientId: Boolean(process.env.GOOGLE_CLIENT_ID?.trim()),
   };
 }

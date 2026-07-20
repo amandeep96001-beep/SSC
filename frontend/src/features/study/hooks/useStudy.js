@@ -211,8 +211,11 @@ export function useStudy() {
     return { success: false, message: verifyOtpApi.error || 'OTP verification failed.' };
   }, [verifyOtpApi]);
 
-  const loginWithGoogle = useCallback(async (credential) => {
-    const res = await googleAuthApi.execute({ credential });
+  const loginWithGoogle = useCallback(async (payload) => {
+    const body = typeof payload === 'string'
+      ? { credential: payload }
+      : payload;
+    const res = await googleAuthApi.execute(body);
     if (res.success && res.data?.data) {
       persistUser(res.data.data);
       return { success: true };
