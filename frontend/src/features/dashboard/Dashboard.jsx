@@ -63,6 +63,7 @@ export function Dashboard() {
     contentSource,
     setContentSource,
     isMineMode,
+    canManageContent,
     subjects,
     selectedSubject,
     topicsList,
@@ -596,7 +597,11 @@ export function Dashboard() {
     }
     const res = await addCustomSubject(newSubjectName.trim());
     if (res.success) {
-      setSubjectFormSuccess('Subject created! Add topics next.');
+      setSubjectFormSuccess(
+        canManageContent && !isMineMode
+          ? 'Official subject created! Add topics next, then map it in Admin.'
+          : 'Subject created! Add topics next.'
+      );
       setNewSubjectName('');
       setTimeout(() => {
         setSubjectModalOpen(false);
@@ -629,7 +634,11 @@ export function Dashboard() {
 
     const res = await addCustomTopic(payload);
     if (res.success) {
-      setTopicAddSuccess('Topic saved to your notes!');
+      setTopicAddSuccess(
+        canManageContent && !isMineMode
+          ? 'Official topic published for all students!'
+          : 'Topic saved to your notes!'
+      );
       setNewTopicName('');
       setNewTopicSyllabus('');
       setNewTopicNotes('');
@@ -793,6 +802,7 @@ export function Dashboard() {
               contentSource={contentSource}
               setContentSource={setContentSource}
               isMineMode={isMineMode}
+              canManageContent={canManageContent}
               subjects={subjects}
               selectSubject={selectSubject}
               selectedSubject={selectedSubject}
@@ -878,13 +888,18 @@ export function Dashboard() {
         <div className="modal-overlay" onClick={() => setSubjectModalOpen(false)}>
           <div className="modal-content-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Create Your Subject</h3>
+              <h3>{canManageContent && !isMineMode ? 'Create Official Subject' : 'Create Your Subject'}</h3>
               <button className="btn-close-modal" onClick={() => setSubjectModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
             <form className="modal-form" onSubmit={handleCreateSubjectSubmit}>
               <div className="form-group">
+                {canManageContent && !isMineMode && (
+                  <p style={{ margin: '0 0 10px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    This subject will be part of the official syllabus (all students can read it). Map it to an exam in Admin.
+                  </p>
+                )}
                 <label>Subject Name *</label>
                 <input
                   type="text"

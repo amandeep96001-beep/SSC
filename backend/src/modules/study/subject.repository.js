@@ -40,6 +40,10 @@ class SubjectRepository {
     return await Subject.findOneAndDelete({ name, ownerId });
   }
 
+  async deleteGlobalByName(name) {
+    return await Subject.findOneAndDelete({ name, ...globalOwnerFilter });
+  }
+
   async save(subject) {
     return await subject.save();
   }

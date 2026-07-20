@@ -77,6 +77,11 @@
     border: none;
     padding: 0;
     cursor: pointer;
+    /* Prevent Android blue tap flash on hardware-back gesture */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
   }
 
   /* Reading comfort on phones */
@@ -186,14 +191,13 @@
   }
 
   .subject-icon-box {
-    width: 46px !important;
-    height: 46px !important;
-    border-radius: 14px !important;
-    margin-right: 12px !important;
+    width: 50px !important;
+    height: 50px !important;
+    border-radius: 16px !important;
   }
 
   .subject-material-icon {
-    font-size: 24px !important;
+    font-size: 26px !important;
   }
 
   .subject-content h3 {

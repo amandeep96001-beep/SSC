@@ -80,6 +80,11 @@
   cursor: pointer;
   backdrop-filter: blur(6px);
   pointer-events: auto;
+  /* Prevent Android blue tap flash on hardware-back gesture */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
 }
 
 .notes-fab-modal {
@@ -187,6 +192,13 @@
 .notes-fab-modal button:hover:not(:disabled),
 .notes-fab-modal button:active:not(:disabled) {
   transform: none;
+}
+
+/* Prevent blue tap highlight on Android for all modal buttons */
+.notes-fab-modal button,
+.notes-fab-backdrop {
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 /* Panel */

@@ -44,6 +44,7 @@ export function SyllabusWorkspace({
   contentSource,
   setContentSource,
   isMineMode,
+  canManageContent = false,
   subjects,
   selectSubject,
   selectedSubject,
@@ -63,6 +64,7 @@ export function SyllabusWorkspace({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [noQuestionsFlash, setNoQuestionsFlash] = useState(false);
   const [localNotesHtml, setLocalNotesHtml] = useState(() => {
     if (!activeNotes) return '';
     const stored = localStorage.getItem(`ssc_notes_${activeNotes.id}`);
@@ -273,8 +275,9 @@ export function SyllabusWorkspace({
     localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
     setLocalNotesHtml(newHtml);
 
-    // Official syllabus is read-only on server; personal edits stay local
-    if (!activeNotes.isOwned) {
+    const isAdminUser = user?.role === 'admin';
+    // Official syllabus: normal users keep local-only edits; admin saves to server
+    if (!activeNotes.isOwned && !isAdminUser) {
       if (closeEditor) setIsEditingNotes(false);
       return { success: true, localOnly: true };
     }
@@ -286,7 +289,7 @@ export function SyllabusWorkspace({
     });
     if (res.success && closeEditor) setIsEditingNotes(false);
     return res;
-  }, [activeNotes, updateCustomTopic]);
+  }, [activeNotes, updateCustomTopic, user?.role]);
 
   const handleSaveNotes = useCallback(async () => {
     if (!notesRef.current) return;
@@ -430,10 +433,12 @@ export function SyllabusWorkspace({
                 <p>
                   {isMineMode
                     ? 'Build your own subjects, topics, notes, and practice questions.'
-                    : 'Study from your institute\'s published syllabus for your target exam — notes and topic tests.'}
+                    : canManageContent
+                      ? 'Publish official subjects, topics, and notes for all students.'
+                      : 'Study from your institute\'s published syllabus for your target exam — notes and topic tests.'}
                 </p>
               </div>
-              {isMineMode && (
+              {canManageContent && (
                 <div className="syllabus-page-header__actions">
                   <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
                     <Plus size={16} /> Add Subject
@@ -485,10 +490,12 @@ export function SyllabusWorkspace({
                         <p>
                           {isMineMode
                             ? 'Your custom topics, notes, and practice questions.'
-                            : `${visual.label} — open notes and try a timed topic test.`}
+                            : canManageContent
+                              ? 'Official subject — add topics and notes for students.'
+                              : `${visual.label} — open notes and try a timed topic test.`}
                         </p>
                       </div>
-                      {isMineMode && (
+                      {canManageContent && (
                         <button
                           type="button"
                           className="btn-topic-action delete subject-delete-btn"
@@ -505,9 +512,13 @@ export function SyllabusWorkspace({
               </div>
             ) : (
               <div className="empty-syllabus empty-syllabus--cta">
-                {isMineMode ? (
+                {canManageContent ? (
                   <>
-                    <p>No personal subjects yet. Create one and add your own topics & questions.</p>
+                    <p>
+                      {isMineMode
+                        ? 'No personal subjects yet. Create one and add your own topics & questions.'
+                        : 'No official subjects yet. Add subjects, then map them to exams in Admin.'}
+                    </p>
                     <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
                       <Plus size={16} /> Create your first subject
                     </button>
@@ -531,14 +542,16 @@ export function SyllabusWorkspace({
                 <p>
                   {isMineMode
                     ? 'Add topics with notes and MCQs — fully under your control.'
-                    : 'Open a topic for revision notes, then attempt a timed speed test.'}
+                    : canManageContent
+                      ? 'Add official topics with notes and MCQs for all students.'
+                      : 'Open a topic for revision notes, then attempt a timed speed test.'}
                 </p>
               </div>
               <div className="syllabus-page-header__actions">
                 <button type="button" className="btn-back" onClick={() => setActiveView('subjects')}>
                   <ArrowLeft size={16} strokeWidth={2} /> All Subjects
                 </button>
-                {isMineMode && (
+                {canManageContent && (
                   <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
                     <Plus size={16} /> Add Topic
                   </button>
@@ -555,7 +568,7 @@ export function SyllabusWorkspace({
                 const status = progressRecord?.status || 'gray';
                 const score = progressRecord?.score;
                 const maxScore = progressRecord?.maxScore || 50;
-                const canManage = isMineMode && topic.isOwned;
+                const canManage = canManageContent && (isMineMode ? topic.isOwned : true);
 
                 return (
                   <div 
@@ -611,9 +624,13 @@ export function SyllabusWorkspace({
               })
             ) : (
               <div className="empty-syllabus empty-syllabus--cta">
-                {isMineMode ? (
+                {canManageContent ? (
                   <>
-                    <p>No topics in this subject yet. Add notes and practice questions.</p>
+                    <p>
+                      {isMineMode
+                        ? 'No topics in this subject yet. Add notes and practice questions.'
+                        : 'No official topics yet. Add notes and practice questions for students.'}
+                    </p>
                     <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
                       <Plus size={16} /> Add your first topic
                     </button>
@@ -639,8 +656,11 @@ export function SyllabusWorkspace({
                   {activeNotes.isOwned ? 'My Notes' : 'Official Syllabus'} · Revision Notes
                 </span>
                 <h1>{activeNotes.name}</h1>
-                {!activeNotes.isOwned && (
+                {!activeNotes.isOwned && user?.role !== 'admin' && (
                   <p className="notes-local-hint">Highlights & edits on official notes stay on this device only.</p>
+                )}
+                {!activeNotes.isOwned && user?.role === 'admin' && (
+                  <p className="notes-local-hint">You are editing the official syllabus — changes save for all students.</p>
                 )}
               </div>
               <div className="syllabus-page-header__actions notes-toolbar-actions">
@@ -697,7 +717,14 @@ export function SyllabusWorkspace({
                     <button type="button" className="notes-action-btn" onClick={handleResetLocalEdits}>
                       <RotateCcw size={16} /> Reset local edits
                     </button>
-                    <button type="button" className="btn-take-test" onClick={() => { startTest(); setShowActionsMenu(false); }}>
+                    <button type="button" className="btn-take-test" onClick={async () => {
+                      const res = await startTest();
+                      setShowActionsMenu(false);
+                      if (res?.noQuestions) {
+                        setNoQuestionsFlash(true);
+                        setTimeout(() => setNoQuestionsFlash(false), 4000);
+                      }
+                    }}>
                       <ClipboardList size={16} />
                       Take Topic Test
                     </button>
@@ -896,11 +923,30 @@ export function SyllabusWorkspace({
                 />
 
                 <footer className="notes-sheet-footer">
-                  <p className="notes-footer-hint">Finished reading? Test yourself on this topic.</p>
-                  <button type="button" className="btn-take-test notes-cta-btn" onClick={startTest}>
-                    <ClipboardList size={18} />
-                    Take Topic Test
-                  </button>
+                  {noQuestionsFlash ? (
+                    <div className="notes-no-questions-msg">
+                      <span>📭 No practice questions available for this topic yet.</span>
+                      <p>The admin hasn't added MCQs here — check back later or switch to another topic.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="notes-footer-hint">Finished reading? Test yourself on this topic.</p>
+                      <button
+                        type="button"
+                        className="btn-take-test notes-cta-btn"
+                        onClick={async () => {
+                          const res = await startTest();
+                          if (res?.noQuestions) {
+                            setNoQuestionsFlash(true);
+                            setTimeout(() => setNoQuestionsFlash(false), 4000);
+                          }
+                        }}
+                      >
+                        <ClipboardList size={18} />
+                        Take Topic Test
+                      </button>
+                    </>
+                  )}
                 </footer>
                 </div>
               </article>

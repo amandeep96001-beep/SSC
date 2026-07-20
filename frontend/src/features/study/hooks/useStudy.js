@@ -51,6 +51,33 @@ export function useStudy() {
     }
   });
 
+  // Refresh role/profile from server so admin promotions apply without re-register
+  useEffect(() => {
+    const token = localStorage.getItem('ssc_token');
+    if (!token || !user) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiService.get('/auth/me');
+        const profile = res?.data;
+        if (!cancelled && profile?.username) {
+          const next = {
+            ...user,
+            ...profile,
+            role: profile.role || user.role || 'user'
+          };
+          localStorage.setItem('ssc_user', JSON.stringify(next));
+          setUser(next);
+        }
+      } catch {
+        // keep cached session
+      }
+    })();
+    return () => { cancelled = true; };
+    // only on mount / when token appears
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Topic Notes view details
   const [topicsList, setTopicsList] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState(null);
@@ -80,7 +107,11 @@ export function useStudy() {
   const getTestApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/test`), []));
   const addTopicApi = useApi(useCallback(({ subjectName, body }) => apiService.post(`/study/subjects/${encodeURIComponent(subjectName)}/topics`, body), []));
   const addSubjectApi = useApi(useCallback((body) => apiService.post('/study/subjects', body), []));
-  const deleteSubjectApi = useApi(useCallback((subjectName) => apiService.delete(`/study/subjects/${encodeURIComponent(subjectName)}`), []));
+  const deleteSubjectApi = useApi(useCallback(({ name, scope } = {}) => {
+    const subjectName = typeof name === 'string' ? name : String(name || '');
+    const q = scope === 'global' ? '?scope=global' : '';
+    return apiService.delete(`/study/subjects/${encodeURIComponent(subjectName)}${q}`);
+  }, []));
 
   const loginApi = useApi(useCallback((body) => apiService.post('/auth/login', body), []));
   const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
@@ -316,22 +347,32 @@ export function useStudy() {
   }, [user, updateMockProgressApi]);
 
   const startTest = useCallback(async () => {
-    if (!selectedTopicId) return;
+    if (!selectedTopicId) return { success: false };
     const result = await getTestApi.execute(selectedTopicId);
     if (result.success && result.data.data) {
-      const qLen = result.data.data.length;
-      setTestQuestions(result.data.data);
+      const questions = result.data.data;
+      // Filter out the auto-seeded placeholder question
+      const realQuestions = questions.filter(q =>
+        !q.q?.startsWith('Syllabus Check:')
+      );
+      if (realQuestions.length === 0) {
+        return { success: false, noQuestions: true };
+      }
+      const qLen = realQuestions.length;
+      setTestQuestions(realQuestions);
       setCurrentQuestionIdx(0);
       setSelectedAnswers(Array(qLen).fill(null));
 
       const initialStatuses = Array(qLen).fill('not-visited');
-      if (qLen > 0) initialStatuses[0] = 'not-answered';
+      initialStatuses[0] = 'not-answered';
       setQuestionStatuses(initialStatuses);
 
       setTimer(900);
       startTimeRef.current = Date.now();
       setActiveView('test');
+      return { success: true };
     }
+    return { success: false };
   }, [selectedTopicId, getTestApi]);
 
   const cancelTest = useCallback(() => {
@@ -453,24 +494,37 @@ export function useStudy() {
 
   const addCustomTopic = useCallback(async (topicData) => {
     if (!selectedSubject) return { success: false, message: 'No active subject selected.' };
-    if (contentSourceRef.current !== 'mine') {
+    const isAdminUser = user?.role === 'admin';
+    const source = contentSourceRef.current;
+    if (source !== 'mine' && !(source === 'global' && isAdminUser)) {
       return { success: false, message: 'Switch to My Notes to create custom topics.' };
     }
+    const body = source === 'global' && isAdminUser
+      ? { ...topicData, scope: 'global' }
+      : topicData;
     const result = await addTopicApi.execute({
       subjectName: selectedSubject,
-      body: topicData
+      body
     });
     if (result.success && result.data.data) {
       await refreshTopics();
       return { success: true };
     }
     return { success: false, message: addTopicApi.error || 'Failed to create custom topic.' };
-  }, [selectedSubject, addTopicApi, refreshTopics]);
+  }, [selectedSubject, addTopicApi, refreshTopics, user?.role]);
 
   const addCustomSubject = useCallback(async (name) => {
-    const result = await addSubjectApi.execute({ name });
+    const isAdminUser = user?.role === 'admin';
+    const source = contentSourceRef.current;
+    const body = (source === 'global' && isAdminUser)
+      ? { name, scope: 'global' }
+      : { name };
+
+    const result = await addSubjectApi.execute(body);
     if (result.success && result.data?.data) {
-      if (contentSourceRef.current !== 'mine') {
+      if (body.scope === 'global') {
+        await fetchSubjects('global');
+      } else if (contentSourceRef.current !== 'mine') {
         await setContentSource('mine');
       } else {
         await fetchSubjects('mine');
@@ -478,12 +532,17 @@ export function useStudy() {
       return { success: true, data: result.data.data };
     }
     return { success: false, message: addSubjectApi.error || 'Failed to create subject.' };
-  }, [addSubjectApi, setContentSource, fetchSubjects]);
+  }, [addSubjectApi, setContentSource, fetchSubjects, user?.role]);
 
   const deleteCustomSubject = useCallback(async (subjectName) => {
-    const result = await deleteSubjectApi.execute(subjectName);
+    const isAdminUser = user?.role === 'admin';
+    const source = contentSourceRef.current;
+    const result = await deleteSubjectApi.execute({
+      name: subjectName,
+      scope: source === 'global' && isAdminUser ? 'global' : undefined
+    });
     if (result.success) {
-      await fetchSubjects('mine');
+      await fetchSubjects(source);
       if (selectedSubject === subjectName) {
         setSelectedSubject(null);
         setTopicsList([]);
@@ -492,7 +551,7 @@ export function useStudy() {
       return { success: true };
     }
     return { success: false, message: deleteSubjectApi.error || 'Failed to delete subject.' };
-  }, [deleteSubjectApi, fetchSubjects, selectedSubject]);
+  }, [deleteSubjectApi, fetchSubjects, selectedSubject, user?.role]);
 
   const updateCustomTopic = useCallback(async (topicId, topicData) => {
     const result = await updateTopicApi.execute({
@@ -545,6 +604,9 @@ export function useStudy() {
   }, [examId, examSubjects, contentSource, selectedSubject, activeView]);
 
   const isMineMode = contentSource === 'mine';
+  const isAdminUser = user?.role === 'admin';
+  /** Admin can manage Official Syllabus; anyone can manage My Notes */
+  const canManageContent = isMineMode || (contentSource === 'global' && isAdminUser);
 
   return {
     activeView,
@@ -552,6 +614,8 @@ export function useStudy() {
     contentSource,
     setContentSource,
     isMineMode,
+    canManageContent,
+    isAdminUser,
     subjects,
     selectedSubject,
     topicsList,

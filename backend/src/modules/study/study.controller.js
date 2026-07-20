@@ -21,6 +21,24 @@ function isUserOwned(doc, userId) {
   return Boolean(doc?.ownerId && doc.ownerId === userId);
 }
 
+function isAdmin(req) {
+  return req.user?.role === 'admin';
+}
+
+/** Official content: no ownerId. Admin can manage; owner can manage personal. */
+function canManageTopic(topic, req) {
+  if (isUserOwned(topic, req.user.id)) return true;
+  if (isAdmin(req) && !topic?.ownerId) return true;
+  return false;
+}
+
+function slugifyId(parts) {
+  return String(parts)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export const getSubjects = async (req, res, next) => {
   try {
     const source = parseSource(req);
@@ -95,13 +113,35 @@ export const addSubject = async (req, res, next) => {
 export const deleteSubject = async (req, res, next) => {
   try {
     const { subjectName } = req.params;
+    const scope = String(req.query.scope || req.body?.scope || req.query.source || '').toLowerCase();
+
+    // Explicit official delete (admin only)
+    if (scope === 'global') {
+      if (!isAdmin(req)) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Admin access required to delete official subjects.'
+        });
+      }
+      const deleted = await subjectRepository.deleteGlobalByName(subjectName);
+      if (!deleted) {
+        return res.status(404).json({ status: 'error', message: 'Official subject not found.' });
+      }
+      const topicDocs = await topicRepository.findIdsBySubjectAndOwner(subjectName, null);
+      const topicIds = topicDocs.map((t) => t.id);
+      await questionRepository.deleteByTopicIds(topicIds);
+      await topicRepository.deleteBySubjectAndOwner(subjectName, null);
+      return res.json({ status: 'success', message: 'Official subject and related topics deleted.' });
+    }
+
+    // Personal subject delete (owner only)
     const deleted = await subjectRepository.deleteByNameAndOwner(subjectName, req.user.id);
     if (!deleted) {
       return res.status(404).json({ status: 'error', message: 'Subject not found or not owned by you.' });
     }
 
     const topicDocs = await topicRepository.findIdsBySubjectAndOwner(subjectName, req.user.id);
-    const topicIds = topicDocs.map(t => t.id);
+    const topicIds = topicDocs.map((t) => t.id);
     await questionRepository.deleteByTopicIds(topicIds);
     await topicRepository.deleteBySubjectAndOwner(subjectName, req.user.id);
 
@@ -203,6 +243,7 @@ export const addTopic = async (req, res, next) => {
   try {
     const { subjectName } = req.params;
     const userId = req.user.id;
+    const wantGlobal = String(req.body?.scope || '').toLowerCase() === 'global';
 
     const dto = new TopicDto(req.body);
     const errors = dto.validate();
@@ -210,7 +251,63 @@ export const addTopic = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
     }
 
-    // Custom topics only under the user's own subjects
+    if (wantGlobal) {
+      if (!isAdmin(req)) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Admin access required to create official topics.'
+        });
+      }
+
+      const subject = await subjectRepository.findByName(subjectName, true, null);
+      if (!subject) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Official subject not found. Create the official subject first.'
+        });
+      }
+
+      const existingTopics = await topicRepository.findBySubjectName(subjectName, null);
+      const rawId = slugifyId(`${subjectName}-${dto.name}`);
+      const finalId = existingTopics.some((t) => t.id === rawId)
+        ? `${rawId}-${Date.now()}`
+        : rawId;
+
+      const newTopic = {
+        id: finalId,
+        subjectName,
+        name: dto.name,
+        syllabus: dto.syllabus || 'Official syllabus topic.',
+        notes: dto.notes,
+        ownerId: null
+      };
+
+      await topicRepository.create(newTopic);
+
+      const seedQuestions = Array.isArray(dto.questions) && dto.questions.length > 0
+        ? dto.questions.map((q) => ({ ...q, topicId: finalId }))
+        : [{
+            topicId: finalId,
+            q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+            o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+            a: 0,
+            e: 'Seeded question to verify study progress for this official topic.'
+          }];
+
+      await questionRepository.insertMany(seedQuestions);
+
+      return res.status(201).json({
+        status: 'success',
+        data: {
+          id: finalId,
+          name: dto.name,
+          syllabus: newTopic.syllabus,
+          isOwned: false
+        }
+      });
+    }
+
+    // Personal topics only under the user's own subjects
     const subject = await subjectRepository.findByName(subjectName, true, userId);
     if (!subject) {
       return res.status(404).json({
@@ -221,7 +318,7 @@ export const addTopic = async (req, res, next) => {
 
     const existingTopics = await topicRepository.findBySubjectName(subjectName, userId);
     const rawId = `u-${userId.slice(-6)}-${subjectName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const finalId = existingTopics.some(t => t.id === rawId)
+    const finalId = existingTopics.some((t) => t.id === rawId)
       ? `${rawId}-${Date.now()}`
       : rawId;
 
@@ -237,7 +334,7 @@ export const addTopic = async (req, res, next) => {
     await topicRepository.create(newTopic);
 
     const seedQuestions = Array.isArray(dto.questions) && dto.questions.length > 0
-      ? dto.questions.map(q => ({ ...q, topicId: finalId }))
+      ? dto.questions.map((q) => ({ ...q, topicId: finalId }))
       : [{
           topicId: finalId,
           q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
@@ -277,7 +374,7 @@ export const updateTopic = async (req, res, next) => {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
-    if (!isUserOwned(topic, req.user.id)) {
+    if (!canManageTopic(topic, req)) {
       return res.status(403).json({
         status: 'error',
         message: 'Official syllabus topics are read-only. Switch to My Notes to edit your own content.'
@@ -293,13 +390,18 @@ export const updateTopic = async (req, res, next) => {
     await topicRepository.update(topicId, updateData);
 
     if (dto.questions.length > 0) {
-      const qsToInsert = dto.questions.map(q => ({ ...q, topicId }));
+      const qsToInsert = dto.questions.map((q) => ({ ...q, topicId }));
       await questionRepository.insertMany(qsToInsert);
     }
 
     res.json({
       status: 'success',
-      data: { id: topicId, name: dto.name, syllabus: updateData.syllabus, isOwned: true }
+      data: {
+        id: topicId,
+        name: dto.name,
+        syllabus: updateData.syllabus,
+        isOwned: isUserOwned(topic, req.user.id)
+      }
     });
   } catch (error) {
     next(error);
@@ -315,7 +417,7 @@ export const deleteTopic = async (req, res, next) => {
       return res.status(404).json({ status: 'error', message: 'Topic not found.' });
     }
 
-    if (!isUserOwned(topic, req.user.id)) {
+    if (!canManageTopic(topic, req)) {
       return res.status(403).json({
         status: 'error',
         message: 'Official syllabus topics cannot be deleted.'

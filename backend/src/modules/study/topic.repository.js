@@ -30,10 +30,22 @@ class TopicRepository {
   }
 
   async deleteBySubjectAndOwner(subjectName, ownerId) {
+    if (ownerId == null) {
+      return await Topic.deleteMany({
+        subjectName,
+        $or: [{ ownerId: null }, { ownerId: { $exists: false } }]
+      });
+    }
     return await Topic.deleteMany({ subjectName, ownerId });
   }
 
   async findIdsBySubjectAndOwner(subjectName, ownerId) {
+    if (ownerId == null) {
+      return await Topic.find({
+        subjectName,
+        $or: [{ ownerId: null }, { ownerId: { $exists: false } }]
+      }).select('id').lean();
+    }
     return await Topic.find({ subjectName, ownerId }).select('id').lean();
   }
 

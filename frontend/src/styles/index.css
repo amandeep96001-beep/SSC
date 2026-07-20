@@ -224,6 +224,8 @@ body {
   letter-spacing: -0.011em;
   font-feature-settings: 'ss01' on, 'cv11' on;
   transition: background-color 0.3s ease, color 0.3s ease;
+  /* Eliminate Android blue tap flash globally */
+  -webkit-tap-highlight-color: transparent;
 }
 
 #root {

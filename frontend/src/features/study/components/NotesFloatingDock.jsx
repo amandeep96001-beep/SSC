@@ -47,8 +47,21 @@ export function NotesFloatingDock({
     if (!open || !lockBodyScroll) return undefined;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [open, lockBodyScroll]);
+
+  // Close panel on Android hardware back (popstate) when open
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPopState = () => {
+      setOpen(false);
+      refreshCount();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [open, refreshCount]);
 
   useEffect(() => {
     if (!open) return undefined;
