@@ -17,14 +17,5 @@ export default defineConfig({
     host: 'localhost',
     port: 5173,
     strictPort: true,
-    headers: {
-      // Lets Google GIS / OAuth talk back to the opener without COOP blocking window.closed
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-    },
-  },
-  preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-    },
   },
 });
