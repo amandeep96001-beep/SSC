@@ -3,6 +3,7 @@ import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot }
 import { useExam } from '@/shared/context/useExam';
 import { APP_NAME } from '@/shared/brand';
 import { ExamDatePicker } from '@/shared/components/ui/ExamDatePicker';
+import { filterProgressForExam, latestProgressByTopic } from '@/shared/utils/examProgress';
 import '@/shared/components/ui/exam-date-picker.css';
 
 function topicLabel(topicId) {
@@ -33,6 +34,7 @@ export function TodayFocusWorkspace({
 }) {
   const {
     exam,
+    examId,
     examDate,
     setExamDate,
     examSubjects,
@@ -45,9 +47,24 @@ export function TodayFocusWorkspace({
 
   const [draft, setDraft] = useState('');
 
-  const progress = user?.progress || [];
-  const strong = progress.filter((p) => p.status === 'green');
-  const remaining = progress.filter((p) => p.status === 'red' || p.status === 'yellow');
+  const examProgress = useMemo(
+    () => filterProgressForExam(user?.progress || [], { examId, examSubjects }),
+    [user?.progress, examId, examSubjects]
+  );
+
+  const latestByTopic = useMemo(
+    () => latestProgressByTopic(examProgress),
+    [examProgress]
+  );
+
+  const strong = useMemo(
+    () => latestByTopic.filter((p) => p.status === 'green'),
+    [latestByTopic]
+  );
+  const remaining = useMemo(
+    () => latestByTopic.filter((p) => p.status === 'red' || p.status === 'yellow'),
+    [latestByTopic]
+  );
   const openTargets = targets.filter((t) => !t.done);
   const doneTargets = targets.filter((t) => t.done);
 
@@ -167,7 +184,11 @@ export function TodayFocusWorkspace({
             <p>{strong.length} topic{strong.length === 1 ? '' : 's'} with high scores on topic tests.</p>
           </div>
           {strong.length === 0 ? (
-            <p className="study-empty">Complete topic tests to build your strong list.</p>
+            <p className="study-empty">
+              {examSubjects.length === 0
+                ? `No subjects mapped for ${exam.name} yet — ask admin to add them.`
+                : `Complete ${exam.name} topic tests to build your strong list.`}
+            </p>
           ) : (
             <ul className="study-status-list study-status-list--scroll">
               {strong.map((p) => (
@@ -187,7 +208,11 @@ export function TodayFocusWorkspace({
             <p>Weaker topic-test scores — separate from weak vocabulary.</p>
           </div>
           {remaining.length === 0 ? (
-            <p className="study-empty">No weak topics from topic tests yet.</p>
+            <p className="study-empty">
+              {examSubjects.length === 0
+                ? `Map subjects for ${exam.name} to track weak topics.`
+                : `No weak ${exam.name} topics from topic tests yet.`}
+            </p>
           ) : (
             <ul className="study-status-list study-status-list--scroll">
               {remaining.map((p) => (

@@ -6,15 +6,29 @@ import { apiService } from '@/shared/services/apiService';
 const STORAGE_KEY = 'examprep_target_exam';
 const DATE_KEY = 'examprep_exam_date';
 const ONBOARD_KEY = 'examprep_exam_onboarded';
-const TARGETS_KEY = 'examprep_study_targets';
+const TARGETS_KEY = 'examprep_study_targets_by_exam';
 
-function loadTargets() {
+function loadTargetsByExam() {
   try {
     const raw = localStorage.getItem(TARGETS_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    }
+    // Migrate legacy flat array → SSC bucket
+    const legacy = localStorage.getItem('examprep_study_targets');
+    if (legacy) {
+      const list = JSON.parse(legacy);
+      if (Array.isArray(list)) {
+        const migrated = { ssc: list };
+        localStorage.setItem(TARGETS_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+    }
   } catch {
-    return [];
+    /* ignore */
   }
+  return {};
 }
 
 function defaultSubjectsMap() {
@@ -30,12 +44,13 @@ export function ExamProvider({ children }) {
   const [examDate, setExamDateState] = useState(() => localStorage.getItem(DATE_KEY) || '');
   const [onboarded, setOnboarded] = useState(() => localStorage.getItem(ONBOARD_KEY) === '1');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [targets, setTargets] = useState(loadTargets);
+  const [targetsByExam, setTargetsByExam] = useState(loadTargetsByExam);
   const [subjectsByExam, setSubjectsByExam] = useState(defaultSubjectsMap);
 
   const exam = useMemo(() => getExamProfile(examId), [examId]);
   const daysLeft = useMemo(() => daysUntil(examDate), [examDate]);
   const examSubjects = subjectsByExam[examId] || exam.subjectsFocus || [];
+  const targets = targetsByExam[examId] || [];
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, examId);
@@ -47,8 +62,8 @@ export function ExamProvider({ children }) {
   }, [examDate]);
 
   useEffect(() => {
-    localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
-  }, [targets]);
+    localStorage.setItem(TARGETS_KEY, JSON.stringify(targetsByExam));
+  }, [targetsByExam]);
 
   const refreshExamConfigs = useCallback(async () => {
     try {
@@ -88,19 +103,37 @@ export function ExamProvider({ children }) {
   const addTarget = useCallback((text) => {
     const label = String(text || '').trim();
     if (!label) return;
-    setTargets((prev) => [
-      { id: `t-${Date.now()}`, label, done: false, createdAt: Date.now() },
-      ...prev,
-    ]);
-  }, []);
+    setTargetsByExam((prev) => {
+      const current = prev[examId] || [];
+      return {
+        ...prev,
+        [examId]: [
+          { id: `t-${Date.now()}`, label, done: false, createdAt: Date.now() },
+          ...current,
+        ],
+      };
+    });
+  }, [examId]);
 
   const toggleTarget = useCallback((id) => {
-    setTargets((prev) => prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-  }, []);
+    setTargetsByExam((prev) => {
+      const current = prev[examId] || [];
+      return {
+        ...prev,
+        [examId]: current.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+      };
+    });
+  }, [examId]);
 
   const removeTarget = useCallback((id) => {
-    setTargets((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+    setTargetsByExam((prev) => {
+      const current = prev[examId] || [];
+      return {
+        ...prev,
+        [examId]: current.filter((t) => t.id !== id),
+      };
+    });
+  }, [examId]);
 
   const saveExamSubjects = useCallback(async (id, subjects) => {
     try {

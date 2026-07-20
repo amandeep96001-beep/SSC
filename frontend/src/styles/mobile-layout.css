@@ -55,14 +55,18 @@
 
   .lms-sidebar .sidebar-nav {
     flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 8px;
   }
 
   .lms-sidebar .sidebar-footer {
     flex-shrink: 0;
     margin-top: 8px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
   }
 
   .lms-sidebar .sidebar-brand {
@@ -71,8 +75,7 @@
     flex-shrink: 0;
   }
 
-  .lms-sidebar .user-profile-card,
-  .lms-sidebar .connection-card {
+  .lms-sidebar .user-profile-card {
     flex-shrink: 0;
     margin-bottom: 10px;
     padding: 10px 12px;
@@ -254,10 +257,9 @@
     box-sizing: border-box;
   }
 
-  /* Adjust grids for mobile */
+  /* Adjust grids for mobile — do NOT collapse exam question palette */
   .subjects-grid,
-  .options-selector-grid,
-  .palette-grid {
+  .options-selector-grid {
     grid-template-columns: 1fr;
   }
 
@@ -274,25 +276,10 @@
     max-width: 100%;
   }
 
-  /* Exam Portal fixes */
+  /* Exam Portal fixes — superseded by exam.css mobile block */
   #exam-portal .main-layout {
     flex-direction: column;
-    overflow-y: auto;
   }
-
-  #exam-portal .left-panel {
-    width: 100%;
-    border-right: none;
-    border-bottom: 2px solid #ccc;
-    min-height: 50vh;
-  }
-
-  #exam-portal .right-panel {
-    width: 100%;
-    height: auto;
-  }
-
-  /* Modal scaling */
   .modal-content-card {
     width: 95%;
     padding: 20px;

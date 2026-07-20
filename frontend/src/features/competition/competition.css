@@ -277,6 +277,27 @@
   transition: color 0.4s ease;
 }
 
+.battle-leave-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-elevated, #fff);
+  color: var(--text-muted, #64748b);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.battle-leave-btn:hover {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
 .battle-timer-number {
   font-family: var(--font-display);
   font-size: 1.2rem;

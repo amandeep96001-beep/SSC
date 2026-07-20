@@ -2,14 +2,15 @@ import mongoose from 'mongoose';
 
 const MockTestSchema = new mongoose.Schema({
   title: { type: String, required: true },
+  examId: { type: String, default: 'ssc', index: true },
   year: { type: String, default: '' },
   date: { type: String, default: '' },
   shift: { type: String, default: '' },
   questions: [{
-    section: { 
-      type: String, 
-      enum: ['English', 'GK', 'Quant', 'Reasoning'],
-      required: true 
+    section: {
+      type: String,
+      required: true,
+      trim: true,
     },
     q: { type: String, required: true },
     o: [{ type: String, required: true }],

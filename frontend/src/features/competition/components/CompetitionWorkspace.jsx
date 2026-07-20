@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Swords, Trophy, Target, Zap, Clock, CheckCircle2, XCircle, 
-  SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer, Award, Shuffle
+  SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer, Award, Shuffle, Ban, X
 } from 'lucide-react';
 import { apiService } from '@/shared/services/apiService';
+import { McqText } from '@/shared/components/ui/McqText';
+import { showAppToast } from '@/shared/utils/appToast';
+import '@/features/exam/exam.css';
 
 const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'];
 const QUESTION_LIMIT = 20;
@@ -20,7 +23,7 @@ const SUBJECT_COLORS = {
 // ── Screen States ─────────────────────────────────────────────────
 // 'start' → 'loading' → 'quiz' → 'submitting' → 'result'
 
-export function CompetitionWorkspace({ user }) {
+export function CompetitionWorkspace({ user, setActiveView }) {
   const [screen, setScreen]           = useState('start');
   const [selectedSubject, setSelectedSubject] = useState('Mixed');
   const [questions, setQuestions]     = useState([]);
@@ -31,13 +34,15 @@ export function CompetitionWorkspace({ user }) {
   const [resultData, setResultData]    = useState(null);
   const [leaderboard, setLeaderboard]  = useState([]);
   const [loadingLeader, setLoadingLeader] = useState(false);
-  const [error, setError]              = useState('');
   const [answered, setAnswered]        = useState(false); // show feedback on current question
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   const timerRef   = useRef(null);
   const startTimeRef = useRef(null);
   const nextTimeoutRef = useRef(null);
   const userAnswersRef = useRef([]);
+  const screenRef = useRef(screen);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
 
   const clearNextTimeout = () => {
     if (nextTimeoutRef.current) {
@@ -55,7 +60,9 @@ export function CompetitionWorkspace({ user }) {
     try {
       const res = await apiService.get(`/competition/leaderboard?subject=${selectedSubject}`);
       if (res.status === 'success') setLeaderboard(res.data);
-    } catch { /* silent fail */ }
+    } catch {
+      showAppToast('Could not load leaderboard.', { variant: 'warn', durationMs: 2500 });
+    }
     finally { setLoadingLeader(false); }
   }, [selectedSubject]);
 
@@ -76,7 +83,7 @@ export function CompetitionWorkspace({ user }) {
         throw new Error(res.message || 'Score submission failed on the server.');
       }
     } catch (err) {
-      setError(err.message || 'Could not save score to leaderboard. Displaying results offline.');
+      showAppToast(err.message || 'Could not save score to leaderboard.', { variant: 'error' });
       // Even if submission fails, show result locally
       setResultData({ correct, wrong, skipped, accuracy, score, timeTaken, answers, rank: null });
       setScreen('result');
@@ -142,7 +149,6 @@ export function CompetitionWorkspace({ user }) {
 
   // ── Start Competition ─────────────────────────────────────────────
   const startBattle = async () => {
-    setError('');
     clearNextTimeout();
     setScreen('loading');
     try {
@@ -161,7 +167,7 @@ export function CompetitionWorkspace({ user }) {
         throw new Error('Unable to load questions. Please ensure the database has been seeded with PYQ questions.');
       }
     } catch (err) {
-      setError(err.message || 'Could not connect to the server. Please verify if the backend is running.');
+      showAppToast(err.message || 'Could not connect to the server.', { variant: 'error' });
       setScreen('start');
     }
   };
@@ -208,6 +214,7 @@ export function CompetitionWorkspace({ user }) {
   const resetToStart = () => {
     clearTimer();
     clearNextTimeout();
+    setLeaveConfirmOpen(false);
     setScreen('start');
     setQuestions([]);
     setCurrentIdx(0);
@@ -216,10 +223,52 @@ export function CompetitionWorkspace({ user }) {
     setAnswered(false);
     setResultData(null);
     setLeaderboard([]);
-    setError('');
   };
 
+  const confirmLeaveBattle = () => {
+    resetToStart();
+    if (typeof setActiveView === 'function') setActiveView('home');
+  };
+
+  useEffect(() => {
+    const onBack = () => {
+      const s = screenRef.current;
+      if (s === 'quiz' || s === 'submitting') {
+        setLeaveConfirmOpen(true);
+        return;
+      }
+      if (typeof setActiveView === 'function') setActiveView('home');
+    };
+    window.addEventListener('ssc-competition-back', onBack);
+    return () => window.removeEventListener('ssc-competition-back', onBack);
+  }, [setActiveView]);
+
   const color = SUBJECT_COLORS[selectedSubject] || SUBJECT_COLORS.Mixed;
+
+  const leaveModal = leaveConfirmOpen ? (
+    <div className="modal-overlay" style={{ zIndex: 12000 }}>
+      <div className="modal-content-card modal-content-cancel">
+        <div className="modal-header">
+          <h3 className="modal-title-warning">Leave MCQ Battle?</h3>
+          <button type="button" className="btn-close-modal" onClick={() => setLeaveConfirmOpen(false)}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-body-cancel">
+          <p className="modal-body-bold">Progress in this battle will be lost.</p>
+          <p className="modal-body-sub">You can start a new battle anytime from MCQ Battle.</p>
+        </div>
+        <div className="modal-actions-row">
+          <button type="button" className="btn-cancel btn-cancel-flex" onClick={() => setLeaveConfirmOpen(false)}>
+            Keep playing
+          </button>
+          <button type="button" className="btn-save-topic btn-confirm-flex" onClick={confirmLeaveBattle}>
+            <Ban size={16} /> Leave battle
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   // ═══════════════════════════════════════════════════════════════════
   // RENDER: START SCREEN
@@ -234,12 +283,6 @@ export function CompetitionWorkspace({ user }) {
             {QUESTION_LIMIT} questions · {TIME_PER_QUESTION}s per question · Fastest wins
           </p>
         </div>
-
-        {error && (
-          <div className="competition-error-banner">
-            <XCircle size={16} /> <span>{error}</span>
-          </div>
-        )}
 
         <div className="competition-subject-selector">
           <p className="competition-label">Choose your subject:</p>
@@ -267,6 +310,7 @@ export function CompetitionWorkspace({ user }) {
           <div className="competition-stat-box"><Clock size={18} /><span>{TIME_PER_QUESTION}s per Q</span></div>
           <div className="competition-stat-box"><Trophy size={18} /><span>Live Leaderboard</span></div>
         </div>
+        {leaveModal}
       </div>
     );
   }
@@ -324,9 +368,18 @@ export function CompetitionWorkspace({ user }) {
               {q.subject}
             </span>
           </div>
-          <div className="battle-timer-display" style={{ color: timerColor }}>
-            <Timer size={16} />
-            <span className="battle-timer-number">{timeLeft}s</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              className="battle-leave-btn"
+              onClick={() => setLeaveConfirmOpen(true)}
+            >
+              <Ban size={14} /> Leave
+            </button>
+            <div className="battle-timer-display" style={{ color: timerColor }}>
+              <Timer size={16} />
+              <span className="battle-timer-number">{timeLeft}s</span>
+            </div>
           </div>
         </div>
 
@@ -341,7 +394,7 @@ export function CompetitionWorkspace({ user }) {
         {/* ── Question card ── */}
         <div className="battle-question-card">
           <p className="battle-question-category">{q.category}</p>
-          <h2 className="battle-question-text">{q.question}</h2>
+          <h2 className="battle-question-text"><McqText text={q.question} /></h2>
 
           <div className="battle-options-grid">
             {q.options.map((opt, idx) => {
@@ -353,7 +406,7 @@ export function CompetitionWorkspace({ user }) {
               return (
                 <button key={idx} className={cls} onClick={() => handleAnswer(idx)} disabled={answered}>
                   <span className="option-label">{String.fromCharCode(65 + idx)}</span>
-                  <span className="option-text">{opt}</span>
+                  <McqText text={opt} className="option-text" />
                   {answered && idx === q.correctAnswer && <CheckCircle2 size={16} className="option-check" />}
                   {answered && idx === userAnswers[currentIdx] && idx !== q.correctAnswer && <XCircle size={16} className="option-x" />}
                 </button>
@@ -363,7 +416,7 @@ export function CompetitionWorkspace({ user }) {
 
           {answered && q.explanation && (
             <div className="battle-explanation-box">
-              <span className="battle-exp-label">Explanation:</span> {q.explanation}
+              <span className="battle-exp-label">Explanation:</span> <McqText text={q.explanation} />
             </div>
           )}
         </div>
@@ -386,6 +439,7 @@ export function CompetitionWorkspace({ user }) {
             </button>
           )}
         </div>
+        {leaveModal}
       </div>
     );
   }
@@ -505,9 +559,10 @@ export function CompetitionWorkspace({ user }) {
             <Shuffle size={16} strokeWidth={2} /> Change Subject
           </button>
         </div>
+        {leaveModal}
       </div>
     );
   }
 
-  return null;
+  return leaveModal;
 }

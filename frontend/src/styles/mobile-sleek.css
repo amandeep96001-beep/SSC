@@ -100,18 +100,24 @@
     height: 300px !important;
   }
 
-  /* ---- Drill / revision tabs — horizontal scroll on mobile ---- */
+  /* ---- Drill / revision tabs — shell fixed, inner content scrolls ---- */
   .tabs-header,
   .tabs-header--scroll,
   .drill-workspace .tabs-header,
   .revision-workspace .tabs-header {
     width: 100% !important;
     max-width: 100% !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
     margin-bottom: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .tabs-header--scroll {
+    background: var(--bg-surface-hover) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
   }
 
   .tabs-header::-webkit-scrollbar,
@@ -119,16 +125,29 @@
     display: none !important;
   }
 
-  .drill-tabs {
+  .drill-tabs,
+  .tabs-header--scroll .drill-tabs {
     display: flex !important;
     flex-wrap: nowrap !important;
-    width: max-content !important;
-    max-width: none !important;
-    min-width: min(100%, max-content) !important;
-    padding: 4px !important;
-    border-radius: 16px !important;
-    gap: 4px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 6px 8px !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    gap: 6px !important;
     box-sizing: border-box !important;
+  }
+
+  .drill-tabs::-webkit-scrollbar,
+  .tabs-header--scroll .drill-tabs::-webkit-scrollbar {
+    display: none !important;
   }
 
   .drill-tab {

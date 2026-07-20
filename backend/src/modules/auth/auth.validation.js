@@ -1,6 +1,7 @@
 import { body } from 'express-validator';
 
 const usernameRules = body('username')
+  .optional({ values: 'falsy' })
   .trim()
   .isLength({ min: 3, max: 32 })
   .withMessage('Username must be 3–32 characters.')
@@ -15,11 +16,39 @@ const passwordRules = body('password')
   .matches(/[0-9]/)
   .withMessage('Password must include at least one number.');
 
-export const registerValidation = [usernameRules, passwordRules];
+export const registerValidation = [
+  body('email').trim().isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  passwordRules,
+  usernameRules,
+];
 
 export const loginValidation = [
-  body('username').trim().notEmpty().withMessage('Username is required.'),
-  body('password').notEmpty().withMessage('Password is required.')
+  body('username').trim().notEmpty().withMessage('Email or username is required.'),
+  body('password').notEmpty().withMessage('Password is required.'),
+];
+
+export const otpRequestValidation = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Enter a valid email address.')
+    .normalizeEmail(),
+];
+
+export const otpVerifyValidation = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Enter a valid email address.')
+    .normalizeEmail(),
+  body('code')
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage('OTP must be a 6-digit code.'),
+];
+
+export const googleAuthValidation = [
+  body('credential').trim().notEmpty().withMessage('Google credential is required.'),
 ];
 
 export const progressValidation = [

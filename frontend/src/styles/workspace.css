@@ -136,23 +136,30 @@
   background-color: var(--text-muted);
 }
 
-.absolute-loader-strip {
-  position: absolute;
-  top: 12px;
-  right: 40px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.25);
-  color: var(--color-primary);
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
+.app-loader-overlay {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 12000;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 100;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.app-loader-spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--color-primary, #6366f1) 20%, transparent);
+  border-top-color: var(--color-primary, #6366f1);
+  animation: app-loader-spin 0.7s linear infinite;
+  background: color-mix(in srgb, var(--bg-elevated, #fff) 88%, transparent);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14);
+}
+
+@keyframes app-loader-spin {
+  to { transform: rotate(360deg); }
 }
 
 .exit-back-toast {

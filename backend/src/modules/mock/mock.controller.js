@@ -1,18 +1,32 @@
 import MockTest from './mock-test.model.js';
 
+function examFilter(examId) {
+  const id = String(examId || 'ssc').trim() || 'ssc';
+  // Legacy rows without examId belong to SSC
+  if (id === 'ssc') {
+    return {
+      $or: [
+        { examId: 'ssc' },
+        { examId: { $exists: false } },
+        { examId: null },
+        { examId: '' },
+      ],
+    };
+  }
+  return { examId: id };
+}
+
 // @desc    Add a new full mock test
 // @route   POST /api/mock
-// @access  Public
 export const createMockTest = async (req, res, next) => {
   try {
-    const { title, year, date, shift, questions } = req.body;
+    const { title, year, date, shift, questions, examId } = req.body;
 
     if (!title || !questions || !Array.isArray(questions)) {
       res.status(400);
       throw new Error('Title and a valid questions array are required');
     }
 
-    // Validate structure of at least the first question
     if (questions.length > 0) {
       const q = questions[0];
       if (!q.section || !q.q || !q.o || typeof q.a !== 'number') {
@@ -21,12 +35,21 @@ export const createMockTest = async (req, res, next) => {
       }
     }
 
+    const resolvedExamId = String(examId || 'ssc').trim() || 'ssc';
+
     const mockTest = new MockTest({
       title,
+      examId: resolvedExamId,
       year: year || '',
       date: date || '',
       shift: shift || '',
-      questions
+      questions: questions.map((row) => ({
+        section: String(row.section).trim(),
+        q: row.q,
+        o: Array.isArray(row.o) ? row.o.map((opt) => (typeof opt === 'string' ? opt : String(opt))) : [],
+        a: row.a,
+        e: row.e || '',
+      })),
     });
 
     const savedTest = await mockTest.save();
@@ -36,6 +59,7 @@ export const createMockTest = async (req, res, next) => {
       data: {
         id: savedTest._id,
         title: savedTest.title,
+        examId: savedTest.examId,
         questionsCount: savedTest.questions.length
       }
     });
@@ -44,16 +68,17 @@ export const createMockTest = async (req, res, next) => {
   }
 };
 
-// @desc    Get all mock tests (metadata only)
-// @route   GET /api/mock
-// @access  Public
+// @desc    Get mock tests for an exam (metadata only)
+// @route   GET /api/mock?examId=ssc
 export const getMockTests = async (req, res, next) => {
   try {
-    const tests = await MockTest.find({}).sort({ createdAt: -1 });
+    const examId = req.query.examId || 'ssc';
+    const tests = await MockTest.find(examFilter(examId)).sort({ createdAt: -1 });
 
-    const formattedTests = tests.map(t => ({
+    const formattedTests = tests.map((t) => ({
       _id: t._id,
       title: t.title,
+      examId: t.examId || 'ssc',
       year: t.year,
       date: t.date,
       shift: t.shift,
@@ -72,7 +97,6 @@ export const getMockTests = async (req, res, next) => {
 
 // @desc    Get a specific mock test by ID (full data)
 // @route   GET /api/mock/:id
-// @access  Public
 export const getMockTestById = async (req, res, next) => {
   try {
     const test = await MockTest.findById(req.params.id);
@@ -93,7 +117,6 @@ export const getMockTestById = async (req, res, next) => {
 
 // @desc    Delete a mock test
 // @route   DELETE /api/mock/:id
-// @access  Public
 export const deleteMockTest = async (req, res, next) => {
   try {
     const test = await MockTest.findByIdAndDelete(req.params.id);

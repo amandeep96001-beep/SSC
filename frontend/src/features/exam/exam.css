@@ -17,6 +17,11 @@
   flex-direction: column;
 }
 
+/* Abort confirm must sit above mobile palette sheet (z-index 10001) */
+#exam-portal .modal-overlay {
+  z-index: 10050;
+}
+
 #exam-portal .navbar {
   background-color: var(--color-primary-muted);
   border-bottom: 1px solid var(--border-color);
@@ -94,11 +99,27 @@
   text-align: left;
 }
 
-#exam-portal .options-box {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 30px;
+#exam-portal .q-text u,
+#exam-portal .opt-label u,
+#exam-portal .opt-text u,
+.mcq-rich u {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  font-weight: inherit;
+}
+
+#exam-portal .q-text .mcq-blank,
+#exam-portal .opt-label .mcq-blank,
+#exam-portal .opt-text .mcq-blank,
+.mcq-rich .mcq-blank {
+  display: inline-block;
+  min-width: 4.5em;
+  height: 0.95em;
+  margin: 0 0.2em;
+  border-bottom: 2px solid currentColor;
+  vertical-align: baseline;
+  border-radius: 0;
 }
 
 #exam-portal .opt-label {
@@ -227,10 +248,13 @@
 #exam-portal .palette-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 10px;
   max-height: 250px;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-bottom: 20px;
+  padding: 6px;
+  box-sizing: border-box;
 }
 
 #exam-portal .palette-btn {
@@ -349,4 +373,357 @@
 .review-card.wrong {
   border-left-color: #e74c3c;
 }
+
+/* —— Shared mock / exam portal polish —— */
+#exam-portal .exam-nav-title {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 10px;
+}
+
+#exam-portal .exam-nav-title__full {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(52vw, 420px);
+}
+
+#exam-portal .exam-nav-title__meta {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+#exam-portal .main-layout {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+}
+
+#exam-portal .exam-section-tabs {
+  flex-shrink: 0;
+  margin: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+
+#exam-portal .exam-section-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#exam-portal .exam-section-tabs .revision-sub-tab {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 8px 14px;
+  white-space: nowrap;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+#exam-portal .exam-section-tabs .revision-sub-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
+}
+
+#exam-portal .section-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#exam-portal .exam-palette-toggle,
+#exam-portal .exam-palette-sheet-head,
+#exam-portal .exam-palette-close,
+#exam-portal .exam-palette-backdrop {
+  display: none;
+}
+
+#exam-portal .opt-letter {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  margin-right: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-heading);
+}
+
+#exam-portal .opt-label {
+  gap: 0;
+}
+
+#exam-portal .opt-label input {
+  margin-right: 8px !important;
+}
+
+#exam-portal .opt-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+#exam-portal .btn-submit-section {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+#exam-portal .btn-cancel-test {
+  width: 100%;
+}
+
+#exam-portal .exam-palette-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#exam-portal .palette-btn.active-q {
+  outline: none;
+  border: 2px solid #111827 !important;
+  box-shadow: none;
+  z-index: 1;
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  #exam-portal {
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    box-sizing: border-box;
+  }
+
+  #exam-portal .navbar {
+    height: auto;
+    min-height: 48px;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  #exam-portal .exam-nav-title__full {
+    max-width: 48vw;
+    font-size: 0.78rem;
+  }
+
+  #exam-portal #timer-box {
+    flex-shrink: 0;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  #exam-portal .timer-label-full {
+    display: none;
+  }
+
+  #exam-portal .exam-section-tabs {
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    margin: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  #exam-portal .exam-section-tabs .revision-sub-tab {
+    border-radius: 999px !important;
+    padding: 8px 14px !important;
+    font-size: 0.78rem !important;
+  }
+
+  #exam-portal .main-layout {
+    position: relative;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #exam-portal .left-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-right: none;
+    flex: 1;
+  }
+
+  #exam-portal .question-area {
+    padding: 14px 14px 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #exam-portal .q-text {
+    font-size: 0.98rem;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  #exam-portal .options-box {
+    margin-top: 0;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+
+  #exam-portal .opt-label {
+    padding: 12px 12px;
+    font-size: 0.9rem;
+    align-items: flex-start;
+  }
+
+  #exam-portal .footer-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.2fr;
+    gap: 8px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+  }
+
+  #exam-portal .footer-buttons .btn {
+    width: 100%;
+    margin: 0;
+    padding: 11px 8px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  #exam-portal .footer-buttons .btn span {
+    display: inline;
+  }
+
+  #exam-portal .btn-review {
+    margin-right: 0;
+  }
+
+  #exam-portal .exam-palette-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-elevated);
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+
+  #exam-portal .right-panel {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: min(78dvh, 640px);
+    z-index: 10001;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.25);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #exam-portal .right-panel.is-open {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #exam-portal .exam-palette-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  #exam-portal .exam-palette-close {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  #exam-portal .exam-palette-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #exam-portal .exam-palette-actions {
+    flex-shrink: 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-surface);
+  }
+
+  #exam-portal .exam-palette-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    border: none;
+    background: rgba(15, 23, 42, 0.45);
+    cursor: pointer;
+  }
+
+  #exam-portal .palette-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    max-height: none;
+    gap: 10px;
+    padding: 6px;
+  }
+
+  #exam-portal .palette-btn {
+    height: 40px;
+    min-height: 40px;
+    font-size: 0.85rem;
+  }
+
+  #exam-portal .user-profile {
+    margin-bottom: 14px;
+  }
+
+  #exam-portal .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
 

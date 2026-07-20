@@ -1,5 +1,6 @@
 /* Centered login / register — no side panel */
 .auth-page {
+  position: relative;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -9,8 +10,10 @@
 }
 
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
   padding: 36px 32px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -32,10 +35,18 @@
   align-items: center;
   justify-content: center;
   background: var(--color-primary-muted);
-  border: 1px solid rgba(99, 102, 241, 0.18);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
   border-radius: 18px;
   color: var(--color-primary);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 8px 24px var(--color-primary-glow);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease;
+}
+
+.auth-brand-icon--otp {
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 28%, transparent);
+  color: var(--color-success);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-success) 22%, transparent);
 }
 
 .auth-brand h1 {
@@ -228,6 +239,247 @@
   box-shadow: var(--shadow-md);
 }
 
-.auth-theme-toggle:active {
-  box-shadow: var(--shadow-sm);
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 16px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.auth-google-wrap {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(60, 64, 67, 0.08);
+  transition: background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.auth-google-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #c6c6c6;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.14);
+  transform: none;
+}
+
+.auth-google-btn:active:not(:disabled) {
+  background: #f1f3f4;
+}
+
+.auth-google-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.auth-google-btn__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+:root[data-theme="dark"] .auth-google-btn {
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-back-link:hover:not(:disabled) {
+  color: var(--color-primary);
+}
+
+.auth-otp-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-muted);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
+  color: var(--color-primary);
+}
+
+.auth-otp-banner > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.auth-otp-banner div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auth-otp-banner strong {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.auth-otp-banner span {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.otp-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.otp-box {
+  width: 100%;
+  aspect-ratio: 1;
+  max-height: 56px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--text-heading);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-color);
+  border-radius: 14px;
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+  caret-color: var(--color-primary);
+}
+
+.otp-box:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-glow);
+  background: var(--bg-surface);
+}
+
+.otp-box--filled {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, var(--border-color));
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--bg-input));
+}
+
+.otp-box:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.auth-dev-otp {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-dev-otp kbd {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.auth-otp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.auth-otp-actions .auth-back-link {
+  margin-top: 0;
+  padding: 8px 0;
+}
+
+.auth-resend {
+  background: none;
+  border: none;
+  padding: 8px 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.auth-resend:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.auth-resend:hover:not(:disabled) {
+  color: var(--color-primary-hover);
+}
+
+.btn-auth-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 400px) {
+  .auth-card {
+    padding: 28px 20px;
+  }
+
+  .otp-boxes {
+    gap: 6px;
+  }
+
+  .otp-box {
+    font-size: 1.15rem;
+    border-radius: 12px;
+  }
 }

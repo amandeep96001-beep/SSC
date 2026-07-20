@@ -3,6 +3,7 @@ import { apiService } from '@/shared/services/apiService';
 import { useApi } from '@/shared/hooks/useApi';
 import { getListFromResponse } from '@/shared/utils/apiResponse';
 import { useExam } from '@/shared/context/useExam';
+import { showAppToast } from '@/shared/utils/appToast';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
 
@@ -28,7 +29,7 @@ function filterByExamSubjects(list, examSubjects, isMine) {
 }
 
 export function useStudy() {
-  const { examId, examSubjects } = useExam();
+  const { exam, examId, examSubjects } = useExam();
   const [activeView, setActiveView] = useState('home'); // home, drill, subjects, topics, notes, test, results, revision
   const [contentSource, setContentSourceState] = useState(() => {
     try {
@@ -115,6 +116,9 @@ export function useStudy() {
 
   const loginApi = useApi(useCallback((body) => apiService.post('/auth/login', body), []));
   const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
+  const requestOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/request', body), []));
+  const verifyOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/verify', body), []));
+  const googleAuthApi = useApi(useCallback((body) => apiService.post('/auth/google', body), []));
   const updateProgressApi = useApi(useCallback((body) => apiService.post('/auth/progress', body), []));
   const updateMockProgressApi = useApi(useCallback((body) => apiService.post('/auth/mock-progress', body), []));
   const updateTopicApi = useApi(useCallback(({ topicId, body }) => apiService.put(`/study/topics/${topicId}`, body), []));
@@ -152,21 +156,69 @@ export function useStudy() {
 
   const loginUser = useCallback(async (username, password) => {
     const res = await loginApi.execute({ username, password });
-    if (res.success && res.data?.data) {
+    if (res.success && res.data?.data?.needsVerification) {
+      return {
+        success: false,
+        needsVerification: true,
+        email: res.data.data.email,
+        debugOtp: res.data.data.debugOtp,
+        message: res.data.message,
+      };
+    }
+    if (res.success && res.data?.data?.token) {
       persistUser(res.data.data);
       return { success: true };
     }
-    return { success: false, message: loginApi.error || 'Login verification failed.' };
+    return { success: false, message: loginApi.error || 'Login failed.' };
   }, [loginApi]);
 
-  const registerUser = useCallback(async (username, password, adminCode) => {
-    const res = await registerApi.execute({ username, password, adminCode: adminCode || undefined });
+  const registerUser = useCallback(async (email, password) => {
+    const res = await registerApi.execute({ email, password });
+    if (res.success && res.data?.data?.needsVerification) {
+      return {
+        success: true,
+        needsVerification: true,
+        email: res.data.data.email,
+        debugOtp: res.data.data.debugOtp,
+        message: res.data.message,
+      };
+    }
+    if (res.success && res.data?.data?.token) {
+      persistUser(res.data.data);
+      return { success: true };
+    }
+    return { success: false, message: registerApi.error || 'Registration failed.' };
+  }, [registerApi]);
+
+  const requestOtp = useCallback(async (email) => {
+    const res = await requestOtpApi.execute({ email });
+    if (res.success && res.data) {
+      return {
+        success: true,
+        message: res.data.message,
+        debugOtp: res.data.data?.debugOtp,
+        alreadyVerified: res.data.data?.alreadyVerified,
+      };
+    }
+    return { success: false, message: requestOtpApi.error || 'Could not send OTP.' };
+  }, [requestOtpApi]);
+
+  const verifyOtp = useCallback(async (email, code) => {
+    const res = await verifyOtpApi.execute({ email, code });
+    if (res.success && res.data?.data?.verified) {
+      return { success: true, message: res.data.message };
+    }
+    return { success: false, message: verifyOtpApi.error || 'OTP verification failed.' };
+  }, [verifyOtpApi]);
+
+  const loginWithGoogle = useCallback(async (credential) => {
+    const res = await googleAuthApi.execute({ credential });
     if (res.success && res.data?.data) {
       persistUser(res.data.data);
       return { success: true };
     }
-    return { success: false, message: registerApi.error || 'Sign up verification failed.' };
-  }, [registerApi]);
+    return { success: false, message: googleAuthApi.error || 'Google sign-in failed.' };
+  }, [googleAuthApi]);
 
   const logoutUser = useCallback(() => {
     setUser(null);
@@ -225,8 +277,9 @@ export function useStudy() {
       }
     });
 
-    const totalScore = (correctCount * 2) - (wrongCount * 0.5);
-    const maxScore = testQuestions.length * 2;
+    const marking = exam?.marking || { correct: 2, wrong: -0.5 };
+    const totalScore = (correctCount * marking.correct) + (wrongCount * marking.wrong);
+    const maxScore = testQuestions.length * marking.correct;
     const accuracy = correctCount + wrongCount > 0
       ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
       : 0;
@@ -250,7 +303,9 @@ export function useStudy() {
         topicId: selectedTopicId,
         score: totalScore,
         maxScore,
-        elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`
+        elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
+        examId,
+        subjectName: selectedSubject || null
       }).then(res => {
         if (res.success && res.data?.data) {
           const updatedProgress = res.data.data;
@@ -264,19 +319,22 @@ export function useStudy() {
     }
 
     setActiveView('results');
-  }, [testQuestions, selectedAnswers, user, selectedTopicId, updateProgressApi]);
+  }, [testQuestions, selectedAnswers, user, selectedTopicId, selectedSubject, examId, updateProgressApi, exam]);
 
   const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0, sectionTimes = null) => {
-    const elapsedSeconds = 3600 - remainingTimer;
+    const totalSeconds = (exam?.mockMinutes || 60) * 60;
+    const elapsedSeconds = Math.max(0, totalSeconds - remainingTimer);
     const elapsedMins = Math.floor(elapsedSeconds / 60);
     const elapsedSecs = elapsedSeconds % 60;
+    const qCount = mockData?.questions?.length || 0;
+    const marking = exam?.marking || { correct: 2, wrong: -0.5 };
 
     let correctCount = 0;
     let wrongCount = 0;
     let unattemptedCount = 0;
-    let errorLog = "=== EXAM 100-QUESTION FULL MOCK ERROR LOG ===\n\n";
+    let errorLog = `=== FULL MOCK ERROR LOG (${qCount} Q) ===\n\n`;
 
-    mockData.questions.forEach((item, index) => {
+    (mockData.questions || []).forEach((item, index) => {
       const userAns = answers[index];
       const correctAns = item.a;
 
@@ -291,7 +349,8 @@ export function useStudy() {
       }
     });
 
-    const totalScore = (correctCount * 2) - (wrongCount * 0.5);
+    const totalScore = (correctCount * marking.correct) + (wrongCount * marking.wrong);
+    const maxScore = qCount * marking.correct;
     const accuracy = correctCount + wrongCount > 0
       ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
       : 0;
@@ -300,7 +359,7 @@ export function useStudy() {
 
     setTestSummary({
       score: totalScore,
-      maxScore: 200,
+      maxScore,
       correct: correctCount,
       wrong: wrongCount,
       blank: unattemptedCount,
@@ -308,15 +367,18 @@ export function useStudy() {
       elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
       summaryText,
       sectionTimes,
-      errorLog: totalScore === 200 ? "Perfect Score! Excellent performance!" : errorLog,
+      errorLog: wrongCount === 0 && unattemptedCount === 0 && qCount > 0
+        ? 'Perfect Score! Excellent performance!'
+        : errorLog,
       isMock: true
     });
 
-    setTestQuestions(mockData.questions);
+    setTestQuestions(mockData.questions || []);
 
-    const answersArray = Array(100).fill(null);
-    Object.keys(answers).forEach((idx) => {
-      answersArray[Number(idx)] = answers[idx];
+    const answersArray = Array(qCount).fill(null);
+    Object.keys(answers || {}).forEach((idx) => {
+      const i = Number(idx);
+      if (i >= 0 && i < qCount) answersArray[i] = answers[idx];
     });
     setSelectedAnswers(answersArray);
 
@@ -330,7 +392,8 @@ export function useStudy() {
         blank: unattemptedCount,
         accuracy,
         elapsedTime: `${elapsedMins} Mins ${elapsedSecs} Secs`,
-        sectionTimes
+        sectionTimes,
+        examId
       }).then(res => {
         if (res.success && res.data?.data) {
           const updatedMockProgress = res.data.data;
@@ -344,7 +407,7 @@ export function useStudy() {
     }
 
     setActiveView('results');
-  }, [user, updateMockProgressApi]);
+  }, [user, updateMockProgressApi, examId, exam]);
 
   const startTest = useCallback(async () => {
     if (!selectedTopicId) return { success: false };
@@ -424,7 +487,7 @@ export function useStudy() {
         return next;
       });
     } else {
-      alert("No more questions available! Please click 'Submit Section' to view your results.");
+      showAppToast("Last question — tap Submit to finish the test.", { variant: 'info', durationMs: 2800 });
     }
   }, [currentQuestionIdx, selectedAnswers, testQuestions.length]);
 
@@ -445,7 +508,7 @@ export function useStudy() {
         return next;
       });
     } else {
-      alert("No more questions available! Please click 'Submit Section' to view your results.");
+      showAppToast("Last question — tap Submit to finish the test.", { variant: 'info', durationMs: 2800 });
     }
   }, [currentQuestionIdx, testQuestions.length]);
 
@@ -647,6 +710,9 @@ export function useStudy() {
     deleteCustomSubject,
     loginUser,
     registerUser,
+    requestOtp,
+    verifyOtp,
+    loginWithGoogle,
     logoutUser,
     updateCustomTopic,
     deleteCustomTopic

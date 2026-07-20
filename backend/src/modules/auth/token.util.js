@@ -15,6 +15,7 @@ export function signToken(user) {
     {
       userId: user._id.toString(),
       username: user.username,
+      email: user.email || undefined,
       role: user.role || 'user',
     },
     getSecret(),

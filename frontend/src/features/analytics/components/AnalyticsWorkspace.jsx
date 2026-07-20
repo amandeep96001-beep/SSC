@@ -5,6 +5,8 @@ import {
 } from 'recharts';
 import { Clock, Target, Activity } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
+import { useExam } from '@/shared/context/useExam';
+import { filterProgressForExam, filterMockProgressForExam } from '@/shared/utils/examProgress';
 
 const PIE_COLORS = ['#8b93f8', '#5eead4', '#f5c76a', '#f9a8d4', '#93c5fd'];
 
@@ -38,6 +40,7 @@ function useIsMobile(breakpoint = 768) {
 
 export function AnalyticsWorkspace({ user }) {
   const isMobile = useIsMobile();
+  const { examId, examSubjects } = useExam();
 
   const analyticsData = useMemo(() => {
     let totalMins = 0;
@@ -54,26 +57,25 @@ export function AnalyticsWorkspace({ user }) {
       return m;
     };
 
-    if (user?.mockProgress) {
-      user.mockProgress.forEach((mock, index) => {
-        totalMins += parseTime(mock.elapsedTime);
-        mockScores.push({
-          name: `Mock ${index + 1}`,
-          score: mock.score,
-          accuracy: mock.accuracy
-        });
-      });
-    }
+    const progress = filterProgressForExam(user?.progress || [], { examId, examSubjects });
+    const mockProgress = filterMockProgressForExam(user?.mockProgress || [], { examId });
 
-    if (user?.progress) {
-      user.progress.forEach((prog) => {
-        totalMins += parseTime(prog.elapsedTime);
-        if (!topicDistribution[prog.topicId]) {
-          topicDistribution[prog.topicId] = 0;
-        }
-        topicDistribution[prog.topicId] += 1;
+    mockProgress.forEach((mock, index) => {
+      totalMins += parseTime(mock.elapsedTime);
+      mockScores.push({
+        name: `Mock ${index + 1}`,
+        score: mock.score,
+        accuracy: mock.accuracy
       });
-    }
+    });
+
+    progress.forEach((prog) => {
+      totalMins += parseTime(prog.elapsedTime);
+      if (!topicDistribution[prog.topicId]) {
+        topicDistribution[prog.topicId] = 0;
+      }
+      topicDistribution[prog.topicId] += 1;
+    });
 
     const pieData = Object.entries(topicDistribution).map(([name, value]) => ({
       name: name.length > 18 ? `${name.slice(0, 16)}…` : name,
@@ -101,18 +103,18 @@ export function AnalyticsWorkspace({ user }) {
       }
     };
 
-    if (user?.mockProgress) user.mockProgress.forEach(processDate);
-    if (user?.progress) user.progress.forEach(processDate);
+    mockProgress.forEach(processDate);
+    progress.forEach(processDate);
 
     return {
       totalTimeStr: hours > 0 ? `${hours}h ${mins}m` : `${mins} Mins`,
-      mockCount: user?.mockProgress?.length || 0,
-      syllabusCount: user?.progress?.length || 0,
+      mockCount: mockProgress.length,
+      syllabusCount: progress.length,
       mockScores,
       pieData,
       barData: Object.values(last7DaysMap)
     };
-  }, [user]);
+  }, [user, examId, examSubjects]);
 
   const pieOuter = isMobile ? 72 : 105;
   const pieInner = isMobile ? 44 : 70;

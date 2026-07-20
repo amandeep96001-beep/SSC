@@ -7,7 +7,7 @@ export function useMockTests() {
   const [mockTests, setMockTests] = useState([]);
 
   const { execute: fetchMockTests, loading: listLoading, error: listError } = useApi(
-    useCallback(() => apiService.get('/mock'), [])
+    useCallback((examId) => apiService.get(`/mock?examId=${encodeURIComponent(examId || 'ssc')}`), [])
   );
   const { execute: fetchMockById, loading: byIdLoading, error: byIdError } = useApi(
     useCallback((id) => apiService.get(`/mock/${id}`), [])
@@ -19,17 +19,15 @@ export function useMockTests() {
     useCallback((id) => apiService.delete(`/mock/${id}`), [])
   );
 
-  // Depend only on stable execute fns — whole useApi objects change every render
-  // and would retrigger MockWorkspace's load effect in an infinite loop.
-  const loadMockTests = useCallback(async () => {
-    const result = await fetchMockTests();
+  const loadMockTests = useCallback(async (examId = 'ssc') => {
+    const result = await fetchMockTests(examId);
     setMockTests(getListFromResponse(result));
   }, [fetchMockTests]);
 
   const addMockTest = useCallback(async (testData) => {
     const result = await createMock(testData);
     if (result.success) {
-      await loadMockTests();
+      await loadMockTests(testData.examId || 'ssc');
       return { success: true };
     }
     return { success: false, error: result.error };
@@ -40,10 +38,10 @@ export function useMockTests() {
     return getObjectFromResponse(result);
   }, [fetchMockById]);
 
-  const removeMockTest = useCallback(async (id) => {
+  const removeMockTest = useCallback(async (id, examId = 'ssc') => {
     const result = await deleteMock(id);
     if (result.success) {
-      await loadMockTests();
+      await loadMockTests(examId);
       return { success: true };
     }
     return { success: false, error: result.error };

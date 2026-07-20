@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen, TrendingUp } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award, AlertCircle, BookOpen, TrendingUp, Download } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
 import { useExam } from '@/shared/context/useExam';
+import { filterProgressForExam, filterMockProgressForExam } from '@/shared/utils/examProgress';
+import { apiService } from '@/shared/services/apiService';
+import { showAppToast } from '@/shared/utils/appToast';
 
 function formatTopicLabel(topicId) {
   if (!topicId) return 'Unknown topic';
@@ -95,10 +98,36 @@ function HistoryCard({ title, attempt, tone, score, maxScore, statusLabel, elaps
 
 export function PerformanceWorkspace({ user }) {
   const [activeTab, setActiveTab] = useState('syllabus');
-  const { exam } = useExam();
+  const [exporting, setExporting] = useState(false);
+  const { exam, examId, examSubjects } = useExam();
 
-  const progress = user.progress || [];
-  const mockProgress = user.mockProgress || [];
+  const progress = useMemo(
+    () => filterProgressForExam(user.progress || [], { examId, examSubjects }),
+    [user.progress, examId, examSubjects]
+  );
+  const mockProgress = useMemo(
+    () => filterMockProgressForExam(user.mockProgress || [], { examId }),
+    [user.mockProgress, examId]
+  );
+
+  const exportMine = async (kind) => {
+    setExporting(true);
+    try {
+      const q = examId ? `&examId=${encodeURIComponent(examId)}` : '';
+      const path = kind === 'mock'
+        ? `/auth/mock-progress/export?scope=me${q}`
+        : `/auth/progress/export?scope=me${q}`;
+      const file = kind === 'mock'
+        ? `my-mock-progress-${examId || 'all'}.csv`
+        : `my-syllabus-progress-${examId || 'all'}.csv`;
+      await apiService.download(path, file);
+      showAppToast('Your report downloaded.', { variant: 'success', durationMs: 2200 });
+    } catch (e) {
+      showAppToast(e.message || 'Export failed.', { variant: 'error' });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const syllabusStats = useMemo(() => {
     const progressCount = progress.length;
@@ -120,18 +149,28 @@ export function PerformanceWorkspace({ user }) {
 
   const mockStats = useMemo(() => {
     const mockCount = mockProgress.length;
+    const marksPerQ = exam?.marking?.correct ?? 2;
+    const averageMax = mockCount > 0
+      ? Math.round(
+          mockProgress.reduce((sum, curr) => {
+            const q = (curr.correct || 0) + (curr.wrong || 0) + (curr.blank || 0);
+            return sum + (q > 0 ? q * marksPerQ : marksPerQ * 100);
+          }, 0) / mockCount
+        )
+      : marksPerQ * 100;
     return {
       mockCount,
       averageMockScore: mockCount > 0
         ? (mockProgress.reduce((sum, curr) => sum + curr.score, 0) / mockCount).toFixed(1)
         : '0.0',
+      averageMax,
       averageMockAccuracy: mockCount > 0
         ? Math.round(mockProgress.reduce((sum, curr) => sum + curr.accuracy, 0) / mockCount)
         : 0,
       totalMockCorrect: mockProgress.reduce((sum, curr) => sum + curr.correct, 0),
       totalMockWrong: mockProgress.reduce((sum, curr) => sum + curr.wrong, 0)
     };
-  }, [mockProgress]);
+  }, [mockProgress, exam]);
 
   return (
     <div className="study-workspace perf-workspace">
@@ -139,8 +178,19 @@ export function PerformanceWorkspace({ user }) {
         <div className="section-header perf-hero-header">
           <div>
             <h1>Performance Tracker</h1>
-            <p className="section-header-sub">Syllabus coverage, mock averages, and weak areas at a glance.</p>
+            <p className="section-header-sub">
+              {exam.name} — syllabus coverage, mock averages, and weak areas for this exam only.
+            </p>
           </div>
+          <button
+            type="button"
+            className="perf-export-btn"
+            disabled={exporting}
+            onClick={() => exportMine(activeTab === 'mock' ? 'mock' : 'syllabus')}
+          >
+            <Download size={15} strokeWidth={2} />
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
         </div>
 
         <div className="perf-mode-toggle" role="tablist" aria-label="Performance mode">
@@ -213,7 +263,7 @@ export function PerformanceWorkspace({ user }) {
           <>
             <div className="stats-row">
               <StatCard icon={ClipboardList} label="Mocks Completed" value={mockStats.mockCount} variant="blue" />
-              <StatCard icon={Target} label="Average Mock Score" value={`${mockStats.averageMockScore} / 200`} variant="lavender" />
+              <StatCard icon={Target} label="Average Mock Score" value={`${mockStats.averageMockScore} / ${mockStats.averageMax}`} variant="lavender" />
               <StatCard icon={Award} label="Average Accuracy" value={`${mockStats.averageMockAccuracy}%`} variant="mint" />
               <StatCard icon={CheckCircle} label="Total Correct" value={mockStats.totalMockCorrect} variant="peach" />
               <StatCard icon={XCircle} label="Total Wrong" value={mockStats.totalMockWrong} variant="rose" />
@@ -237,7 +287,7 @@ export function PerformanceWorkspace({ user }) {
                         attempt={record.attemptNumber || 1}
                         tone={tone}
                         score={record.score}
-                        maxScore={200}
+                        maxScore={((record.correct || 0) + (record.wrong || 0) + (record.blank || 0)) * (exam?.marking?.correct ?? 2) || 200}
                         statusLabel={`${record.accuracy}% accuracy`}
                         elapsed={record.elapsedTime}
                         timestamp={record.timestamp}

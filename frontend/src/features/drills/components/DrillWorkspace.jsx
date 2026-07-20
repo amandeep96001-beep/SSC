@@ -8,7 +8,9 @@ import {
   SkipForward, Target
 } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
+import { McqText } from '@/shared/components/ui/McqText';
 import '@/features/dashboard/Dashboard.css';
+import '@/features/exam/exam.css';
 
 function vocabWordFromWrong(wq) {
   if (wq?.word) return wq.word;
@@ -186,23 +188,23 @@ function WrongQuestionCard({ wq, onRemove }) {
       )}
 
       {/* Question */}
-      <p className="wrong-q-question">{wq.question}</p>
+      <p className="wrong-q-question"><McqText text={wq.question} /></p>
 
       {wq.userAnswer && (
         <div className="wrong-q-answer-row wrong-q-answer-row--yours">
           <XCircle size={14} className="wrong-q-wrong-icon" />
-          <span>Your answer: <strong>{wq.userAnswer}</strong></span>
+          <span>Your answer: <strong><McqText text={wq.userAnswer} /></strong></span>
         </div>
       )}
 
       {/* Correct answer */}
       <div className="wrong-q-answer-row">
         <CheckCircle size={14} className="wrong-q-correct-icon" />
-        <span>Correct Answer: <strong>{wq.correctAnswer}</strong></span>
+        <span>Correct Answer: <strong><McqText text={wq.correctAnswer} /></strong></span>
       </div>
 
       {/* Official explanation */}
-      {wq.explanation && <div className="wrong-q-hint">{wq.explanation}</div>}
+      {wq.explanation && <div className="wrong-q-hint"><McqText text={wq.explanation} /></div>}
 
       {wq.type === 'vocab' && (wq.revealDefinition || (wq.revealSynonyms && wq.revealSynonyms.length > 0) || (wq.revealAntonyms && wq.revealAntonyms.length > 0)) && (
         <div className="wrong-q-hint" style={{ color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.07)', borderColor: '#8b5cf6', padding: '10px', borderRadius: '6px', borderLeft: '3px solid #8b5cf6', marginTop: '10px' }}>
@@ -231,7 +233,7 @@ function WrongQuestionCard({ wq, onRemove }) {
                   onClick={() => handleRetrySubmit(opt)}
                   disabled={!!retryResult}
                 >
-                  {opt}
+                  <McqText text={opt} />
                 </button>
               ))}
             </div>
@@ -515,7 +517,7 @@ export function DrillWorkspace({
                 className={`drill-tab ${activeTab === 'drill' && drillType === key ? 'active' : ''}`}
                 onClick={(e) => {
                   switchDrill(key);
-                  const scroller = e.currentTarget.closest('.tabs-header');
+                  const scroller = e.currentTarget.closest('.drill-tabs');
                   if (scroller) {
                     const tab = e.currentTarget;
                     const left = tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2;
@@ -531,7 +533,7 @@ export function DrillWorkspace({
               className={`drill-tab drill-tab--wronglog ${activeTab === 'wronglog' ? 'active' : ''}`}
               onClick={(e) => {
                 setActiveTab('wronglog');
-                const scroller = e.currentTarget.closest('.tabs-header');
+                const scroller = e.currentTarget.closest('.drill-tabs');
                 if (scroller) {
                   const tab = e.currentTarget;
                   const left = tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2;
@@ -599,7 +601,7 @@ export function DrillWorkspace({
                   </div>
 
                   <div className={`question-text-box ${MCQ_TYPES.includes(drillType) ? 'mcq-question-box' : ''}`}>
-                    <h2>{currentDrill.question}</h2>
+                    <h2><McqText text={currentDrill.question} /></h2>
                     {drillType === 'vocab' && currentDrill.definition && (
                       <div className="pos-definition">
                         <span className="pos-badge">{currentDrill.pos}</span>
@@ -651,7 +653,7 @@ export function DrillWorkspace({
                       {MCQ_TYPES.includes(drillType) && currentDrill.options ? (
                         <div className="options-selector-grid">
                           {currentDrill.options.map(opt => (
-                            <button key={opt} type="button" className="option-choice-btn" onClick={() => submitDrillAnswer(null, opt)}>{opt}</button>
+                            <button key={opt} type="button" className="option-choice-btn" onClick={() => submitDrillAnswer(null, opt)}><McqText text={opt} /></button>
                           ))}
                         </div>
                       ) : (

@@ -80,10 +80,13 @@
   box-sizing: border-box;
   flex-shrink: 0;
   height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px);
   margin: 32px 0 32px 32px;
   position: sticky;
   top: 32px;
   z-index: 10;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .sidebar-brand {
@@ -92,6 +95,7 @@
   gap: 12px;
   margin-bottom: 24px;
   padding-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .brand-mark {
@@ -133,61 +137,28 @@
   margin-top: 2px;
 }
 
-/* Connection info card */
-.connection-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-surface-hover);
-  border: 1px solid var(--border-color);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 24px;
-  text-align: left;
-}
-
-.connection-card .status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.connection-card .status-dot.connected {
-  background-color: var(--color-success);
-  animation: statusPulse 2.5s infinite;
-}
-
-.connection-card .status-dot.disconnected {
-  background-color: var(--color-danger);
-  animation: statusPulseRed 2.5s infinite;
-}
-
-.connection-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.connection-info .status-label {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.connection-info .status-text {
-  font-size: 0.8rem;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-/* Navigation Lists */
+/* Navigation Lists — scrolls when viewport is short */
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--sidebar-fg-muted, #94a3b8) 45%, transparent);
+  border-radius: 999px;
 }
 
 .nav-item {
@@ -228,6 +199,7 @@
   text-align: center;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 /* Right Workspace container — flex + min-width:0 (never calc(100% - sidebar)) */
@@ -385,10 +357,16 @@
   border-radius: 4px;
 }
 
-/* Mobile-only: single-row horizontal scroll for tabs (contained by .tabs-header--scroll) */
+/* Mobile: shell keeps both rounded ends; only .drill-tabs scrolls inside */
 @media (max-width: 768px) {
   .tabs-header--scroll {
+    overflow: hidden;
     scrollbar-width: none;
+    background: var(--bg-surface-hover);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 16px);
+    padding: 0;
+    box-sizing: border-box;
   }
 
   .tabs-header--scroll::-webkit-scrollbar {
@@ -397,14 +375,53 @@
 
   .tabs-header--scroll .drill-tabs {
     flex-wrap: nowrap;
-    width: max-content;
-    max-width: none;
-    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 6px 8px;
+  }
+
+  .tabs-header--scroll .drill-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tabs-header--scroll .drill-tab {
     flex-shrink: 0;
     white-space: nowrap;
+  }
+}
+
+@media (max-height: 720px) {
+  .lms-sidebar {
+    padding-top: 18px;
+    padding-bottom: 14px;
+  }
+
+  .sidebar-brand {
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+  }
+
+  .user-profile-card {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .nav-item {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+  }
+
+  .sidebar-nav {
+    gap: 4px;
   }
 }
 

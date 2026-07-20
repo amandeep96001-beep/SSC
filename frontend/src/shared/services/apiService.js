@@ -73,4 +73,35 @@ export const apiService = {
   put: (endpoint, body, options) => request(endpoint, { method: 'PUT', body, ...options }),
   delete: (endpoint, options) => request(endpoint, { method: 'DELETE', ...options }),
   addVocabBulkApi: (body, options) => request('/study/vocab/bulk', { method: 'POST', body, ...options }),
+
+  /** Download CSV (or other non-JSON) with auth headers */
+  async download(endpoint, filename) {
+    const url = `${BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { ...getAuthHeaders() },
+      cache: 'no-store',
+    });
+    if (response.status === 401) {
+      localStorage.removeItem('ssc_token');
+      localStorage.removeItem('ssc_user');
+    }
+    if (!response.ok) {
+      let message = `Download failed (${response.status})`;
+      try {
+        const j = await response.json();
+        if (j?.message) message = j.message;
+      } catch { /* ignore */ }
+      throw new Error(message);
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename || 'export.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
 };

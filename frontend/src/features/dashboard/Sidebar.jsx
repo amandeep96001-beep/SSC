@@ -23,7 +23,6 @@ import { APP_NAME, APP_VERSION } from '@/shared/brand';
 export function Sidebar({
   user,
   logoutUser,
-  isOnline,
   activeView,
   setActiveView,
   skipToSubjects,
@@ -46,9 +45,9 @@ export function Sidebar({
       { y: -20, opacity: 0 }, 
       { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out', clearProps: 'all' }
     );
-    gsap.fromTo('.user-profile-card, .connection-card', 
+    gsap.fromTo('.user-profile-card', 
       { x: -20, opacity: 0 }, 
-      { x: 0, opacity: 1, duration: 0.5, stagger: 0.1, delay: 0.2, ease: 'power2.out', clearProps: 'all' }
+      { x: 0, opacity: 1, duration: 0.5, delay: 0.2, ease: 'power2.out', clearProps: 'all' }
     );
     gsap.fromTo('.nav-item', 
       { x: -30, opacity: 0 }, 
@@ -93,14 +92,6 @@ export function Sidebar({
             <LogOut size={12} />
             <span>Log Out</span>
           </button>
-        </div>
-      </div>
-
-      <div className="connection-card">
-        <div className={`status-dot ${isOnline ? 'connected' : 'disconnected'}`}></div>
-        <div className="connection-info">
-          <span className="status-label">Sync status</span>
-          <span className="status-text">{isOnline ? 'Connected' : 'Offline'}</span>
         </div>
       </div>
 

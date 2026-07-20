@@ -1,7 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { ArrowLeft, RotateCcw, Copy, Zap } from 'lucide-react';
+import { McqText } from '@/shared/components/ui/McqText';
+import { showAppToast } from '@/shared/utils/appToast';
 import '@/features/dashboard/Dashboard.css';
+import '@/features/exam/exam.css';
 
 export function ResultsPortal({
   testSummary,
@@ -14,11 +17,13 @@ export function ResultsPortal({
   const copyErrorLog = () => {
     if (testSummary && testSummary.errorLog) {
       navigator.clipboard.writeText(testSummary.errorLog);
-      alert(`Full ${testSummary.isMock ? '100-Q' : '25-Q'} Error Log successfully copied to clipboard!`);
+      const qLabel = testQuestions?.length || 0;
+      showAppToast(`${qLabel}-Q error log copied.`, { variant: 'success', durationMs: 2200 });
     }
   };
 
   const isMock = testSummary?.isMock;
+  const qCount = testQuestions?.length || 0;
 
   return (
     <div className="results-container results-portal-visible" id="results-portal">
@@ -49,7 +54,7 @@ export function ResultsPortal({
 
       <div className="results-error-log-banner">
         <span className="results-error-log-title">
-          Complete {testQuestions?.length || 25}-Question Error Log (Paste directly in chat):
+          Complete {qCount}-Question Error Log:
         </span>
         <textarea 
           id="error-log-box" 
@@ -79,7 +84,7 @@ export function ResultsPortal({
               key={idx} 
               className={`review-card ${userAns === null || userAns === undefined ? '' : (isCorrect ? 'correct' : 'wrong')}`}
             >
-              <h4>Q{idx + 1}. {item.q}</h4>
+              <h4>Q{idx + 1}. <McqText text={item.q} /></h4>
               {item.state && (
                 <p className="review-state-link">
                   Hidden State Link: {item.state}
@@ -91,13 +96,13 @@ export function ResultsPortal({
                 </p>
               )}
               <p style={{ margin: '8px 0', color: userAns === null || userAns === undefined ? '#7f8c8d' : (isCorrect ? '#2ecc71' : '#e74c3c') }}>
-                <b>Your Choice:</b> {userText}
+                <b>Your Choice:</b> <McqText text={userText} />
               </p>
               <p className="review-official-key">
-                <b>Official answer key:</b> {correctText}
+                <b>Official answer key:</b> <McqText text={correctText} />
               </p>
               <div className="review-core-logic">
-                <b>Official Core Logic:</b> {item.e}
+                <b>Official Core Logic:</b> <McqText text={item.e} />
               </div>
             </div>
           );
@@ -117,7 +122,7 @@ export function ResultsPortal({
         ) : (
           <>
             <button className="btn btn-save" onClick={startTest}>
-              <RotateCcw size={16} strokeWidth={2} /> Retake Mock Test
+              <RotateCcw size={16} strokeWidth={2} /> Retake Topic Test
             </button>
             <button className="btn btn-clear btn-outline" onClick={() => setActiveView('topics')}>
               <ArrowLeft size={16} strokeWidth={2} /> Back to Topics

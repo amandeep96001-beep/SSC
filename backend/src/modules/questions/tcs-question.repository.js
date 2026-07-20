@@ -10,11 +10,31 @@ class TCSQuestionRepository {
   }
 
   static async getCountBySubject() {
-    const gk = await TCSQuestion.countDocuments({ subject: 'GK' });
-    const english = await TCSQuestion.countDocuments({ subject: 'English' });
-    const maths = await TCSQuestion.countDocuments({ subject: 'Maths' });
-    const reasoning = await TCSQuestion.countDocuments({ subject: 'Reasoning' });
-    return { gk, english, maths, reasoning, total: gk + english + maths + reasoning };
+    const rows = await TCSQuestion.aggregate([
+      { $group: { _id: '$subject', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+
+    const bySubject = {};
+    let total = 0;
+    for (const row of rows) {
+      const name = row._id || 'Unknown';
+      bySubject[name] = row.count;
+      total += row.count;
+    }
+
+    const subjects = Object.keys(bySubject);
+
+    // Legacy flat keys for older UI
+    return {
+      total,
+      bySubject,
+      subjects,
+      gk: bySubject.GK || 0,
+      english: bySubject.English || 0,
+      maths: bySubject.Maths || 0,
+      reasoning: bySubject.Reasoning || 0,
+    };
   }
 
   /**

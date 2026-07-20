@@ -1,29 +1,46 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ArrowLeft, Ban } from 'lucide-react';
+import { McqText } from '@/shared/components/ui/McqText';
 import '@/features/dashboard/Dashboard.css';
+import '@/features/exam/exam.css';
 import { apiService } from '@/shared/services/apiService';
 import { useExam } from '@/shared/context/useExam';
 
-const SECTIONS = ['English', 'GK', 'Quant', 'Reasoning'];
+function sectionsFromQuestions(questions) {
+  const order = [];
+  const seen = new Set();
+  for (const q of questions || []) {
+    const s = q?.section;
+    if (s && !seen.has(s)) {
+      seen.add(s);
+      order.push(s);
+    }
+  }
+  return order;
+}
 
 export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   const { exam } = useExam();
   const [loading, setLoading] = useState(true);
   const [mockData, setMockData] = useState(null);
-  
-  const [timer, setTimer] = useState(3600); // 60 mins
-  const [currentSection, setCurrentSection] = useState(SECTIONS[0]);
-  const [globalIndex, setGlobalIndex] = useState(0); // 0 to 99
-  
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [questionStatuses, setQuestionStatuses] = useState({}); // 'not-visited', 'not-answered', 'answered', 'marked'
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
-  const [sectionTimes, setSectionTimes] = useState({
-    'English': 0, 'GK': 0, 'Quant': 0, 'Reasoning': 0
-  });
+  const [timer, setTimer] = useState(() => (exam.mockMinutes || 60) * 60);
+  const [currentSection, setCurrentSection] = useState('');
+  const [globalIndex, setGlobalIndex] = useState(0);
+
+  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [questionStatuses, setQuestionStatuses] = useState({});
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const [sectionTimes, setSectionTimes] = useState({});
+
+  const sections = useMemo(
+    () => sectionsFromQuestions(mockData?.questions) || exam.sections || [],
+    [mockData, exam.sections]
+  );
 
   const stateRef = useRef({ mockData, selectedAnswers, sectionTimes });
   useEffect(() => {
@@ -47,7 +64,6 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
       setLoading(true);
       try {
-        // apiService returns the JSON body: { status: 'success', data: test }
         const res = await apiService.get(`/mock/${mockTestId}`);
         const testData = res?.data ?? res;
 
@@ -55,11 +71,18 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
         if (testData?.questions) {
           setMockData(testData);
+          setTimer((exam.mockMinutes || 60) * 60);
+
+          const secs = sectionsFromQuestions(testData.questions);
+          const times = Object.fromEntries(secs.map((s) => [s, 0]));
+          setSectionTimes(times);
 
           if (testData.questions.length > 0) {
             setQuestionStatuses({ 0: 'not-answered' });
             if (testData.questions[0].section) {
               setCurrentSection(testData.questions[0].section);
+            } else if (secs[0]) {
+              setCurrentSection(secs[0]);
             }
           }
         } else {
@@ -74,7 +97,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
 
     loadTest();
     return () => { cancelled = true; };
-  }, [mockTestId]);
+  }, [mockTestId, exam.mockMinutes]);
 
   // Timer logic
   useEffect(() => {
@@ -103,7 +126,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `Time Remaining: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const jumpToQuestion = (idx) => {
@@ -115,6 +138,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
     if (!questionStatuses[idx]) {
       setQuestionStatuses(prev => ({ ...prev, [idx]: 'not-answered' }));
     }
+    setPaletteOpen(false);
   };
 
   const selectOptionValue = (optIdx) => {
@@ -175,62 +199,75 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   }
 
   const activeQ = mockData.questions[globalIndex];
+  const qCount = mockData.questions.length;
   
   // Filter questions for the palette based on current section
   const sectionQuestions = mockData.questions.map((q, i) => ({ ...q, originalIndex: i })).filter(q => q.section === currentSection);
 
   return (
-    <div id="exam-portal" className="no-select">
+    <div id="exam-portal" className="no-select exam-portal--mock">
       <Helmet><title>{pageTitle('Full Mock')}</title></Helmet>
       
       {/* Top Navbar */}
       <div className="navbar">
-        <div>{mockData.title.toUpperCase()} - FULL MOCK (100 Qs)</div>
-        <div id="timer-box" style={{ color: timer < 300 ? '#ef4444' : 'inherit', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <Timer size={16} strokeWidth={2} /> {formatTimer(timer)}
+        <div className="exam-nav-title">
+          <span className="exam-nav-title__full">{mockData.title}</span>
+          <span className="exam-nav-title__meta">{qCount} Q · {exam.name}</span>
+        </div>
+        <div id="timer-box" className={timer < 300 ? 'timer-urgent' : ''} style={{ color: timer < 300 ? '#ef4444' : 'inherit' }}>
+          <Timer size={16} strokeWidth={2} />
+          <span className="timer-label-full">Time Left </span>
+          <strong>{formatTimer(timer)}</strong>
         </div>
       </div>
 
       {/* Section Tabs */}
-      <div className="revision-sub-tabs" style={{ margin: 0, borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-surface)' }}>
-        {SECTIONS.map(st => (
+      <div className="exam-section-tabs revision-sub-tabs" role="tablist">
+        {sections.map(st => (
           <button
             key={st}
+            type="button"
+            role="tab"
             className={`revision-sub-tab ${currentSection === st ? 'active' : ''}`}
             onClick={() => {
                setCurrentSection(st);
-               // optionally jump to the first question of this section
                const firstQIdx = mockData.questions.findIndex(q => q.section === st);
                if (firstQIdx !== -1) jumpToQuestion(firstQIdx);
             }}
-            style={{ borderRadius: 0, padding: '12px 24px' }}
           >
             {st}
           </button>
         ))}
       </div>
 
-      <div className="main-layout" style={{ height: 'calc(100vh - 120px)' }}>
+      <div className="main-layout">
         <div className="left-panel">
           <div className="section-bar">
-            Section: {currentSection}
+            <span>Q{globalIndex + 1}/{qCount} · {currentSection || 'Section'}</span>
+            <button
+              type="button"
+              className="exam-palette-toggle"
+              onClick={() => setPaletteOpen(true)}
+            >
+              Palette
+            </button>
           </div>
           
           <div className="question-area">
             {activeQ ? (
               <>
-                <div className="q-text" id="q-display-text" style={{ fontSize: '1.2rem', lineHeight: '1.6' }}>
-                  <b>Q{globalIndex + 1}.</b> {activeQ.q}
+                <div className="q-text" id="q-display-text">
+                  <b>Q{globalIndex + 1}.</b>{' '}
+                  <McqText text={activeQ.q} />
                 </div>
 
-                <div className="options-box" id="options-display-box" style={{ marginTop: '30px' }}>
+                <div className="options-box" id="options-display-box">
                   {activeQ.o.map((opt, idx) => {
                     const isActive = selectedAnswers[globalIndex] === idx;
                     return (
                       <label 
                         key={idx} 
                         className={`opt-label ${isActive ? 'active' : ''}`}
-                        style={{ padding: '15px' }}
                       >
                         <input
                           type="radio"
@@ -238,46 +275,54 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
                           checked={isActive}
                           onChange={() => selectOptionValue(idx)}
                         />
-                        {opt}
+                        <span className="opt-letter">{String.fromCharCode(65 + idx)}</span>
+                        <McqText text={opt} className="opt-text" />
                       </label>
                     );
                   })}
                 </div>
               </>
             ) : (
-              <div style={{ padding: '20px' }}>Question data missing or invalid.</div>
+              <div className="exam-q-missing">Question data missing or invalid.</div>
             )}
           </div>
 
           <div className="footer-buttons">
-            <div>
-              <button className="btn btn-review" onClick={markForReview}>
-                <Flag size={15} strokeWidth={2} /> Mark for Review & Next
-              </button>
-              <button className="btn btn-clear" onClick={clearResponse}>
-                <Eraser size={15} strokeWidth={2} /> Clear Response
-              </button>
-            </div>
-            <button className="btn btn-save" onClick={saveAndNext}>
-              <Save size={15} strokeWidth={2} /> Save & Next
+            <button type="button" className="btn btn-clear" onClick={clearResponse}>
+              <Eraser size={15} strokeWidth={2} />
+              <span>Clear</span>
+            </button>
+            <button type="button" className="btn btn-review" onClick={markForReview}>
+              <Flag size={15} strokeWidth={2} />
+              <span>Mark</span>
+            </button>
+            <button type="button" className="btn btn-save" onClick={saveAndNext}>
+              <Save size={15} strokeWidth={2} />
+              <span>Next</span>
             </button>
           </div>
         </div>
 
-        <div className="right-panel">
-          <div>
+        <div className={`right-panel${paletteOpen ? ' is-open' : ''}`}>
+          <div className="exam-palette-sheet-head">
+            <strong>Question palette</strong>
+            <button type="button" className="exam-palette-close" onClick={() => setPaletteOpen(false)} aria-label="Close palette">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="exam-palette-body">
             <div className="user-profile">
               <div className="avatar">{user?.username ? user.username.slice(0, 2).toUpperCase() : 'US'}</div>
               <div>
                 <div className="exam-user-name">{user?.username || 'Guest User'}</div>
                 <div className="exam-user-meta">
-                  {mockData?.questions?.length || exam.mockQuestions} Q · {exam.mockMinutes} min pattern · {exam.name}
+                  {qCount} Q · {exam.mockMinutes} min · {exam.name}
                 </div>
               </div>
             </div>
             
             <div className="palette-header">
-              {currentSection} Palette :
+              {currentSection} Palette
             </div>
             
             <div className="palette-grid" id="palette-box">
@@ -287,19 +332,17 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
                 return (
                   <button
                     key={sq.originalIndex}
+                    type="button"
                     id={`p-btn-${sq.originalIndex}`}
                     className={`palette-btn ${status} ${isActive ? 'active-q' : ''}`}
                     onClick={() => jumpToQuestion(sq.originalIndex)}
-                    style={isActive ? { border: '2px solid #000' } : {}}
                   >
                     {sectionIdx + 1}
                   </button>
                 );
               })}
             </div>
-          </div>
 
-          <div>
             <div className="legend-box">
               <div className="legend-item">
                 <span className="dot dot-white"></span> Not Visited
@@ -314,21 +357,37 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
                 <span className="dot dot-yellow"></span> Marked
               </div>
             </div>
+          </div>
+
+          <div className="exam-palette-actions">
             <button 
+              type="button"
               className="btn btn-submit-section" 
               onClick={() => onSubmit(mockData, selectedAnswers, timer, sectionTimes)}
-              style={{ background: '#10b981' }}
             >
-              <Send size={15} strokeWidth={2} /> Submit Full Test
+              <Send size={15} strokeWidth={2} /> Submit Test
             </button>
             <button 
+              type="button"
               className="btn btn-cancel-test" 
-              onClick={() => setCancelConfirmOpen(true)}
+              onClick={() => {
+                setPaletteOpen(false);
+                setCancelConfirmOpen(true);
+              }}
             >
-              <Ban size={15} strokeWidth={2} /> Abort Test
+              <Ban size={15} strokeWidth={2} /> Abort
             </button>
           </div>
         </div>
+
+        {paletteOpen && (
+          <button
+            type="button"
+            className="exam-palette-backdrop"
+            aria-label="Close palette"
+            onClick={() => setPaletteOpen(false)}
+          />
+        )}
       </div>
 
       {/* --- CANCEL TEST CONFIRMATION MODAL --- */}

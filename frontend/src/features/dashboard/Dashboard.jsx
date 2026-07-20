@@ -1,12 +1,13 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { APP_NAME, pageTitle } from '@/shared/brand';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useDrills } from '@/features/drills/hooks/useDrills';
 import { useStudy } from '@/features/study/hooks/useStudy';
-import { RefreshCw, XCircle, X, Menu } from 'lucide-react';
+import { XCircle, X, Menu } from 'lucide-react';
 import { apiService } from '@/shared/services/apiService';
+import { showAppToast } from '@/shared/utils/appToast';
 import './Dashboard.css';
 import '@/features/study/study.css';
 import '@/features/analytics/performance.css';
@@ -18,23 +19,51 @@ import { AuthPanel } from '@/features/auth/components/AuthPanel';
 import { ExamPortal } from '@/features/exam/components/ExamPortal';
 import { ResultsPortal } from '@/features/exam/components/ResultsPortal';
 import { Sidebar } from './Sidebar';
-import { DrillWorkspace } from '@/features/drills/components/DrillWorkspace';
-import { SyllabusWorkspace } from '@/features/study/components/SyllabusWorkspace';
-import { RevisionWorkspace } from '@/features/study/components/RevisionWorkspace';
-import { PerformanceWorkspace } from '@/features/analytics/components/PerformanceWorkspace';
-import { AnalyticsWorkspace } from '@/features/analytics/components/AnalyticsWorkspace';
-import { MockWorkspace } from '@/features/mock-tests/components/MockWorkspace';
 import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal';
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
-import { CompetitionWorkspace } from '@/features/competition/components/CompetitionWorkspace';
 import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
-import { TodayFocusWorkspace } from '@/features/home/components/TodayFocusWorkspace';
 import { ExamPicker } from '@/features/home/components/ExamPicker';
-import { AdminWorkspace } from '@/features/admin/components/AdminWorkspace';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
+import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE } from '@/shared/utils/parseBulkQuestions';
 import '@/features/home/home.css';
 import '@/features/admin/admin.css';
+
+const DrillWorkspace = lazy(() =>
+  import('@/features/drills/components/DrillWorkspace').then((m) => ({ default: m.DrillWorkspace }))
+);
+const SyllabusWorkspace = lazy(() =>
+  import('@/features/study/components/SyllabusWorkspace').then((m) => ({ default: m.SyllabusWorkspace }))
+);
+const RevisionWorkspace = lazy(() =>
+  import('@/features/study/components/RevisionWorkspace').then((m) => ({ default: m.RevisionWorkspace }))
+);
+const PerformanceWorkspace = lazy(() =>
+  import('@/features/analytics/components/PerformanceWorkspace').then((m) => ({ default: m.PerformanceWorkspace }))
+);
+const AnalyticsWorkspace = lazy(() =>
+  import('@/features/analytics/components/AnalyticsWorkspace').then((m) => ({ default: m.AnalyticsWorkspace }))
+);
+const MockWorkspace = lazy(() =>
+  import('@/features/mock-tests/components/MockWorkspace').then((m) => ({ default: m.MockWorkspace }))
+);
+const CompetitionWorkspace = lazy(() =>
+  import('@/features/competition/components/CompetitionWorkspace').then((m) => ({ default: m.CompetitionWorkspace }))
+);
+const TodayFocusWorkspace = lazy(() =>
+  import('@/features/home/components/TodayFocusWorkspace').then((m) => ({ default: m.TodayFocusWorkspace }))
+);
+const AdminWorkspace = lazy(() =>
+  import('@/features/admin/components/AdminWorkspace').then((m) => ({ default: m.AdminWorkspace }))
+);
+
+function WorkspaceFallback() {
+  return (
+    <div className="app-loader-overlay" style={{ position: 'relative', top: 24 }} aria-busy="true" aria-label="Loading">
+      <div className="app-loader-spinner" />
+    </div>
+  );
+}
 
 const VIEW_PARENT = {
   notes: 'topics',
@@ -94,6 +123,9 @@ export function Dashboard() {
     deleteCustomSubject,
     loginUser,
     registerUser,
+    requestOtp,
+    verifyOtp,
+    loginWithGoogle,
     logoutUser,
     updateCustomTopic,
     deleteCustomTopic,
@@ -172,7 +204,7 @@ export function Dashboard() {
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicSyllabus, setNewTopicSyllabus] = useState('');
   const [newTopicNotes, setNewTopicNotes] = useState('');
-  const [newTopicQuestionsJson, setNewTopicQuestionsJson] = useState('[]');
+  const [newTopicQuestionsJson, setNewTopicQuestionsJson] = useState('');
   const [topicAddSuccess, setTopicAddSuccess] = useState('');
   const [topicAddError, setTopicAddError] = useState('');
 
@@ -186,7 +218,7 @@ export function Dashboard() {
   const [editTopicName, setEditTopicName] = useState('');
   const [editTopicSyllabus, setEditTopicSyllabus] = useState('');
   const [editTopicNotes, setEditTopicNotes] = useState('');
-  const [editTopicQuestionsJson, setEditTopicQuestionsJson] = useState('[]');
+  const [editTopicQuestionsJson, setEditTopicQuestionsJson] = useState('');
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTopicId, setDeletingTopicId] = useState('');
@@ -200,7 +232,6 @@ export function Dashboard() {
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [apiOnline, setApiOnline] = useState(true);
   const viewStackRef = useRef([]);
   const skipStackRef = useRef(false);
   const prevViewRef = useRef(activeView);
@@ -280,6 +311,11 @@ export function Dashboard() {
         return goToView('mock');
       }
 
+      if (currentView === 'competition') {
+        window.dispatchEvent(new CustomEvent('ssc-competition-back'));
+        return true;
+      }
+
       if (currentView === 'notes') {
         return goToView('topics');
       }
@@ -310,24 +346,6 @@ export function Dashboard() {
 
     return () => setBackHandler(null);
   }, [setActiveView]);
-
-  const checkApiHealth = useCallback(async () => {
-    try {
-      const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
-      const res = await fetch(`${apiBase}/health`, { signal: AbortSignal.timeout(5000) });
-      const data = await res.json();
-      setApiOnline(res.ok && data.db === 'connected');
-    } catch {
-      setApiOnline(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    checkApiHealth();
-    const interval = setInterval(checkApiHealth, 60000);
-    return () => clearInterval(interval);
-  }, [user, checkApiHealth]);
 
   const [deckTab, setDeckTab] = useState('tables');
   const [tableSubTab, setTableSubTab] = useState('tables');
@@ -483,7 +501,14 @@ export function Dashboard() {
 
   const globalLoading = drillLoading || studyLoading;
   const globalError = studyError;
-  const isOnline = apiOnline;
+
+  useEffect(() => {
+    if (globalError) showAppToast(globalError, { variant: 'error' });
+  }, [globalError]);
+
+  useEffect(() => {
+    if (drillError) showAppToast(drillError, { variant: 'error' });
+  }, [drillError]);
 
   const handleOpenEditModal = async (e, topic) => {
     e.stopPropagation();
@@ -507,31 +532,19 @@ export function Dashboard() {
     setTopicAddError('');
 
     if (!editTopicName.trim() || !editTopicNotes.trim()) {
-      setTopicAddError("Heading and notes are mandatory!");
+      setTopicAddError('Heading and notes are required.');
       return;
     }
 
     let parsedQuestions = null;
     if (editTopicQuestionsJson.trim()) {
-      try {
-        parsedQuestions = JSON.parse(editTopicQuestionsJson.trim());
-        if (!Array.isArray(parsedQuestions)) {
-          setTopicAddError("MCQ must be a JSON array format (i.e. [ ... ])!");
-          return;
-        }
-        for (let i = 0; i < parsedQuestions.length; i++) {
-          const q = parsedQuestions[i];
-          if (!q.q || !Array.isArray(q.o) || typeof q.a !== 'number' || !q.e) {
-            setTopicAddError(`Invalid MCQ object at index ${i}! Check structure: { q, o: [...], a, e }`);
-            return;
-          }
-          // Ensure all options are strings
-          q.o = q.o.map(opt => typeof opt === 'string' ? opt : JSON.stringify(opt));
-        }
-      } catch (err) {
-        setTopicAddError("Invalid MCQ JSON syntax! Please check parsing: " + err.message);
+      const { items, errors } = parseBulkQuestions(editTopicQuestionsJson);
+      const { items: compact, errors: compactErrors } = toCompactMcqs(items);
+      if (compact.length === 0) {
+        setTopicAddError(errors[0] || compactErrors[0] || 'No valid MCQs found. Check the question format.');
         return;
       }
+      parsedQuestions = compact;
     }
 
     const res = await updateCustomTopic(editingTopicId, {
@@ -542,13 +555,17 @@ export function Dashboard() {
     });
 
     if (res.success) {
-      setTopicAddSuccess("Topic successfully updated in database!");
+      setTopicAddSuccess(
+        parsedQuestions?.length
+          ? `Topic updated. ${parsedQuestions.length} MCQ(s) appended.`
+          : 'Topic updated successfully.'
+      );
       setTimeout(() => {
         setEditModalOpen(false);
         setTopicAddSuccess('');
       }, 1500);
     } else {
-      setTopicAddError(res.message || "Failed to update custom topic.");
+      setTopicAddError(res.message || 'Failed to update topic.');
     }
   };
 
@@ -564,27 +581,15 @@ export function Dashboard() {
     setDeleteSubjectConfirmOpen(true);
   };
 
-  const parseQuestionsJson = (raw, setError) => {
-    if (!raw?.trim() || raw.trim() === '[]') return [];
-    try {
-      const parsed = JSON.parse(raw.trim());
-      if (!Array.isArray(parsed)) {
-        setError('MCQ must be a JSON array format (i.e. [ ... ])!');
-        return null;
-      }
-      for (let i = 0; i < parsed.length; i++) {
-        const q = parsed[i];
-        if (!q.q || !Array.isArray(q.o) || typeof q.a !== 'number' || !q.e) {
-          setError(`Invalid MCQ object at index ${i}! Check structure: { q, o: [...], a, e }`);
-          return null;
-        }
-        q.o = q.o.map(opt => (typeof opt === 'string' ? opt : JSON.stringify(opt)));
-      }
-      return parsed;
-    } catch (err) {
-      setError('Invalid MCQ JSON syntax! Please check parsing: ' + err.message);
+  const parseQuestionsBulk = (raw, setError) => {
+    if (!raw?.trim()) return [];
+    const { items, errors } = parseBulkQuestions(raw);
+    const { items: compact, errors: compactErrors } = toCompactMcqs(items);
+    if (compact.length === 0) {
+      setError(errors[0] || compactErrors[0] || 'No valid MCQs found. Check the question format.');
       return null;
     }
+    return compact;
   };
 
   const handleCreateSubjectSubmit = async (e) => {
@@ -622,7 +627,7 @@ export function Dashboard() {
       return;
     }
 
-    const parsedQuestions = parseQuestionsJson(newTopicQuestionsJson, setTopicAddError);
+    const parsedQuestions = parseQuestionsBulk(newTopicQuestionsJson, setTopicAddError);
     if (parsedQuestions === null) return;
 
     const payload = {
@@ -642,7 +647,7 @@ export function Dashboard() {
       setNewTopicName('');
       setNewTopicSyllabus('');
       setNewTopicNotes('');
-      setNewTopicQuestionsJson('[]');
+      setNewTopicQuestionsJson('');
       setTimeout(() => {
         setModalOpen(false);
         setTopicAddSuccess('');
@@ -653,7 +658,15 @@ export function Dashboard() {
   };
 
   if (!user) {
-    return <AuthPanel loginUser={loginUser} registerUser={registerUser} />;
+    return (
+      <AuthPanel
+        loginUser={loginUser}
+        registerUser={registerUser}
+        requestOtp={requestOtp}
+        verifyOtp={verifyOtp}
+        loginWithGoogle={loginWithGoogle}
+      />
+    );
   }
 
   if (activeView === 'test') {
@@ -712,16 +725,14 @@ export function Dashboard() {
       <Helmet><title>{pageTitle('Dashboard')}</title></Helmet>
       
       {globalLoading && (
-        <div className="absolute-loader-strip">
-          <RefreshCw className="spin-icon" size={14} />
-          <span>Synchronizing with MongoDB Atlas...</span>
+        <div className="app-loader-overlay" aria-busy="true" aria-label="Loading">
+          <div className="app-loader-spinner" />
         </div>
       )}
 
       <Sidebar 
         user={user}
         logoutUser={logoutUser}
-        isOnline={isOnline}
         activeView={activeView}
         setActiveView={setActiveView}
         skipToSubjects={skipToSubjects}
@@ -738,20 +749,8 @@ export function Dashboard() {
           <h2>{APP_NAME}</h2>
         </div>
 
-        {globalError && (
-          <div className="alert-banner error">
-            <XCircle size={16} />
-            <span>{globalError}</span>
-          </div>
-        )}
-        {drillError && activeView === 'drill' && (
-          <div className="alert-banner error">
-            <XCircle size={16} />
-            <span>{drillError}</span>
-          </div>
-        )}
-
         <div className="workspace-card-enclosure" ref={workspaceRef}>
+          <Suspense fallback={<WorkspaceFallback />}>
           {activeView === 'home' && (
             <TodayFocusWorkspace
               user={user}
@@ -833,6 +832,7 @@ export function Dashboard() {
             <MockWorkspace 
               mockTestsApi={mockTestsHooks}
               startMockExam={startMockExam}
+              canEditPattern={user?.role === 'admin'}
             />
           )}
 
@@ -875,8 +875,9 @@ export function Dashboard() {
           )}
 
           {activeView === 'competition' && (
-            <CompetitionWorkspace user={user} />
+            <CompetitionWorkspace user={user} setActiveView={setActiveView} />
           )}
+          </Suspense>
         </div>
       </main>
 
@@ -979,18 +980,17 @@ Tip: 12.5% = 1/8
                 </span>
               </div>
               <div className="form-group">
-                <label>
-                  Practice MCQs (optional JSON array)
-                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
-                    Example: <code>{`[ { "q": "Question?", "o": ["A","B","C","D"], "a": 0, "e": "Why" } ]`}</code>
-                  </span>
-                </label>
+                <label>Practice MCQs <em style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--text-muted)' }}>(optional)</em></label>
+                <p className="mcq-bulk-guide">
+                  Add questions in plain text. Format:
+                </p>
+                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE.split('\n\n')[0]}</pre>
                 <textarea
-                  rows="4"
+                  className="mcq-bulk-textarea"
+                  rows="8"
                   value={newTopicQuestionsJson}
                   onChange={e => setNewTopicQuestionsJson(e.target.value)}
-                  placeholder='[ { "q": "...", "o": ["..."], "a": 0, "e": "..." } ]'
-                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
+                  placeholder="Enter questions using the format above…"
                 />
               </div>
               
@@ -1019,14 +1019,14 @@ Tip: 12.5% = 1/8
         <div className="modal-overlay" onClick={() => setEditModalOpen(false)}>
           <div className="modal-content-card modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Edit Topic Notes & Inject MCQs</h3>
+              <h3>Edit topic &amp; add MCQs</h3>
               <button className="btn-close-modal" onClick={() => setEditModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
             <form className="modal-form" onSubmit={handleEditTopicSubmit}>
               <div className="form-group">
-                <label>Topic Heading *</label>
+                <label>Topic heading *</label>
                 <input 
                   type="text" 
                   value={editTopicName} 
@@ -1035,7 +1035,7 @@ Tip: 12.5% = 1/8
                 />
               </div>
               <div className="form-group">
-                <label>Syllabus Meta Description</label>
+                <label>Syllabus description</label>
                 <input 
                   type="text" 
                   value={editTopicSyllabus} 
@@ -1043,7 +1043,7 @@ Tip: 12.5% = 1/8
                 />
               </div>
               <div className="form-group">
-                <label>Revision Notes (text / Markdown / HTML) *</label>
+                <label>Revision notes (text / Markdown / HTML) *</label>
                 <textarea 
                   rows="10" 
                   value={editTopicNotes} 
@@ -1056,19 +1056,17 @@ Tip: 12.5% = 1/8
                 </span>
               </div>
               <div className="form-group">
-                <label>
-                  Inject Bulk MCQs (JSON Array format)
-                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
-                    Paste a valid JSON array here to append MCQs to this topic. Example: <br/>
-                    <code>{`[ { "q": "Question", "o": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"], "a": 1, "e": "Explanation" } ]`}</code>
-                  </span>
-                </label>
+                <label>Add practice MCQs <em style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--text-muted)' }}>(optional)</em></label>
+                <p className="mcq-bulk-guide">
+                  New questions are appended to this topic. Use the format below
+                </p>
+                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE.split('\n\n')[0]}</pre>
                 <textarea 
-                  rows="5" 
+                  className="mcq-bulk-textarea"
+                  rows="8" 
                   value={editTopicQuestionsJson} 
                   onChange={e => setEditTopicQuestionsJson(e.target.value)} 
-                  placeholder="Paste JSON Array of questions here..."
-                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
+                  placeholder="Enter questions using the format above…"
                 />
               </div>
 
@@ -1080,8 +1078,8 @@ Tip: 12.5% = 1/8
               )}
 
               <div className="modal-footer-actions">
-                <button type="button" className="btn-cancel" onClick={() => setEditModalOpen(false)}>Discard Edit</button>
-                <button type="submit" className="btn-save-topic">Update Topic & Append MCQs</button>
+                <button type="button" className="btn-cancel" onClick={() => setEditModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn-save-topic">Save topic</button>
               </div>
             </form>
           </div>

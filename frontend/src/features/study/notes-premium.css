@@ -382,10 +382,14 @@
   }
   .drill-tabs {
     flex-wrap: nowrap !important;
-    width: max-content !important;
-    max-width: none !important;
-    padding: 3px !important;
-    border-radius: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: auto !important;
+    padding: 6px 8px !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 
   /* Notes: header stays in flow; scroll is inside notes card */

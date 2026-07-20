@@ -1,8 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer } from 'lucide-react';
+import { McqText } from '@/shared/components/ui/McqText';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/study/study.css';
+import '@/features/exam/exam.css';
 
 export function ExamPortal({
   selectedSubject,
@@ -43,18 +45,19 @@ export function ExamPortal({
       <div className="main-layout">
         <div className="left-panel">
           <div className="section-bar">
-            Section: {selectedSubject} (25 Question Set Master Run)
+            Section: {selectedSubject} ({testQuestions?.length || 0} Questions)
           </div>
           
           <div className="question-area">
             <div className="direction" id="q-direction">
-              Direction: Choose the correct option that perfectly matches central standard answer keys.
+              Direction: Choose the correct option.
             </div>
 
             {activeQ ? (
               <>
                 <div className="q-text" id="q-display-text">
-                  <b>Q{currentQuestionIdx + 1}.</b> {activeQ.q}
+                  <b>Q{currentQuestionIdx + 1}.</b>{' '}
+                  <McqText text={activeQ.q} />
                 </div>
 
                 <div className="options-box" id="options-display-box">
@@ -71,7 +74,7 @@ export function ExamPortal({
                           checked={isActive}
                           onChange={() => selectOptionValue(idx)}
                         />
-                        {opt}
+                        <McqText text={opt} />
                       </label>
                     );
                   })}
@@ -106,7 +109,7 @@ export function ExamPortal({
               <div className="avatar">{user.username.slice(0, 2).toUpperCase()}</div>
               <div>
                 <div className="exam-user-name">{user.username}</div>
-                <div className="exam-user-meta">25 Questions | 15 Mins</div>
+                <div className="exam-user-meta">{testQuestions?.length || 0} Questions · 15 Mins</div>
               </div>
             </div>
             <div className="palette-header">

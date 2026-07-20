@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
+import { progressForTopic } from '@/shared/utils/examProgress';
+import { useExam } from '@/shared/context/useExam';
+import { showAppToast } from '@/shared/utils/appToast';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -61,6 +64,8 @@ export function SyllabusWorkspace({
   updateCustomTopic,
   onOpenNotesDock
 }) {
+  const { examId, examSubjects } = useExam();
+  const examScope = { examId, examSubjects };
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
@@ -298,7 +303,9 @@ export function SyllabusWorkspace({
     const res = await persistNotesHtml(newHtml, { closeEditor: true });
     setIsSaving(false);
     if (!res.success) {
-      alert(res.message || 'Failed to save notes');
+      showAppToast(res.message || 'Failed to save notes', { variant: 'error' });
+    } else {
+      showAppToast('Notes saved.', { variant: 'success', durationMs: 1800 });
     }
   }, [persistNotesHtml]);
 
@@ -317,14 +324,14 @@ export function SyllabusWorkspace({
         await persistNotesHtml(notesRef.current.innerHTML);
       }
     } catch {
-      alert('Please select text within a single line to highlight.');
+      showAppToast('Select text within a single line to highlight.', { variant: 'warn' });
     }
   }, [persistNotesHtml]);
 
   const handleRemoveHighlight = useCallback(async () => {
     const selection = window.getSelection();
     if (!selection.rangeCount || selection.isCollapsed) {
-      alert('Please click inside or select the highlighted text you want to remove.');
+      showAppToast('Click inside or select the highlighted text to remove.', { variant: 'warn' });
       return;
     }
 
@@ -344,7 +351,7 @@ export function SyllabusWorkspace({
         await persistNotesHtml(notesRef.current.innerHTML);
       }
     } else {
-      alert('Please click inside an existing highlight to remove it.');
+      showAppToast('Click inside an existing highlight to remove it.', { variant: 'warn' });
     }
   }, [persistNotesHtml]);
 
@@ -563,8 +570,8 @@ export function SyllabusWorkspace({
             <div className="topics-list-container">
             {topicsList.length > 0 ? (
               topicsList.map((topic) => {
-                // Look up topic accuracy indicators in user's profile
-                const progressRecord = user.progress?.find(p => p.topicId === topic.id);
+                // Look up topic accuracy indicators for THIS exam only
+                const progressRecord = progressForTopic(user.progress, topic.id, examScope);
                 const status = progressRecord?.status || 'gray';
                 const score = progressRecord?.score;
                 const maxScore = progressRecord?.maxScore || 50;
