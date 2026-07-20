@@ -75,14 +75,32 @@ function resolveRole(username, adminCode, email) {
   return 'user';
 }
 
-async function createAndStoreOtp(email) {
+async function createAndStoreOtp(email, purpose = 'email_verify') {
   const code = generateOtpCode();
   const codeHash = hashOtpCode(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-  await OtpChallenge.deleteMany({ email });
-  await OtpChallenge.create({ email, codeHash, expiresAt, attempts: 0 });
-  const mail = await sendOtpEmail(email, code);
+  await OtpChallenge.deleteMany({ email, purpose });
+  await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0 });
+  const mail = await sendOtpEmail(email, code, { purpose });
   return { code, mail };
+}
+
+async function consumeOtpChallenge(email, code, purpose) {
+  const challenge = await OtpChallenge.findOne({ email, purpose }).sort({ expiresAt: -1 });
+  if (!challenge || challenge.expiresAt.getTime() < Date.now()) {
+    return { ok: false, status: 401, message: 'OTP expired. Request a new code.' };
+  }
+  if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
+    await OtpChallenge.deleteMany({ email, purpose });
+    return { ok: false, status: 429, message: 'Too many incorrect attempts. Request a new code.' };
+  }
+  if (challenge.codeHash !== hashOtpCode(code)) {
+    challenge.attempts += 1;
+    await challenge.save();
+    return { ok: false, status: 401, message: 'Incorrect OTP. Try again.' };
+  }
+  await OtpChallenge.deleteMany({ email, purpose });
+  return { ok: true };
 }
 
 export const register = async (req, res, next) => {
@@ -128,7 +146,7 @@ export const register = async (req, res, next) => {
       emailVerified: false,
     });
 
-    const { mail } = await createAndStoreOtp(email);
+    const { mail } = await createAndStoreOtp(email, 'email_verify');
     const payload = {
       status: 'success',
       message: mail.sent
@@ -177,7 +195,7 @@ export const login = async (req, res, next) => {
     }
 
     if (user.email && !user.emailVerified && !user.googleId) {
-      const { mail } = await createAndStoreOtp(user.email);
+      const { mail } = await createAndStoreOtp(user.email, 'email_verify');
       const payload = {
         status: 'success',
         message: 'Verify your email with the OTP we sent, then sign in with your password.',
@@ -349,7 +367,7 @@ export const requestOtp = async (req, res, next) => {
       });
     }
 
-    const { mail } = await createAndStoreOtp(email);
+    const { mail } = await createAndStoreOtp(email, 'email_verify');
     const payload = {
       status: 'success',
       message: mail.sent
@@ -377,33 +395,14 @@ export const verifyOtp = async (req, res, next) => {
       });
     }
 
-    const challenge = await OtpChallenge.findOne({ email }).sort({ expiresAt: -1 });
-    if (!challenge || challenge.expiresAt.getTime() < Date.now()) {
-      return res.status(401).json({
+    const consumed = await consumeOtpChallenge(email, code, 'email_verify');
+    if (!consumed.ok) {
+      return res.status(consumed.status).json({
         status: 'error',
-        message: 'OTP expired. Request a new code.',
+        message: consumed.message,
       });
     }
 
-    if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
-      await OtpChallenge.deleteMany({ email });
-      return res.status(429).json({
-        status: 'error',
-        message: 'Too many incorrect attempts. Request a new code.',
-      });
-    }
-
-    const ok = challenge.codeHash === hashOtpCode(code);
-    if (!ok) {
-      challenge.attempts += 1;
-      await challenge.save();
-      return res.status(401).json({
-        status: 'error',
-        message: 'Incorrect OTP. Try again.',
-      });
-    }
-
-    await OtpChallenge.deleteMany({ email });
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({
@@ -420,6 +419,85 @@ export const verifyOtp = async (req, res, next) => {
       status: 'success',
       message: 'Email verified. Sign in with your password.',
       data: { email, verified: true },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /auth/password/forgot
+ * Always returns a generic success message (no email enumeration).
+ * Sends a password_reset OTP when an account exists for the email.
+ */
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ status: 'error', message: 'Enter a valid email address.' });
+    }
+
+    const generic = {
+      status: 'success',
+      message: 'If an account exists for that email, a reset code has been sent.',
+      data: { email },
+    };
+
+    const user = await User.findOne({ email }).lean();
+    if (!user) {
+      return res.json(generic);
+    }
+
+    const { mail } = await createAndStoreOtp(email, 'password_reset');
+    if (mail.debugOtp) generic.data.debugOtp = mail.debugOtp;
+    return res.json(generic);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /auth/password/reset
+ * Body: { email, code, password }
+ */
+export const resetPassword = async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const code = String(req.body.code || '').trim();
+    const password = req.body.password;
+
+    if (!isValidEmail(email) || !/^\d{6}$/.test(code) || !password) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Email, 6-digit OTP, and a new password are required.',
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No account found for this email.',
+      });
+    }
+
+    const consumed = await consumeOtpChallenge(email, code, 'password_reset');
+    if (!consumed.ok) {
+      return res.status(consumed.status).json({
+        status: 'error',
+        message: consumed.message,
+      });
+    }
+
+    user.password = await hashPassword(password);
+    user.emailVerified = true;
+    if (resolveRoleByEmail(email) === 'admin') user.role = 'admin';
+    await user.save();
+
+    return res.json({
+      status: 'success',
+      message: 'Password updated. Sign in with your new password.',
+      data: { email, reset: true },
     });
   } catch (error) {
     next(error);

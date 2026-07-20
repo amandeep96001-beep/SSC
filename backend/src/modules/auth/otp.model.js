@@ -8,11 +8,19 @@ const OtpSchema = new mongoose.Schema({
     trim: true,
     index: true,
   },
+  /** email_verify | password_reset */
+  purpose: {
+    type: String,
+    enum: ['email_verify', 'password_reset'],
+    default: 'email_verify',
+    index: true,
+  },
   codeHash: { type: String, required: true },
   expiresAt: { type: Date, required: true, index: true },
   attempts: { type: Number, default: 0 },
 });
 
+OtpSchema.index({ email: 1, purpose: 1 });
 // Auto-delete expired OTP docs
 OtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 

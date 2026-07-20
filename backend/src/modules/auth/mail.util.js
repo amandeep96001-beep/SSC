@@ -25,7 +25,7 @@ function createTransport() {
   });
 }
 
-function buildOtpEmailHtml(code) {
+function buildOtpEmailHtml(code, { title, subtitle, lead }) {
   const digits = String(code).split('').map((d) => (
     `<td style="width:42px;height:52px;text-align:center;vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;letter-spacing:0;color:#1a1d2e;background:#ffffff;border:1px solid rgba(99,102,241,0.22);border-radius:12px;">${d}</td>`
   )).join('<td style="width:8px;"></td>');
@@ -35,7 +35,7 @@ function buildOtpEmailHtml(code) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ExamPrep login code</title>
+  <title>${title}</title>
 </head>
 <body style="margin:0;padding:0;background:#e8eef8;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e8eef8;padding:32px 16px;">
@@ -49,7 +49,7 @@ function buildOtpEmailHtml(code) {
                   <td style="width:44px;height:44px;border-radius:14px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.18);text-align:center;vertical-align:middle;font-size:20px;">📚</td>
                   <td style="padding-left:12px;">
                     <div style="font-size:18px;font-weight:800;color:#14182a;letter-spacing:-0.02em;">ExamPrep</div>
-                    <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6366f1;">Login verification</div>
+                    <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6366f1;">${subtitle}</div>
                   </td>
                 </tr>
               </table>
@@ -59,7 +59,7 @@ function buildOtpEmailHtml(code) {
             <td style="padding:8px 28px 8px;">
               <h1 style="margin:12px 0 8px;font-size:22px;line-height:1.25;font-weight:800;color:#14182a;letter-spacing:-0.02em;">Your one-time code</h1>
               <p style="margin:0 0 20px;font-size:14px;line-height:1.5;color:#4a5168;">
-                Enter this 6-digit code to sign in. It expires in <strong style="color:#252b42;">10 minutes</strong>.
+                ${lead} It expires in <strong style="color:#252b42;">10 minutes</strong>.
               </p>
               <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 8px;">
                 <tr>${digits}</tr>
@@ -93,13 +93,32 @@ function buildOtpEmailHtml(code) {
 
 /**
  * Send OTP email. In non-production without SMTP, logs OTP and returns debugOtp.
+ * @param {string} email
+ * @param {string} code
+ * @param {{ purpose?: 'email_verify' | 'password_reset' }} [options]
  * @returns {{ sent: boolean, debugOtp?: string }}
  */
-export async function sendOtpEmail(email, code) {
+export async function sendOtpEmail(email, code, options = {}) {
+  const purpose = options.purpose || 'email_verify';
+  const isReset = purpose === 'password_reset';
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local';
-  const subject = 'Your ExamPrep verification code';
-  const text = `Your ExamPrep email verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`;
-  const html = buildOtpEmailHtml(code);
+  const subject = isReset
+    ? 'Your ExamPrep password reset code'
+    : 'Your ExamPrep verification code';
+  const copy = isReset
+    ? {
+      title: 'ExamPrep password reset',
+      subtitle: 'Password reset',
+      lead: 'Enter this 6-digit code to reset your password.',
+      text: `Your ExamPrep password reset code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+    }
+    : {
+      title: 'ExamPrep login code',
+      subtitle: 'Email verification',
+      lead: 'Enter this 6-digit code to verify your email.',
+      text: `Your ExamPrep email verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+    };
+  const html = buildOtpEmailHtml(code, copy);
 
   if (!smtpConfigured()) {
     if (process.env.NODE_ENV === 'production') {
@@ -111,11 +130,10 @@ export async function sendOtpEmail(email, code) {
 
   try {
     const transporter = createTransport();
-    await transporter.sendMail({ from, to: email, subject, text, html });
+    await transporter.sendMail({ from, to: email, subject, text: copy.text, html });
     return { sent: true };
   } catch (err) {
     console.error('[auth:otp] SMTP send failed:', err.message);
-    // Always log code on server for ops; never expose to client unless SMTP_DEBUG=1
     console.info(`[auth:otp] Code for ${email}: ${code}`);
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Unable to send verification email. Please try again shortly.');

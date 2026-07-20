@@ -125,6 +125,8 @@ export function Dashboard() {
     registerUser,
     requestOtp,
     verifyOtp,
+    forgotPassword,
+    resetPassword,
     loginWithGoogle,
     logoutUser,
     updateCustomTopic,
@@ -664,6 +666,8 @@ export function Dashboard() {
         registerUser={registerUser}
         requestOtp={requestOtp}
         verifyOtp={verifyOtp}
+        forgotPassword={forgotPassword}
+        resetPassword={resetPassword}
         loginWithGoogle={loginWithGoogle}
       />
     );

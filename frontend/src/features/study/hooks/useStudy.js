@@ -118,6 +118,8 @@ export function useStudy() {
   const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
   const requestOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/request', body), []));
   const verifyOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/verify', body), []));
+  const forgotPasswordApi = useApi(useCallback((body) => apiService.post('/auth/password/forgot', body), []));
+  const resetPasswordApi = useApi(useCallback((body) => apiService.post('/auth/password/reset', body), []));
   const googleAuthApi = useApi(useCallback((body) => apiService.post('/auth/google', body), []));
   const updateProgressApi = useApi(useCallback((body) => apiService.post('/auth/progress', body), []));
   const updateMockProgressApi = useApi(useCallback((body) => apiService.post('/auth/mock-progress', body), []));
@@ -210,6 +212,27 @@ export function useStudy() {
     }
     return { success: false, message: verifyOtpApi.error || 'OTP verification failed.' };
   }, [verifyOtpApi]);
+
+  const forgotPassword = useCallback(async (email) => {
+    const res = await forgotPasswordApi.execute({ email });
+    if (res.success) {
+      return {
+        success: true,
+        message: res.data?.message,
+        debugOtp: res.data?.data?.debugOtp,
+        email: res.data?.data?.email || email,
+      };
+    }
+    return { success: false, message: forgotPasswordApi.error || 'Unable to send reset code.' };
+  }, [forgotPasswordApi]);
+
+  const resetPassword = useCallback(async (email, code, password) => {
+    const res = await resetPasswordApi.execute({ email, code, password });
+    if (res.success && res.data?.data?.reset) {
+      return { success: true, message: res.data.message };
+    }
+    return { success: false, message: resetPasswordApi.error || 'Password reset failed.' };
+  }, [resetPasswordApi]);
 
   const loginWithGoogle = useCallback(async (payload) => {
     const body = typeof payload === 'string'
@@ -715,6 +738,8 @@ export function useStudy() {
     registerUser,
     requestOtp,
     verifyOtp,
+    forgotPassword,
+    resetPassword,
     loginWithGoogle,
     logoutUser,
     updateCustomTopic,

@@ -11,6 +11,8 @@ import {
   getAdminSummary,
   requestOtp,
   verifyOtp,
+  forgotPassword,
+  resetPassword,
   loginWithGoogle,
 } from './auth.controller.js';
 import {
@@ -20,6 +22,8 @@ import {
   mockProgressValidation,
   otpRequestValidation,
   otpVerifyValidation,
+  forgotPasswordValidation,
+  resetPasswordValidation,
   googleAuthValidation,
 } from './auth.validation.js';
 import { validateRequest } from '../../shared/middleware/validate.middleware.js';
@@ -50,6 +54,8 @@ router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, 
 
 router.post('/otp/request', otpLimiter, requireDb, otpRequestValidation, validateRequest, requestOtp);
 router.post('/otp/verify', authLimiter, requireDb, otpVerifyValidation, validateRequest, verifyOtp);
+router.post('/password/forgot', otpLimiter, requireDb, forgotPasswordValidation, validateRequest, forgotPassword);
+router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, validateRequest, resetPassword);
 
 // Google Identity Services — frontend sends ID token, backend verifies
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);

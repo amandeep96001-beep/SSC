@@ -47,6 +47,27 @@ export const otpVerifyValidation = [
     .withMessage('OTP must be a 6-digit code.'),
 ];
 
+export const forgotPasswordValidation = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Enter a valid email address.')
+    .normalizeEmail(),
+];
+
+export const resetPasswordValidation = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Enter a valid email address.')
+    .normalizeEmail(),
+  body('code')
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage('OTP must be a 6-digit code.'),
+  passwordRules,
+];
+
 export const googleAuthValidation = [
   body('code').optional({ values: 'falsy' }).trim().isString(),
   body('credential').optional({ values: 'falsy' }).trim().isString(),

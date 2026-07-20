@@ -25,6 +25,15 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
+    const origins = [
+      process.env.FRONTEND_URL,
+      ...(String(process.env.FRONTEND_URLS || '').split(',')),
+    ].map((u) => String(u || '').trim().replace(/\/+$/, '')).filter(Boolean);
+    if (origins.length) {
+      console.log(`🌐 CORS FRONTEND origins: ${origins.join(', ')}`);
+    } else {
+      console.warn('⚠️ FRONTEND_URL not set — browsers from other origins will be blocked in strict CORS mode.');
+    }
     if (process.env.GOOGLE_CLIENT_ID) {
       console.log('🔐 Google Sign-In: enabled (GIS ID token via POST /api/auth/google)');
     } else {
