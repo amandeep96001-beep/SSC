@@ -271,8 +271,12 @@
   opacity: 0.65;
 }
 
-.auth-google-wrap > div {
+.auth-google-wrap > div,
+.auth-google-gsi {
   width: 100% !important;
+  min-height: 40px;
+  display: flex;
+  justify-content: center;
 }
 
 .auth-google-btn {

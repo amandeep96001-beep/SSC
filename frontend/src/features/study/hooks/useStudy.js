@@ -247,6 +247,11 @@ export function useStudy() {
   }, [googleAuthApi]);
 
   const logoutUser = useCallback(() => {
+    try {
+      window.google?.accounts?.id?.disableAutoSelect?.();
+    } catch {
+      // ignore — GSI may not be loaded
+    }
     setUser(null);
     localStorage.removeItem('ssc_user');
     localStorage.removeItem('ssc_token');

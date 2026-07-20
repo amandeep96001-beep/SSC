@@ -6,34 +6,67 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleOAuth } from '@react-oauth/google';
 import { showAppToast } from '@/shared/utils/appToast';
 import '../auth.css';
 
 const OTP_LEN = 6;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
+/** Stable callback slot so we only call google.accounts.id.initialize() once per GSI instance. */
+const gsiCredentialHandler = { current: null };
+
 function GoogleSignInButton({ disabled, onCredential, onError }) {
+  const btnRef = useRef(null);
+  const onCredentialRef = useRef(onCredential);
+  const onErrorRef = useRef(onError);
+  const { clientId, scriptLoadedSuccessfully } = useGoogleOAuth();
+
+  onCredentialRef.current = onCredential;
+  onErrorRef.current = onError;
+  gsiCredentialHandler.current = (response) => {
+    if (!response?.credential) {
+      onErrorRef.current?.('Google did not return a credential.');
+      return;
+    }
+    onCredentialRef.current?.(response.credential);
+  };
+
+  useEffect(() => {
+    if (!scriptLoadedSuccessfully || !btnRef.current || disabled) return undefined;
+
+    const gsi = window.google?.accounts?.id;
+    if (!gsi) return undefined;
+
+    // Flag lives on the GSI object so a script reload can initialize again without remount spam
+    if (!gsi.__examprepInitialized) {
+      gsi.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          gsiCredentialHandler.current?.(response);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      gsi.__examprepInitialized = true;
+    }
+
+    btnRef.current.innerHTML = '';
+    gsi.renderButton(btnRef.current, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular',
+      width: 360,
+    });
+
+    return undefined;
+  }, [clientId, scriptLoadedSuccessfully, disabled]);
+
   return (
     <div className={`auth-google-wrap${disabled ? ' is-disabled' : ''}`}>
-      <GoogleLogin
-        onSuccess={(response) => {
-          if (!response?.credential) {
-            onError?.('Google did not return a credential.');
-            return;
-          }
-          onCredential(response.credential);
-        }}
-        onError={() => {
-          onError?.('Google sign-in failed. Check Authorized JavaScript origins for this site.');
-        }}
-        useOneTap={false}
-        theme="outline"
-        size="large"
-        text="signin_with"
-        shape="rectangular"
-        width="360"
-      />
+      <div ref={btnRef} className="auth-google-gsi" />
     </div>
   );
 }
