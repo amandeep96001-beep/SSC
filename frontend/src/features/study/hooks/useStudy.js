@@ -4,6 +4,7 @@ import { useApi } from '@/shared/hooks/useApi';
 import { getListFromResponse } from '@/shared/utils/apiResponse';
 import { useExam } from '@/shared/context/useExam';
 import { showAppToast } from '@/shared/utils/appToast';
+import { disableGsiAutoSelect } from '@/shared/utils/gsi';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
 
@@ -247,11 +248,7 @@ export function useStudy() {
   }, [googleAuthApi]);
 
   const logoutUser = useCallback(() => {
-    try {
-      window.google?.accounts?.id?.disableAutoSelect?.();
-    } catch {
-      // ignore — GSI may not be loaded
-    }
+    disableGsiAutoSelect();
     setUser(null);
     localStorage.removeItem('ssc_user');
     localStorage.removeItem('ssc_token');

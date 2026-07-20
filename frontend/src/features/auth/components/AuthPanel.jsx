@@ -6,66 +6,64 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
-import { useGoogleOAuth } from '@react-oauth/google';
+import { ensureGsiInitialized, setGsiCredentialHandler } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
 import '../auth.css';
 
 const OTP_LEN = 6;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
-/** Stable callback slot so we only call google.accounts.id.initialize() once per GSI instance. */
-const gsiCredentialHandler = { current: null };
-
 function GoogleSignInButton({ disabled, onCredential, onError }) {
   const btnRef = useRef(null);
   const onCredentialRef = useRef(onCredential);
   const onErrorRef = useRef(onError);
-  const { clientId, scriptLoadedSuccessfully } = useGoogleOAuth();
+  const [ready, setReady] = useState(false);
 
   onCredentialRef.current = onCredential;
   onErrorRef.current = onError;
-  gsiCredentialHandler.current = (response) => {
-    if (!response?.credential) {
-      onErrorRef.current?.('Google did not return a credential.');
-      return;
-    }
-    onCredentialRef.current?.(response.credential);
-  };
 
   useEffect(() => {
-    if (!scriptLoadedSuccessfully || !btnRef.current || disabled) return undefined;
-
-    const gsi = window.google?.accounts?.id;
-    if (!gsi) return undefined;
-
-    // Flag lives on the GSI object so a script reload can initialize again without remount spam
-    if (!gsi.__examprepInitialized) {
-      gsi.initialize({
-        client_id: clientId,
-        callback: (response) => {
-          gsiCredentialHandler.current?.(response);
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-      gsi.__examprepInitialized = true;
-    }
-
-    btnRef.current.innerHTML = '';
-    gsi.renderButton(btnRef.current, {
-      type: 'standard',
-      theme: 'outline',
-      size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-      width: 360,
+    setGsiCredentialHandler((response) => {
+      if (!response?.credential) {
+        onErrorRef.current?.('Google did not return a credential.');
+        return;
+      }
+      onCredentialRef.current?.(response.credential);
     });
+  }, []);
 
-    return undefined;
-  }, [clientId, scriptLoadedSuccessfully, disabled]);
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || disabled) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const gsi = await ensureGsiInitialized(GOOGLE_CLIENT_ID);
+        if (cancelled || !btnRef.current) return;
+        btnRef.current.innerHTML = '';
+        gsi.renderButton(btnRef.current, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width: 360,
+        });
+        if (!cancelled) setReady(true);
+      } catch {
+        if (!cancelled) {
+          onErrorRef.current?.('Google sign-in failed to load. Hard-refresh and try again.');
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [disabled]);
 
   return (
-    <div className={`auth-google-wrap${disabled ? ' is-disabled' : ''}`}>
+    <div className={`auth-google-wrap${disabled || !ready ? ' is-disabled' : ''}`}>
       <div ref={btnRef} className="auth-google-gsi" />
     </div>
   );

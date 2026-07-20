@@ -1,6 +1,5 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { HelmetProvider } from 'react-helmet-async';
 import GlobalErrorBoundary from '@/shared/components/layout/GlobalErrorBoundary.jsx';
 import { ThemeProvider } from '@/shared/context/ThemeContext.jsx';
@@ -10,8 +9,6 @@ import '@/styles/index.css';
 import App from '@/app/App.jsx';
 
 installBackTrap();
-
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
 const tree = (
   <HelmetProvider>
@@ -26,11 +23,5 @@ const tree = (
 );
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    {googleClientId ? (
-      <GoogleOAuthProvider clientId={googleClientId}>{tree}</GoogleOAuthProvider>
-    ) : (
-      tree
-    )}
-  </StrictMode>,
+  import.meta.env.DEV ? <StrictMode>{tree}</StrictMode> : tree,
 );
