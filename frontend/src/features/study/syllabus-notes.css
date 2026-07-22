@@ -664,6 +664,13 @@
   box-shadow: none;
 }
 
+.notes-tool-icon--edit.is-active {
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  border-color: transparent;
+  box-shadow: none;
+}
+
 [data-theme="dark"] .notes-tool-icon {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
@@ -1119,6 +1126,12 @@
   background: rgba(0, 113, 227, 0.03);
   cursor: text;
   min-height: 320px;
+  caret-color: var(--color-primary);
+}
+
+.notes-reader.editing:focus {
+  border-color: var(--color-primary);
+  background: rgba(0, 113, 227, 0.045);
 }
 
 .notes-sheet-footer {

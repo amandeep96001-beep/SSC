@@ -272,8 +272,23 @@ export function SyllabusWorkspace({
   }, []);
 
   const handleEditToggle = () => {
-    setIsEditingNotes(prev => !prev);
+    setIsEditingNotes((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowActionsMenu(false);
+        setShowReadTools(false);
+        setNotesFocus(true);
+        requestAnimationFrame(() => {
+          notesRef.current?.focus?.();
+        });
+      }
+      return next;
+    });
   };
+
+  const handleStopEditing = useCallback(() => {
+    setIsEditingNotes(false);
+  }, []);
 
   const persistNotesHtml = useCallback(async (newHtml, { closeEditor = false } = {}) => {
     if (!activeNotes?.id) return { success: false };
@@ -675,6 +690,16 @@ export function SyllabusWorkspace({
               <div className="syllabus-page-header__actions notes-toolbar-actions">
                 <button
                   type="button"
+                  className={`notes-tool-icon notes-tool-icon--edit${isEditingNotes ? ' is-active' : ''}`}
+                  onClick={() => (isEditingNotes ? handleStopEditing() : handleEditToggle())}
+                  title={isEditingNotes ? 'Stop editing' : 'Edit notes'}
+                  aria-label={isEditingNotes ? 'Stop editing' : 'Edit notes'}
+                  aria-pressed={isEditingNotes}
+                >
+                  {isEditingNotes ? <X size={18} strokeWidth={1.75} /> : <Pencil size={18} strokeWidth={1.75} />}
+                </button>
+                <button
+                  type="button"
                   className="notes-tool-icon sticky-launch-btn"
                   onClick={() => onOpenNotesDock?.()}
                   title="Quick Notes"
@@ -763,16 +788,29 @@ export function SyllabusWorkspace({
                 </div>
 
                 <div className="notes-reading-compact">
-                  <span className="notes-reading-compact__meta">{readingProgress}% read</span>
-                  <button
-                    type="button"
-                    className={`notes-tools-toggle${showReadTools ? ' active' : ''}`}
-                    onClick={() => setShowReadTools((v) => !v)}
-                    aria-expanded={showReadTools}
-                  >
-                    <Settings2 size={15} />
-                    {showReadTools ? 'Hide tools' : 'Read tools'}
-                  </button>
+                  <span className="notes-reading-compact__meta">
+                    <span className="notes-reading-compact__pct">{readingProgress}%</span>
+                    <span className="notes-reading-compact__label">read</span>
+                  </span>
+                  <div className="notes-reading-compact__actions">
+                    <div className="notes-quick-hl" role="group" aria-label="Highlight selection">
+                      <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Highlight yellow" aria-label="Highlight yellow" />
+                      <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Highlight green" aria-label="Highlight green" />
+                      <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Highlight pink" aria-label="Highlight pink" />
+                      <button type="button" className="notes-quick-hl__btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight" aria-label="Remove highlight">
+                        <Eraser size={12} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className={`notes-tools-toggle${showReadTools ? ' active' : ''}`}
+                      onClick={() => setShowReadTools((v) => !v)}
+                      aria-expanded={showReadTools}
+                    >
+                      <Settings2 size={15} />
+                      {showReadTools ? 'Hide' : 'Aa'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="notes-reading-panel">
@@ -887,8 +925,8 @@ export function SyllabusWorkspace({
                   </aside>
                 )}
 
-              <article className={`notes-sheet notes-sheet--premium${notesComfort ? ' notes-sheet--comfort' : ''}`}>
-                <header className="notes-sheet-header">
+              <article className={`notes-sheet notes-sheet--premium${notesComfort ? ' notes-sheet--comfort' : ''}${isEditingNotes ? ' notes-sheet--editing' : ''}`}>
+                <header className="notes-sheet-header notes-sheet-header--desktop">
                   <div className="notes-sheet-meta">
                     <span className="notes-sheet-label">Topic notes</span>
                     <span className="notes-sheet-topic">{activeNotes.name}</span>
@@ -899,7 +937,7 @@ export function SyllabusWorkspace({
                 </header>
 
                 {isEditingNotes && (
-                  <div className="notes-inline-toolbar" role="toolbar" aria-label="Note formatting">
+                  <div className="notes-inline-toolbar notes-inline-toolbar--top" role="toolbar" aria-label="Note formatting">
                     <span className="notes-toolbar-label">Write</span>
                     <button type="button" className="notes-fmt-btn" onClick={() => runFormat('bold')} title="Bold"><Bold size={15} /></button>
                     <button type="button" className="notes-fmt-btn" onClick={() => runFormat('italic')} title="Italic"><Italic size={15} /></button>
@@ -922,6 +960,20 @@ export function SyllabusWorkspace({
                 )}
 
                 <div ref={notesScrollRef} className="notes-reader-scroll" onScroll={handleNotesScroll}>
+                {notesFocus && (
+                  <div className="notes-focus-chip">
+                    <button
+                      type="button"
+                      className="notes-focus-chip__btn"
+                      onClick={() => setNotesFocus(false)}
+                      title="Show header"
+                    >
+                      <Minimize2 size={14} /> Exit focus
+                    </button>
+                    {isEditingNotes && <span className="notes-edit-badge">Editing</span>}
+                    <span className="notes-focus-chip__topic">{activeNotes.name}</span>
+                  </div>
+                )}
                 <div
                   ref={notesRef}
                   className={`notes-reader notes-reader--size-${notesFontSize} notes-reader--spacing-${notesLineSpacing}${notesComfort ? ' notes-reader--comfort' : ''} ${isEditingNotes ? 'editing' : ''}`}
@@ -929,17 +981,19 @@ export function SyllabusWorkspace({
                   contentEditable={isEditingNotes}
                   suppressContentEditableWarning
                   dangerouslySetInnerHTML={{ __html: localNotesHtml }}
+                  data-placeholder="Tap to start writing your notes…"
                 />
 
+                {!isEditingNotes && (
                 <footer className="notes-sheet-footer">
                   {noQuestionsFlash ? (
                     <div className="notes-no-questions-msg">
-                      <span>📭 No practice questions available for this topic yet.</span>
-                      <p>The admin hasn't added MCQs here — check back later or switch to another topic.</p>
+                      <span>No practice questions for this topic yet.</span>
+                      <p>Check back later or switch to another topic to keep learning.</p>
                     </div>
                   ) : (
                     <>
-                      <p className="notes-footer-hint">Finished reading? Test yourself on this topic.</p>
+                      <p className="notes-footer-hint">Lock it in — test yourself while it is fresh.</p>
                       <button
                         type="button"
                         className="btn-take-test notes-cta-btn"
@@ -957,7 +1011,30 @@ export function SyllabusWorkspace({
                     </>
                   )}
                 </footer>
+                )}
                 </div>
+
+                {isEditingNotes && (
+                  <div className="notes-edit-dock" role="toolbar" aria-label="Save and format">
+                    <div className="notes-edit-dock__formats">
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('bold')} title="Bold"><Bold size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('italic')} title="Italic"><Italic size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h2')} title="Heading"><Heading2 size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertUnorderedList')} title="Bullet list"><List size={16} /></button>
+                      <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Yellow highlight" />
+                      <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Green highlight" />
+                    </div>
+                    <div className="notes-edit-dock__actions">
+                      <button type="button" className="notes-edit-dock__done" onClick={handleStopEditing}>
+                        Done
+                      </button>
+                      <button type="button" className="notes-edit-dock__save" onClick={handleSaveNotes} disabled={isSaving}>
+                        <Save size={16} />
+                        {isSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </article>
               </div>
 

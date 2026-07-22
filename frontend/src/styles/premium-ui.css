@@ -585,7 +585,7 @@
 .notes-reading-compact__meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -816,7 +816,7 @@
 .notes-reader p,
 .notes-reader li,
 .notes-reader .notes-lead {
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .notes-reader h2,

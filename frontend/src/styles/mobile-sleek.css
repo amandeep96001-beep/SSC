@@ -364,15 +364,16 @@
   }
 
   .notes-toolbar-header .syllabus-page-header__row {
-    flex-direction: column !important;
-    align-items: stretch !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 8px !important;
   }
 
   .notes-toolbar-header .syllabus-page-header__actions {
-    width: 100% !important;
+    width: auto !important;
     display: flex !important;
-    gap: 8px !important;
+    gap: 4px !important;
+    flex-shrink: 0 !important;
   }
 
   .notes-toolbar-header .btn-add,
@@ -388,14 +389,14 @@
     min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 8px !important;
     overflow: hidden !important;
     position: relative !important;
   }
 
   .notes-reading-toolbar {
     flex-shrink: 0 !important;
-    padding: 10px !important;
+    padding: 8px 10px !important;
     border-radius: 14px !important;
     gap: 8px !important;
     overflow: visible !important;
@@ -426,7 +427,7 @@
   }
 
   .notes-ctrl-btn {
-    min-height: 32px !important;
+    min-height: 36px !important;
     padding: 5px 10px !important;
     border-radius: 10px !important;
     font-size: 0.75rem !important;
@@ -510,10 +511,11 @@
     -webkit-overflow-scrolling: touch !important;
   }
 
-  .notes-reader {
-    padding: 18px 16px 28px !important;
-    font-size: 1.08rem !important;
-    line-height: 1.8 !important;
+  .notes-reader,
+  .notes-sheet--premium .notes-reader {
+    padding: 22px 18px 36px !important;
+    font-size: 1.125rem !important;
+    line-height: 1.85 !important;
   }
 
   .notes-sheet-footer {
@@ -524,6 +526,20 @@
     position: absolute !important;
     bottom: 12px !important;
     right: 12px !important;
+  }
+
+  .notes-sheet--editing .notes-scroll-top {
+    bottom: 120px !important;
+  }
+
+  /* While editing, hide the reading-tools chrome — one mode at a time */
+  .notes-sheet--editing ~ .notes-scroll-top,
+  .notes-flow:has(.notes-sheet--editing) .notes-reading-toolbar {
+    opacity: 0.92;
+  }
+
+  .notes-flow:has(.notes-sheet--editing) .notes-reading-compact__actions .notes-quick-hl {
+    display: none;
   }
 
   /* Drill / revision cards */
@@ -605,7 +621,7 @@
 [data-theme="light"] .notes-reader span,
 [data-theme="light"] .notes-reader div,
 [data-theme="light"] .notes-reader .notes-lead {
-  color: #3a3f55 !important;
+  color: #252b42 !important;
 }
 
 [data-theme="light"] .notes-reader h1,

@@ -1,13 +1,18 @@
 /* ============================================================
-   Notes readability + sticky notes (desktop + mobile)
-   Keep reading first — tools stay out of the way on small screens
+   Notes — mobile learning experience
+   Psychology: lower cognitive load, readable type, chunked
+   content, thumb-zone editing, highlight-as-encoding.
    ============================================================ */
 
-/* ---- Readable defaults — roomy reading column ---- */
+/* ---- Readable defaults (all viewports) ---- */
 .notes-reader {
   font-size: 1.125rem;
   line-height: 1.85;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.011em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .notes-reader--size-sm { font-size: 1rem; line-height: 1.72; }
@@ -19,13 +24,140 @@
 }
 
 .notes-reader p {
-  margin: 0 0 1.15em;
+  margin: 0 0 1.2em;
   max-width: 62ch;
 }
 
 .notes-reader li {
-  margin-bottom: 0.45em;
+  margin-bottom: 0.5em;
   max-width: 62ch;
+}
+
+.notes-reader h2,
+.notes-reader .notes-section-title {
+  scroll-margin-top: 1rem;
+}
+
+.notes-reader h3 {
+  scroll-margin-top: 0.75rem;
+}
+
+/* Empty editor hint */
+.notes-reader.editing:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Edit icon in header */
+.notes-tool-icon--edit.is-active,
+.notes-tool-icon--edit.is-active:hover {
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+  border-color: transparent;
+}
+
+/* Focus mode chip — exit without hunting for chrome */
+.notes-focus-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(
+    180deg,
+    var(--bg-surface) 55%,
+    transparent 100%
+  );
+}
+
+.notes-focus-chip__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.notes-focus-chip__topic {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Quick highlight strip (mobile compact bar) */
+.notes-reading-compact__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notes-quick-hl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.notes-quick-hl__btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notes-quick-hl__btn.hl-yellow { background: #facc15; }
+.notes-quick-hl__btn.hl-green { background: #4ade80; }
+.notes-quick-hl__btn.hl-pink { background: #f472b6; }
+.notes-quick-hl__btn.hl-clear {
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.notes-reading-compact__pct {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.notes-reading-compact__label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Desktop: hide mobile edit dock; keep top toolbar */
+.notes-edit-dock {
+  display: none;
+}
+
+.notes-sheet-header--desktop {
+  display: flex;
 }
 
 /* Sticky overlay backdrop (mobile sheet) */
@@ -43,7 +175,6 @@
     flex-direction: column !important;
   }
 
-  /* Don't squeeze the article — stickies open as a sheet */
   .notes-reading-layout--with-stickies .notes-sheet--premium {
     flex: 1 1 auto !important;
     width: 100% !important;
@@ -77,82 +208,271 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    /* Prevent Android blue tap flash on hardware-back gesture */
     -webkit-tap-highlight-color: transparent;
     -webkit-appearance: none;
     appearance: none;
     outline: none;
   }
 
-  /* Reading comfort on phones */
-  .notes-flow .notes-toolbar-header h1 {
-    font-size: 1.15rem !important;
-    line-height: 1.3 !important;
+  /* ---- Compact header: one job — identify topic + act ---- */
+  .notes-flow .notes-toolbar-header {
+    padding: 2px 0 6px !important;
+    margin: 0 0 4px !important;
   }
 
-  .notes-local-hint {
-    font-size: 0.75rem !important;
-    line-height: 1.4 !important;
+  .notes-toolbar-header .syllabus-page-header__row {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
 
-  .notes-sheet-header {
-    padding: 14px 16px 10px !important;
+  .notes-toolbar-header .syllabus-page-header__text {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
   }
 
+  .notes-toolbar-header .notes-breadcrumb,
+  .notes-toolbar-header .notes-local-hint {
+    display: none !important;
+  }
+
+  .notes-toolbar-header h1 {
+    font-size: 1.05rem !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notes-toolbar-actions {
+    width: auto !important;
+    margin-left: 0 !important;
+    flex-shrink: 0 !important;
+    gap: 4px !important;
+  }
+
+  .notes-tool-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Drop duplicate title chrome — page header already names the topic */
+  .notes-sheet-header--desktop {
+    display: none !important;
+  }
+
+  /* Reading toolbar: progress + highlight + Aa — not a control jungle */
+  .notes-reading-toolbar {
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    gap: 8px !important;
+  }
+
+  .notes-reading-progress {
+    height: 3px !important;
+  }
+
+  .notes-tools-toggle {
+    min-height: 34px !important;
+    padding: 6px 11px !important;
+    font-size: 0.78rem !important;
+    box-shadow: none !important;
+  }
+
+  /* ---- Reading body: large enough for daily study ---- */
+  .notes-sheet--premium .notes-reader,
   .notes-reader {
-    padding: 18px 16px 28px !important;
-    font-size: 1.08rem !important;
-    line-height: 1.8 !important;
+    padding: 22px 18px 36px !important;
+    font-size: 1.125rem !important;
+    line-height: 1.85 !important;
+    max-width: none !important;
   }
 
-  .notes-reader--size-sm { font-size: 1rem !important; }
-  .notes-reader--size-md { font-size: 1.08rem !important; }
-  .notes-reader--size-lg { font-size: 1.22rem !important; }
+  .notes-reader--size-sm { font-size: 1.02rem !important; line-height: 1.75 !important; }
+  .notes-reader--size-md { font-size: 1.125rem !important; line-height: 1.85 !important; }
+  .notes-reader--size-lg { font-size: 1.28rem !important; line-height: 1.95 !important; }
+
+  .notes-reader--spacing-relaxed {
+    line-height: 2.08 !important;
+  }
 
   .notes-reader p,
   .notes-reader li {
     max-width: none !important;
   }
 
-  .notes-reader h2 {
-    font-size: 1.2rem !important;
-    margin: 1.25em 0 0.5em !important;
-    line-height: 1.35 !important;
+  .notes-reader p {
+    margin: 0 0 1.15em !important;
+  }
+
+  .notes-reader h2,
+  .notes-reader .notes-section-title {
+    font-size: 1.28rem !important;
+    margin: 1.55em 0 0.55em !important;
+    line-height: 1.3 !important;
+    letter-spacing: -0.02em;
+    padding-bottom: 0.35em !important;
   }
 
   .notes-reader h3 {
-    font-size: 1.05rem !important;
-    margin: 1.1em 0 0.4em !important;
+    font-size: 1.1rem !important;
+    margin: 1.25em 0 0.4em !important;
+    line-height: 1.35 !important;
   }
 
-  .notes-inline-toolbar {
+  .notes-reader .notes-lead {
+    font-size: 1.08em !important;
+    line-height: 1.7 !important;
+    margin-bottom: 1.35em !important;
+  }
+
+  .notes-reader .notes-callout,
+  .notes-reader blockquote {
+    margin: 1.35rem 0 !important;
+    padding: 14px 16px !important;
+    font-size: 0.98em !important;
+    line-height: 1.65 !important;
+  }
+
+  .notes-reader ul,
+  .notes-reader ol {
+    padding-left: 1.25em !important;
+    margin: 0 0 1.15em !important;
+  }
+
+  .notes-table {
+    font-size: 0.9rem !important;
+  }
+
+  .notes-table th,
+  .notes-table td {
     padding: 10px 12px !important;
-    gap: 6px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 5 !important;
   }
 
-  .notes-fmt-btn,
-  .notes-inline-toolbar .hl-btn {
-    min-width: 40px !important;
-    height: 40px !important;
+  /* Editing: calm field, no dashed cage fighting the text */
+  .notes-reader.editing {
+    margin: 0 !important;
+    padding: 20px 16px 100px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    min-height: 40vh !important;
+    caret-color: var(--color-primary);
   }
 
-  .notes-fmt-btn--save {
+  .notes-sheet--editing {
+    border-top-color: var(--color-primary) !important;
+  }
+
+  /* Top format bar only on larger phones / landscape; dock handles thumbs */
+  .notes-inline-toolbar--top {
+    display: none !important;
+  }
+
+  .notes-edit-dock {
+    display: flex !important;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 10px 12px max(12px, env(safe-area-inset-bottom, 0px));
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-subtle);
+    box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.12);
+    z-index: 6;
+  }
+
+  .notes-edit-dock__formats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .notes-edit-dock__formats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .notes-edit-dock .notes-fmt-btn,
+  .notes-edit-dock .hl-btn {
+    min-width: 42px !important;
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    flex-shrink: 0;
+  }
+
+  .notes-edit-dock .hl-btn.hl-yellow,
+  .notes-edit-dock .hl-btn.hl-green {
+    border: none !important;
+  }
+
+  .notes-edit-dock .hl-btn.hl-yellow { background: #facc15 !important; }
+  .notes-edit-dock .hl-btn.hl-green { background: #4ade80 !important; }
+
+  .notes-edit-dock__actions {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 8px;
+  }
+
+  .notes-edit-dock__done,
+  .notes-edit-dock__save {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 46px;
+    border-radius: 14px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .notes-edit-dock__done {
+    background: var(--bg-surface-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+  }
+
+  .notes-edit-dock__save {
+    background: var(--color-primary);
+    color: var(--text-inverse);
+    box-shadow: 0 6px 18px var(--color-primary-glow);
+  }
+
+  .notes-edit-dock__save:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
+  .notes-sheet-footer {
+    padding: 18px 16px max(22px, env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .notes-footer-hint {
+    font-size: 0.88rem !important;
+    line-height: 1.45 !important;
+  }
+
+  .notes-cta-btn {
     width: 100%;
-    margin-left: 0 !important;
-    margin-top: 4px;
-    min-height: 40px;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: 14px;
   }
 
-  .notes-toolbar-header .syllabus-page-header__actions {
-    flex-wrap: wrap !important;
-  }
-
-  .sticky-launch-btn {
-    order: 0;
-    flex: 0 0 auto !important;
+  .notes-toc,
+  .notes-toc--bookmarks-only {
+    max-height: 132px !important;
+    width: 100% !important;
   }
 
   .notes-reading-controls {
@@ -161,18 +481,12 @@
   }
 
   .notes-ctrl-btn {
-    min-height: 36px !important;
-    padding: 6px 10px !important;
+    min-height: 38px !important;
+    padding: 6px 11px !important;
     font-size: 0.78rem !important;
   }
 
   .notes-search-bar {
-    width: 100% !important;
-  }
-
-  .notes-toc,
-  .notes-toc--bookmarks-only {
-    max-height: 140px !important;
     width: 100% !important;
   }
 
@@ -223,6 +537,47 @@
     flex: 1;
     text-align: center;
     padding: 10px 8px;
+  }
+
+  /* Focus mode: max reading surface */
+  .notes-flow--focus .notes-reader-panel {
+    gap: 6px !important;
+  }
+
+  .notes-flow--focus .notes-reading-toolbar:not(.notes-reading-toolbar--open) {
+    padding: 6px 8px !important;
+  }
+}
+
+/* Small phones — keep type LARGE (do not shrink below reading comfort) */
+@media (max-width: 480px) {
+  .notes-sheet--premium .notes-reader,
+  .notes-reader {
+    padding: 20px 16px 32px !important;
+    font-size: 1.125rem !important;
+    line-height: 1.85 !important;
+  }
+
+  .notes-reader--size-sm { font-size: 1.02rem !important; }
+  .notes-reader--size-md { font-size: 1.125rem !important; }
+  .notes-reader--size-lg { font-size: 1.26rem !important; }
+
+  .notes-reader h2,
+  .notes-reader .notes-section-title {
+    font-size: 1.22rem !important;
+  }
+
+  .notes-reader h3 {
+    font-size: 1.06rem !important;
+  }
+
+  .notes-reader.editing {
+    padding: 18px 14px 110px !important;
+  }
+
+  .notes-quick-hl__btn {
+    width: 28px;
+    height: 28px;
   }
 }
 
