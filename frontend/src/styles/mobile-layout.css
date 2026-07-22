@@ -418,9 +418,9 @@
   cursor: not-allowed;
 }
 
-/* In-text Highlights (notes reader) */
-mark.hl-yellow { background-color: rgba(253, 224, 71, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
-mark.hl-green { background-color: rgba(134, 239, 172, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
-mark.hl-pink { background-color: rgba(249, 168, 212, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
-mark.hl-blue { background-color: rgba(147, 197, 253, 0.8); color: inherit; border-radius: 3px; padding: 0 4px; }
+/* In-text Highlights (notes reader) — soft, readable */
+mark.hl-yellow { background-color: rgba(253, 224, 71, 0.38); color: inherit; border-radius: 4px; padding: 0 3px; }
+mark.hl-green { background-color: rgba(134, 239, 172, 0.35); color: inherit; border-radius: 4px; padding: 0 3px; }
+mark.hl-pink { background-color: rgba(249, 168, 212, 0.35); color: inherit; border-radius: 4px; padding: 0 3px; }
+mark.hl-blue { background-color: rgba(147, 197, 253, 0.38); color: inherit; border-radius: 4px; padding: 0 3px; }
 

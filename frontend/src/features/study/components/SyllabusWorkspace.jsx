@@ -92,6 +92,7 @@ export function SyllabusWorkspace({
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
   const [searchMatchCount, setSearchMatchCount] = useState(0);
   const searchHitsRef = useRef([]);
+  const searchMatchIdxRef = useRef(0);
   const [bookmarks, setBookmarks] = useState(() => {
     if (!activeNotes?.id) return [];
     try {
@@ -113,6 +114,7 @@ export function SyllabusWorkspace({
     setSearchMatchIdx(0);
     setSearchMatchCount(0);
     searchHitsRef.current = [];
+    searchMatchIdxRef.current = 0;
     setIsEditingNotes(false);
     setManageFlash('');
     try {
@@ -178,76 +180,144 @@ export function SyllabusWorkspace({
       if (!parent) return;
       while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
       parent.removeChild(mark);
+      parent.normalize?.();
     });
   }, []);
 
-  const collectSearchHits = useCallback(() => {
+  const applySearchHighlights = useCallback((query) => {
     const root = notesRef.current;
-    if (!root || !searchQuery.trim()) return [];
-    const q = searchQuery.trim().toLowerCase();
-    const hits = [];
+    clearSearchHighlights();
+    const q = (query || '').trim();
+    if (!root || !q) {
+      searchHitsRef.current = [];
+      return [];
+    }
+
+    const needle = q.toLowerCase();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
     let node;
     while ((node = walker.nextNode())) {
-      const text = node.textContent || '';
+      // Skip empty / whitespace-only
+      if (!node.textContent?.trim()) continue;
+      // Don't search inside existing user highlights? Still search — ok
+      textNodes.push(node);
+    }
+
+    for (const textNode of textNodes) {
+      const text = textNode.textContent || '';
+      const lower = text.toLowerCase();
+      const ranges = [];
       let start = 0;
       let idx;
-      while ((idx = text.toLowerCase().indexOf(q, start)) !== -1) {
-        hits.push({ node, start, end: idx + q.length });
-        start = idx + q.length;
+      while ((idx = lower.indexOf(needle, start)) !== -1) {
+        ranges.push([idx, idx + needle.length]);
+        start = idx + needle.length;
+      }
+      // Wrap from end → start so indices stay valid in this node
+      for (let i = ranges.length - 1; i >= 0; i -= 1) {
+        const [s, e] = ranges[i];
+        try {
+          const range = document.createRange();
+          range.setStart(textNode, s);
+          range.setEnd(textNode, e);
+          const mark = document.createElement('mark');
+          mark.className = 'search-hit';
+          range.surroundContents(mark);
+        } catch {
+          // cross-boundary / split nodes — skip
+        }
       }
     }
-    return hits;
-  }, [searchQuery]);
 
-  const jumpToHit = useCallback((idx) => {
-    clearSearchHighlights();
-    const hits = searchHitsRef.current;
-    const container = notesScrollRef.current;
-    if (!hits.length || !container || idx < 0 || idx >= hits.length) return;
-
-    setSearchMatchIdx(idx);
-    const hit = hits[idx];
-    if (!hit?.node?.parentNode) return;
-
-    try {
-      const range = document.createRange();
-      range.setStart(hit.node, hit.start);
-      range.setEnd(hit.node, hit.end);
-      const mark = document.createElement('mark');
-      mark.className = 'search-hit';
-      range.surroundContents(mark);
-      const offset = mark.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 16;
-      container.scrollTo({ top: offset, behavior: 'smooth' });
-    } catch {
-      hit.node.parentElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    // Re-query in document order (wrapping from end shuffles push order)
+    const ordered = Array.from(root.querySelectorAll('mark.search-hit'));
+    searchHitsRef.current = ordered;
+    return ordered;
   }, [clearSearchHighlights]);
 
-  const goToSearchMatch = useCallback((direction = 1) => {
-    let hits = searchHitsRef.current;
-    if (!hits.length && searchQuery.trim()) {
-      hits = collectSearchHits();
-      searchHitsRef.current = hits;
-      setSearchMatchCount(hits.length);
+  const jumpToHit = useCallback((idx) => {
+    const container = notesScrollRef.current;
+    const root = notesRef.current;
+    if (!container || !root) return;
+
+    let marks = Array.from(root.querySelectorAll('mark.search-hit')).filter((m) => m.isConnected);
+    if (!marks.length && searchQuery.trim()) {
+      marks = applySearchHighlights(searchQuery);
+      setSearchMatchCount(marks.length);
     }
-    if (!hits.length) return;
-    const base = searchMatchIdx < 0 ? 0 : searchMatchIdx;
+    searchHitsRef.current = marks;
+    if (!marks.length || idx < 0 || idx >= marks.length) return;
+
+    marks.forEach((m, i) => {
+      m.classList.toggle('search-hit--active', i === idx);
+    });
+    searchMatchIdxRef.current = idx;
+    setSearchMatchIdx(idx);
+
+    const mark = marks[idx];
+    const offset = mark.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 48;
+    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+  }, [applySearchHighlights, searchQuery]);
+
+  const goToSearchMatch = useCallback((direction = 1) => {
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    const root = notesRef.current;
+    let marks = root
+      ? Array.from(root.querySelectorAll('mark.search-hit')).filter((m) => m.isConnected)
+      : [];
+
+    if (!marks.length) {
+      marks = applySearchHighlights(q);
+    }
+    searchHitsRef.current = marks;
+    setSearchMatchCount(marks.length);
+
+    if (!marks.length) {
+      searchMatchIdxRef.current = 0;
+      setSearchMatchIdx(0);
+      return;
+    }
+
+    const base = searchMatchIdxRef.current;
     const nextIdx = direction >= 0
-      ? (base + 1) % hits.length
-      : (base - 1 + hits.length) % hits.length;
+      ? (base + 1) % marks.length
+      : (base - 1 + marks.length) % marks.length;
     jumpToHit(nextIdx);
-  }, [collectSearchHits, jumpToHit, searchMatchIdx, searchQuery]);
+  }, [applySearchHighlights, jumpToHit, searchQuery]);
 
   const handleSearchSubmit = useCallback((e) => {
     e?.preventDefault();
-    clearSearchHighlights();
-    const hits = collectSearchHits();
-    searchHitsRef.current = hits;
-    setSearchMatchCount(hits.length);
-    if (hits.length) jumpToHit(0);
+    const marks = applySearchHighlights(searchQuery);
+    setSearchMatchCount(marks.length);
+    searchMatchIdxRef.current = 0;
+    if (marks.length) jumpToHit(0);
     else setSearchMatchIdx(0);
-  }, [clearSearchHighlights, collectSearchHits, jumpToHit]);
+  }, [applySearchHighlights, jumpToHit, searchQuery]);
+
+  // Live-highlight as user types (debounced) so matches are always visible
+  useEffect(() => {
+    if (activeView !== 'notes') return undefined;
+    const q = searchQuery.trim();
+    const t = setTimeout(() => {
+      if (!q) {
+        clearSearchHighlights();
+        searchHitsRef.current = [];
+        searchMatchIdxRef.current = 0;
+        setSearchMatchCount(0);
+        setSearchMatchIdx(0);
+        return;
+      }
+      const marks = applySearchHighlights(q);
+      setSearchMatchCount(marks.length);
+      searchMatchIdxRef.current = 0;
+      setSearchMatchIdx(0);
+      marks.forEach((m, i) => m.classList.toggle('search-hit--active', i === 0));
+    }, q ? 220 : 0);
+    return () => clearTimeout(t);
+  }, [searchQuery, localNotesHtml, activeView, applySearchHighlights, clearSearchHighlights]);
 
   useEffect(() => {
     if (activeView !== 'notes' || !activeNotes?.id) return;
@@ -259,13 +329,6 @@ export function SyllabusWorkspace({
       handleNotesScroll();
     });
   }, [activeNotes?.id, activeView, localNotesHtml, handleNotesScroll]);
-
-  useEffect(() => {
-    clearSearchHighlights();
-    searchHitsRef.current = [];
-    setSearchMatchCount(0);
-    setSearchMatchIdx(0);
-  }, [searchQuery, localNotesHtml, clearSearchHighlights]);
 
   const scrollNotesToTop = useCallback(() => {
     notesScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -782,6 +845,7 @@ export function SyllabusWorkspace({
           )}
 
           <div className="notes-reader-panel">
+              {!notesFocus && (
               <div className={`notes-reading-toolbar${showReadTools ? ' notes-reading-toolbar--open' : ''}`}>
                 <div className="notes-reading-progress" aria-hidden="true">
                   <div className="notes-reading-progress__fill" style={{ width: `${readingProgress}%` }} />
@@ -794,11 +858,12 @@ export function SyllabusWorkspace({
                   </span>
                   <div className="notes-reading-compact__actions">
                     <div className="notes-quick-hl" role="group" aria-label="Highlight selection">
-                      <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Highlight yellow" aria-label="Highlight yellow" />
-                      <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Highlight green" aria-label="Highlight green" />
-                      <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Highlight pink" aria-label="Highlight pink" />
+                      <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Highlight yellow" />
+                      <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Highlight green" />
+                      <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink" aria-label="Highlight pink" />
+                      <button type="button" className="notes-quick-hl__btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue" aria-label="Highlight blue" />
                       <button type="button" className="notes-quick-hl__btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight" aria-label="Remove highlight">
-                        <Eraser size={12} />
+                        <Eraser size={11} strokeWidth={2} />
                       </button>
                     </div>
                     <button
@@ -830,9 +895,9 @@ export function SyllabusWorkspace({
                         <List size={14} /> Contents
                       </button>
                     )}
-                    <button type="button" className={`notes-ctrl-btn${notesFocus ? ' active' : ''}`} onClick={() => setNotesFocus((v) => !v)} title={notesFocus ? 'Exit focus mode' : 'Focus reading mode'}>
-                      {notesFocus ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                      {notesFocus ? 'Exit' : 'Focus'}
+                    <button type="button" className={`notes-ctrl-btn${notesFocus ? ' active' : ''}`} onClick={() => { setNotesFocus(true); setShowToc(false); setShowReadTools(false); }} title="Focus reading mode">
+                      <Maximize2 size={14} />
+                      Focus
                     </button>
                     <button
                       type="button"
@@ -860,18 +925,58 @@ export function SyllabusWorkspace({
                     {searchMatchCount > 0 && (
                       <span className="notes-search-count">{searchMatchIdx + 1}/{searchMatchCount}</span>
                     )}
-                    <button type="button" className="notes-search-nav" onClick={() => goToSearchMatch(-1)} disabled={!searchQuery.trim()} aria-label="Previous match">
+                    <button
+                      type="button"
+                      className="notes-search-nav"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); goToSearchMatch(-1); }}
+                      disabled={!searchQuery.trim() || searchMatchCount < 1}
+                      aria-label="Previous match"
+                    >
                       <ChevronUp size={16} />
                     </button>
-                    <button type="button" className="notes-search-nav" onClick={() => goToSearchMatch(1)} disabled={!searchQuery.trim()} aria-label="Next match">
+                    <button
+                      type="button"
+                      className="notes-search-nav"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); goToSearchMatch(1); }}
+                      disabled={!searchQuery.trim() || searchMatchCount < 1}
+                      aria-label="Next match"
+                    >
                       <ChevronDown size={16} />
                     </button>
                   </form>
                 </div>
               </div>
+              )}
+
+              {notesFocus && !isEditingNotes && (
+                <div className="notes-focus-bar" role="toolbar" aria-label="Focus mode">
+                  <button
+                    type="button"
+                    className="notes-focus-bar__exit"
+                    onClick={() => setNotesFocus(false)}
+                    title="Exit focus"
+                    aria-label="Exit focus"
+                  >
+                    <Minimize2 size={15} />
+                    Exit
+                  </button>
+                  <div className="notes-quick-hl notes-quick-hl--focus" role="group" aria-label="Highlight selection">
+                    <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Highlight yellow" />
+                    <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Highlight green" />
+                    <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink" aria-label="Highlight pink" />
+                    <button type="button" className="notes-quick-hl__btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue" aria-label="Highlight blue" />
+                    <button type="button" className="notes-quick-hl__btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight" aria-label="Remove highlight">
+                      <Eraser size={11} strokeWidth={2} />
+                    </button>
+                  </div>
+                  {searchMatchCount > 0 && (
+                    <span className="notes-focus-bar__search">{searchMatchIdx + 1}/{searchMatchCount}</span>
+                  )}
+                </div>
+              )}
 
               <div className="notes-reading-layout">
-                {showToc && tocItems.length > 0 && (
+                {!notesFocus && showToc && tocItems.length > 0 && (
                   <aside className="notes-toc">
                     <p className="notes-toc__title">Jump to section</p>
                     <ul className="notes-toc__list">
@@ -907,7 +1012,7 @@ export function SyllabusWorkspace({
                   </aside>
                 )}
 
-                {!showToc && bookmarks.length > 0 && (
+                {!notesFocus && !showToc && bookmarks.length > 0 && (
                   <aside className="notes-toc notes-toc--bookmarks-only">
                     <p className="notes-toc__title">Bookmarks</p>
                     <ul className="notes-toc__list">
@@ -960,20 +1065,6 @@ export function SyllabusWorkspace({
                 )}
 
                 <div ref={notesScrollRef} className="notes-reader-scroll" onScroll={handleNotesScroll}>
-                {notesFocus && (
-                  <div className="notes-focus-chip">
-                    <button
-                      type="button"
-                      className="notes-focus-chip__btn"
-                      onClick={() => setNotesFocus(false)}
-                      title="Show header"
-                    >
-                      <Minimize2 size={14} /> Exit focus
-                    </button>
-                    {isEditingNotes && <span className="notes-edit-badge">Editing</span>}
-                    <span className="notes-focus-chip__topic">{activeNotes.name}</span>
-                  </div>
-                )}
                 <div
                   ref={notesRef}
                   className={`notes-reader notes-reader--size-${notesFontSize} notes-reader--spacing-${notesLineSpacing}${notesComfort ? ' notes-reader--comfort' : ''} ${isEditingNotes ? 'editing' : ''}`}
@@ -984,7 +1075,7 @@ export function SyllabusWorkspace({
                   data-placeholder="Tap to start writing your notes…"
                 />
 
-                {!isEditingNotes && (
+                {!isEditingNotes && !notesFocus && (
                 <footer className="notes-sheet-footer">
                   {noQuestionsFlash ? (
                     <div className="notes-no-questions-msg">

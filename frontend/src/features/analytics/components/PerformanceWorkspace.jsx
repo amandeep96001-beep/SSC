@@ -3,7 +3,12 @@ import { Clock, CheckCircle, XCircle, MinusCircle, ClipboardList, Target, Award,
 import { StatCard } from '@/shared/components/ui/StatCard';
 import { useExam } from '@/shared/context/useExam';
 import { filterProgressForExam, filterMockProgressForExam } from '@/shared/utils/examProgress';
-import { apiService } from '@/shared/services/apiService';
+import {
+  rowsToCsv,
+  downloadTextFile,
+  MOCK_PROGRESS_CSV_COLUMNS,
+  SYLLABUS_PROGRESS_CSV_COLUMNS,
+} from '@/shared/utils/csvExport';
 import { showAppToast } from '@/shared/utils/appToast';
 
 function formatTopicLabel(topicId) {
@@ -113,15 +118,31 @@ export function PerformanceWorkspace({ user }) {
   const exportMine = async (kind) => {
     setExporting(true);
     try {
-      const q = examId ? `&examId=${encodeURIComponent(examId)}` : '';
-      const path = kind === 'mock'
-        ? `/auth/mock-progress/export?scope=me${q}`
-        : `/auth/progress/export?scope=me${q}`;
+      const rows = kind === 'mock' ? mockProgress : progress;
+      if (!rows.length) {
+        showAppToast('No attempts to export for this exam yet.', { variant: 'warn' });
+        return;
+      }
+
+      // Attach username so CSV matches server export shape
+      const withUser = rows.map((r) => ({
+        username: user?.username || '',
+        ...r,
+      }));
+
+      const csv = kind === 'mock'
+        ? rowsToCsv(withUser, MOCK_PROGRESS_CSV_COLUMNS)
+        : rowsToCsv(withUser, SYLLABUS_PROGRESS_CSV_COLUMNS);
+
       const file = kind === 'mock'
         ? `my-mock-progress-${examId || 'all'}.csv`
         : `my-syllabus-progress-${examId || 'all'}.csv`;
-      await apiService.download(path, file);
-      showAppToast('Your report downloaded.', { variant: 'success', durationMs: 2200 });
+
+      downloadTextFile(file, csv);
+      showAppToast(`Downloaded ${rows.length} row${rows.length === 1 ? '' : 's'}.`, {
+        variant: 'success',
+        durationMs: 2200,
+      });
     } catch (e) {
       showAppToast(e.message || 'Export failed.', { variant: 'error' });
     } finally {

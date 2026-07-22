@@ -350,8 +350,8 @@
 
   .notes-flow--focus.study-workspace.syllabus-flow,
   .notes-flow--focus.study-workspace {
-    height: 100% !important;
-    max-height: 100% !important;
+    height: calc(100dvh - var(--mobile-header-h, 56px) - 16px) !important;
+    max-height: calc(100dvh - var(--mobile-header-h, 56px) - 16px) !important;
   }
 
   .notes-flow .notes-toolbar-header {
@@ -653,8 +653,14 @@
 }
 
 .notes-reader mark.search-hit {
-  background: rgba(245, 158, 11, 0.5) !important;
+  background: rgba(250, 204, 21, 0.55) !important;
   color: inherit !important;
+}
+
+.notes-reader mark.search-hit--active {
+  background: rgba(249, 115, 22, 0.75) !important;
+  outline: 2px solid rgba(234, 88, 12, 0.95);
+  outline-offset: 1px;
 }
 
 /* Dark mode multiplier rows — readable */

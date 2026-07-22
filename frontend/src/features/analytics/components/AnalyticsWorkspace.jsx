@@ -142,7 +142,7 @@ export function AnalyticsWorkspace({ user }) {
             <h3>Daily Study Time (Last 7 Days)</h3>
             <div className="chart-plot">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analyticsData.barData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <BarChart data={analyticsData.barData} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorBar" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
@@ -151,7 +151,7 @@ export function AnalyticsWorkspace({ user }) {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
                   <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} dy={8} />
-                  <YAxis stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} width={36} />
+                  <YAxis stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} width={40} tickMargin={4} />
                   <RechartsTooltip
                     contentStyle={CHART_TOOLTIP}
                     formatter={(value) => [`${Math.round(value)} Mins`, 'Time Spent']}
@@ -214,7 +214,7 @@ export function AnalyticsWorkspace({ user }) {
           {analyticsData.mockScores.length > 0 ? (
             <div className="chart-plot chart-plot--tall">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={analyticsData.mockScores} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                <AreaChart data={analyticsData.mockScores} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#818cf8" stopOpacity={0.28} />
@@ -223,7 +223,7 @@ export function AnalyticsWorkspace({ user }) {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
                   <XAxis dataKey="name" stroke={CHART_AXIS} fontSize={12} tickLine={false} axisLine={false} dy={8} />
-                  <YAxis stroke={CHART_AXIS} fontSize={12} domain={[0, 200]} tickLine={false} axisLine={false} width={36} />
+                  <YAxis stroke={CHART_AXIS} fontSize={12} domain={[0, 200]} tickLine={false} axisLine={false} width={40} tickMargin={4} />
                   <RechartsTooltip contentStyle={CHART_TOOLTIP} />
                   <Area
                     type="monotone"

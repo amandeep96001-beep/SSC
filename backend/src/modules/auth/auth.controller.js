@@ -571,7 +571,7 @@ export const exportMockProgressCsv = async (req, res, next) => {
     const who = scope === 'all' ? 'all' : req.user.username;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="mock-progress-${who}.csv"`);
-    res.send(csv);
+    res.send(`\uFEFF${csv}`);
   } catch (error) {
     next(error);
   }
@@ -597,7 +597,7 @@ export const exportSyllabusProgressCsv = async (req, res, next) => {
     const who = scope === 'all' ? 'all' : req.user.username;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="syllabus-progress-${who}.csv"`);
-    res.send(csv);
+    res.send(`\uFEFF${csv}`);
   } catch (error) {
     next(error);
   }

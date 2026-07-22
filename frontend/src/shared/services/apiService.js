@@ -90,7 +90,10 @@ export const apiService = {
     const url = `${BASE_URL}${endpoint}`;
     const response = await fetch(url, {
       method: 'GET',
-      headers: { ...getAuthHeaders() },
+      headers: {
+        Accept: 'text/csv, text/plain, */*',
+        ...getAuthHeaders(),
+      },
       cache: 'no-store',
     });
     if (response.status === 401) {
@@ -105,14 +108,38 @@ export const apiService = {
       } catch { /* ignore */ }
       throw new Error(message);
     }
-    const blob = await response.blob();
+
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+    const text = await response.text();
+
+    // Server sometimes returns JSON error with a 200-ish proxy, or empty body
+    if (contentType.includes('application/json')) {
+      try {
+        const j = JSON.parse(text);
+        throw new Error(j?.message || 'Export failed.');
+      } catch (e) {
+        if (e.message && e.message !== 'Export failed.' && !e.message.startsWith('Unexpected')) throw e;
+        throw new Error('Export failed — unexpected server response.');
+      }
+    }
+
+    if (!text || !String(text).trim()) {
+      throw new Error('Export file was empty.');
+    }
+
+    // UTF-8 BOM so Excel / Sheets show columns correctly
+    const withBom = text.charCodeAt(0) === 0xfeff ? text : `\uFEFF${text}`;
+    const blob = new Blob([withBom], { type: 'text/csv;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = objectUrl;
     a.download = filename || 'export.csv';
+    a.rel = 'noopener';
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(objectUrl);
+    // Revoke after browsers start the download — immediate revoke can yield empty files
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
   },
 };

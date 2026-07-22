@@ -175,6 +175,12 @@
 
 .notes-flow--focus .notes-reader-panel {
   flex: 1;
+  gap: 0;
+}
+
+.notes-flow--focus .notes-sheet--premium {
+  box-shadow: none;
+  border-color: transparent;
 }
 
 .notes-toolbar-actions {
