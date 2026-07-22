@@ -9,14 +9,34 @@
 }
 
 @media (max-width: 768px) {
+  /*
+    Lock the document shell only while the app LMS is mounted.
+    Desktop .lms-container uses min-height: 100vh; on mobile that can exceed
+    100dvh (URL bar), so the PAGE scrolls and the workspace card slides under
+    the fixed hamburger after inner scroll ends.
+    Auth (no .lms-container) must keep document scroll.
+  */
+  html:has(.lms-container),
+  html:has(.lms-container) body,
+  html:has(.lms-container) #root {
+    height: 100%;
+    max-height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   .lms-container {
     flex-direction: column;
     width: 100%;
     max-width: 100%;
     min-width: 0;
+    /* Override layout.css min-height: 100vh — min > max makes max ignored */
+    min-height: 0;
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
   .lms-sidebar {
@@ -108,6 +128,7 @@
     max-height: 100dvh;
     min-height: 0;
     overflow: hidden;
+    overscroll-behavior: none;
     display: flex;
     flex-direction: column;
   }
@@ -120,7 +141,8 @@
     top: 0;
     left: 0;
     right: auto;
-    z-index: 900;
+    /* Above workspace content; below sidebar (1050) / overlay (1040) */
+    z-index: 1030;
     margin: 0;
     min-height: 0;
     width: auto;
@@ -178,6 +200,7 @@
     border-radius: 20px;
     overflow-x: hidden;
     overflow-y: hidden;
+    overscroll-behavior: none;
     flex: 1 1 auto;
     min-height: 0;
   }
@@ -191,6 +214,16 @@
     min-height: 0;
     overflow-x: hidden;
     overflow-y: hidden;
+    overscroll-behavior: none;
+  }
+
+  .workspace-scrollable-content,
+  .today-focus,
+  .admin-workspace,
+  .syllabus-page-body,
+  .notes-reader-scroll {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .workspace-scrollable-content {

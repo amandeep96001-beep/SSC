@@ -13,6 +13,7 @@
     max-width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 20px;
     scrollbar-width: none;
@@ -186,6 +187,7 @@
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
     padding-bottom: 12px !important;
     padding-right: 0 !important;
@@ -323,11 +325,16 @@
   }
 
   .subjects-grid,
+  .subjects-roster,
   .topics-list-container {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    padding: 4px 2px 12px !important;
+  }
+
+  .subjects-roster {
+    padding: 0 !important;
+    gap: 0 !important;
   }
   .notes-flow.study-workspace.syllabus-flow,
   .notes-flow.study-workspace,
@@ -527,12 +534,18 @@
     box-sizing: border-box !important;
   }
 
-  .subject-selection-card,
   .topic-outline-card,
   .vocab-term-card {
     border-radius: 16px !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .subject-selection-card {
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
   }
 }
 

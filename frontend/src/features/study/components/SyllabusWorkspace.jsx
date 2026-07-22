@@ -477,42 +477,44 @@ export function SyllabusWorkspace({
           </header>
           <div className="syllabus-page-body">
             {subjects.length > 0 ? (
-              <div className="subjects-grid">
-                {subjects.map((sub) => {
+              <div className="subjects-roster" role="list">
+                {subjects.map((sub, index) => {
                   const name = typeof sub === 'string' ? sub : sub.name;
                   const visual = getSubjectVisual(name);
                   return (
                     <div
                       key={name}
+                      role="listitem"
                       className={`subject-selection-card subject-selection-card--${visual.tone}`}
                       onClick={() => selectSubject(name)}
                     >
-                      <div className={`subject-icon-box subject-icon-box--${visual.tone}`} aria-hidden>
-                        <span className="material-symbols-outlined subject-material-icon">
-                          {visual.icon}
-                        </span>
-                      </div>
+                      <span className="subject-row__index" aria-hidden>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
                       <div className="subject-content">
                         <h3>{name}</h3>
                         <p>
                           {isMineMode
-                            ? 'Your custom topics, notes, and practice questions.'
+                            ? 'Your topics, notes, and practice questions'
                             : canManageContent
-                              ? 'Official subject — add topics and notes for students.'
-                              : `${visual.label} — open notes and try a timed topic test.`}
+                              ? 'Add topics and notes for students'
+                              : visual.label}
                         </p>
                       </div>
-                      {canManageContent && (
-                        <button
-                          type="button"
-                          className="btn-topic-action delete subject-delete-btn"
-                          title="Delete subject"
-                          onClick={(e) => handleDeleteSubjectClick(e, name)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                      <ChevronRight className="arrow-icon" size={18} />
+                      <div className="subject-row__actions">
+                        {canManageContent && (
+                          <button
+                            type="button"
+                            className="btn-topic-action delete subject-delete-btn"
+                            title="Delete subject"
+                            aria-label={`Delete ${name}`}
+                            onClick={(e) => handleDeleteSubjectClick(e, name)}
+                          >
+                            <Trash2 size={15} strokeWidth={1.75} />
+                          </button>
+                        )}
+                        <ChevronRight className="arrow-icon" size={18} strokeWidth={1.75} aria-hidden />
+                      </div>
                     </div>
                   );
                 })}

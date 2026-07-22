@@ -474,7 +474,10 @@
     display: none !important;
   }
   .subject-selection-card {
-    padding: 14px 16px !important;
+    padding: 16px 4px 16px 12px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
   .topic-outline-card {
     padding: 14px 16px !important;
