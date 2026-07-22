@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
-import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer } from 'lucide-react';
+import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, LayoutGrid } from 'lucide-react';
 import { McqText } from '@/shared/components/ui/McqText';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/study/study.css';
@@ -26,12 +27,19 @@ export function ExamPortal({
   submitExam,
   cancelTest
 }) {
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const activeQ = testQuestions[currentQuestionIdx];
+  const qCount = testQuestions?.length || 0;
 
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `Time Remaining: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const goToQuestion = (i) => {
+    jumpToQuestion(i);
+    setPaletteOpen(false);
   };
 
   return (
@@ -45,7 +53,19 @@ export function ExamPortal({
       <div className="main-layout">
         <div className="left-panel">
           <div className="section-bar">
-            Section: {selectedSubject} ({testQuestions?.length || 0} Questions)
+            <span>
+              Q{currentQuestionIdx + 1}/{qCount} · {selectedSubject || 'Topic'}
+              {activeNotes?.name ? ` · ${activeNotes.name}` : ''}
+            </span>
+            <button
+              type="button"
+              className="exam-palette-toggle"
+              onClick={() => setPaletteOpen(true)}
+              aria-expanded={paletteOpen}
+            >
+              <LayoutGrid size={15} strokeWidth={2} />
+              Palette
+            </button>
           </div>
           
           <div className="question-area">
@@ -90,41 +110,56 @@ export function ExamPortal({
 
           <div className="footer-buttons">
             <div>
-              <button className="btn btn-review" onClick={markForReview}>
+              <button type="button" className="btn btn-review" onClick={markForReview}>
                 <Flag size={15} strokeWidth={2} /> Mark for Review & Next
               </button>
-              <button className="btn btn-clear" onClick={clearResponse}>
+              <button type="button" className="btn btn-clear" onClick={clearResponse}>
                 <Eraser size={15} strokeWidth={2} /> Clear Response
               </button>
             </div>
-            <button className="btn btn-save" onClick={saveAndNext}>
+            <button type="button" className="btn btn-save" onClick={saveAndNext}>
               <Save size={15} strokeWidth={2} /> Save & Next
             </button>
           </div>
         </div>
 
-        <div className="right-panel">
-          <div>
+        <div className={`right-panel${paletteOpen ? ' is-open' : ''}`}>
+          <div className="exam-palette-sheet-head">
+            <strong>Question palette</strong>
+            <button
+              type="button"
+              className="exam-palette-close"
+              onClick={() => setPaletteOpen(false)}
+              aria-label="Close palette"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="exam-palette-body">
             <div className="user-profile">
-              <div className="avatar">{user.username.slice(0, 2).toUpperCase()}</div>
+              <div className="avatar">{user?.username?.slice(0, 2).toUpperCase() || 'US'}</div>
               <div>
-                <div className="exam-user-name">{user.username}</div>
-                <div className="exam-user-meta">{testQuestions?.length || 0} Questions · 15 Mins</div>
+                <div className="exam-user-name">{user?.username || 'Student'}</div>
+                <div className="exam-user-meta">{qCount} Questions · 15 Mins</div>
               </div>
             </div>
             <div className="palette-header">
-              Question Palette :
+              Question Palette
             </div>
             
             <div className="palette-grid" id="palette-box">
               {testQuestions.map((_, i) => {
                 const status = questionStatuses[i] || 'not-visited';
+                const isActive = i === currentQuestionIdx;
                 return (
                   <button
                     key={i}
+                    type="button"
                     id={`p-btn-${i}`}
-                    className={`palette-btn ${status}`}
-                    onClick={() => jumpToQuestion(i)}
+                    className={`palette-btn ${status}${isActive ? ' active-q' : ''}`}
+                    onClick={() => goToQuestion(i)}
+                    aria-current={isActive ? 'true' : undefined}
                   >
                     {i + 1}
                   </button>
@@ -132,14 +167,12 @@ export function ExamPortal({
               })}
             </div>
 
-            {testQuestions.length > 0 && testQuestions.length < 25 && (
+            {qCount > 0 && qCount < 25 && (
               <div className="palette-warning">
-                <strong>Note:</strong> Only {testQuestions.length} questions available. Add more MCQs to this topic to simulate a full 25-Q mock test.
+                <strong>Note:</strong> Only {qCount} questions available. Add more MCQs to this topic to simulate a full 25-Q mock test.
               </div>
             )}
-          </div>
 
-          <div>
             <div className="legend-box">
               <div className="legend-item">
                 <span className="dot dot-white"></span> Not Visited
@@ -154,13 +187,18 @@ export function ExamPortal({
                 <span className="dot dot-yellow"></span> Marked for Review
               </div>
             </div>
+          </div>
+
+          <div className="exam-palette-actions">
             <button 
+              type="button"
               className="btn btn-submit-section" 
               onClick={submitExam}
             >
               <Send size={15} strokeWidth={2} /> Submit Section
             </button>
             <button 
+              type="button"
               className="btn btn-cancel-test" 
               onClick={() => setCancelConfirmOpen(true)}
             >
@@ -169,6 +207,15 @@ export function ExamPortal({
           </div>
         </div>
       </div>
+
+      {paletteOpen && (
+        <button
+          type="button"
+          className="exam-palette-backdrop"
+          aria-label="Close palette"
+          onClick={() => setPaletteOpen(false)}
+        />
+      )}
 
       {/* --- CANCEL TEST CONFIRMATION MODAL --- */}
       {cancelConfirmOpen && (
@@ -179,13 +226,13 @@ export function ExamPortal({
                 <Activity size={20} color="#f59e0b" />
                 Cancel Current Test?
               </h3>
-              <button className="btn-close-modal" onClick={() => setCancelConfirmOpen(false)}>
+              <button type="button" className="btn-close-modal" onClick={() => setCancelConfirmOpen(false)}>
                 <X size={18} />
               </button>
             </div>
             
             <div className="modal-body-cancel">
-              <p className="modal-body-bold">Are you sure you want to cancel the mock test?</p>
+              <p className="modal-body-bold">Are you sure you want to cancel the topic test?</p>
               <p className="modal-body-sub">All your current progress and answered questions will be <strong>erased</strong>. This action cannot be undone.</p>
             </div>
 

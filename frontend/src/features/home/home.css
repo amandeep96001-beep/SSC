@@ -756,3 +756,65 @@
     align-items: center;
   }
 }
+
+/* Study reminders entry — desktop + mobile */
+.today-reminders-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background:
+    linear-gradient(120deg, var(--color-primary-muted) 0%, var(--bg-surface) 48%);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.today-reminders-cta:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--border-color));
+  box-shadow: var(--shadow-md);
+}
+
+.today-reminders-cta__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-elevated);
+  color: var(--color-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.today-reminders-cta__copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.today-reminders-cta__copy strong {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text-heading);
+}
+
+.today-reminders-cta__copy em {
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.today-reminders-cta__chev {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}

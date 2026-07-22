@@ -26,8 +26,10 @@ import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE } from '@/shared/utils/parseBulkQuestions';
+import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
 import '@/features/home/home.css';
 import '@/features/admin/admin.css';
+import '@/features/reminders/reminders.css';
 
 const DrillWorkspace = lazy(() =>
   import('@/features/drills/components/DrillWorkspace').then((m) => ({ default: m.DrillWorkspace }))
@@ -56,6 +58,9 @@ const TodayFocusWorkspace = lazy(() =>
 const AdminWorkspace = lazy(() =>
   import('@/features/admin/components/AdminWorkspace').then((m) => ({ default: m.AdminWorkspace }))
 );
+const RemindersWorkspace = lazy(() =>
+  import('@/features/reminders/components/RemindersWorkspace').then((m) => ({ default: m.RemindersWorkspace }))
+);
 
 function WorkspaceFallback() {
   return (
@@ -78,6 +83,7 @@ const VALID_VIEWS = new Set([
   'topics',
   'notes',
   'revision',
+  'reminders',
   'mock',
   'performance',
   'analytics',
@@ -276,6 +282,13 @@ export function Dashboard() {
     // Keep an extra history entry whenever the section changes
     trapHistory();
   }, [activeView, user]);
+
+  // Study reminders — fire browser + in-app alerts while logged in
+  useEffect(() => {
+    if (!user) return undefined;
+    startReminderScheduler();
+    return undefined;
+  }, [user]);
 
   // Register in-app back behavior with the global trap (never leaves the page)
   useEffect(() => {
@@ -877,6 +890,8 @@ export function Dashboard() {
               handleVocabPageChange={handleVocabPageChange}
             />
           )}
+
+          {activeView === 'reminders' && <RemindersWorkspace />}
 
           {activeView === 'competition' && (
             <CompetitionWorkspace user={user} setActiveView={setActiveView} />

@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   Home,
-  Shield
+  Shield,
+  Bell
 } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
@@ -102,6 +103,14 @@ export function Sidebar({
         >
           <Home className="nav-icon" size={18} strokeWidth={1.75} />
           <span>What to Study</span>
+        </button>
+
+        <button 
+          className={`nav-item ${activeView === 'reminders' ? 'active' : ''}`}
+          onClick={() => go('reminders')}
+        >
+          <Bell className="nav-icon" size={18} strokeWidth={1.75} />
+          <span>Reminders</span>
         </button>
 
         {user?.role === 'admin' && (

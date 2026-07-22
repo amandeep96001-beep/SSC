@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot } from 'lucide-react';
+import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot, Bell } from 'lucide-react';
 import { useExam } from '@/shared/context/useExam';
 import { APP_NAME } from '@/shared/brand';
 import { ExamDatePicker } from '@/shared/components/ui/ExamDatePicker';
@@ -115,6 +115,21 @@ export function TodayFocusWorkspace({
         accent={exam.accent}
         examName={exam.name}
       />
+
+      <button
+        type="button"
+        className="today-reminders-cta"
+        onClick={() => setActiveView?.('reminders')}
+      >
+        <span className="today-reminders-cta__icon" aria-hidden="true">
+          <Bell size={18} />
+        </span>
+        <span className="today-reminders-cta__copy">
+          <strong>Set study reminders</strong>
+          <em>Desktop &amp; mobile — get notified at your study time</em>
+        </span>
+        <ChevronRight size={16} className="today-reminders-cta__chev" />
+      </button>
 
       {wrongVocab.length > 0 && (
         <section className="study-block study-block--revise-vocab">

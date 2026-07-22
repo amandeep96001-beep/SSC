@@ -90,6 +90,8 @@
   padding: 11px 14px;
   border: 1px solid transparent;
   box-sizing: border-box;
+  opacity: 1;
+  visibility: visible;
 }
 
 .lms-sidebar .nav-item:hover {
