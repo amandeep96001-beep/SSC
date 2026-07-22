@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
 import { progressForTopic } from '@/shared/utils/examProgress';
@@ -78,6 +78,9 @@ export function SyllabusWorkspace({
   const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
   const notesRef = useRef(null);
   const notesScrollRef = useRef(null);
+  const notesHtmlSyncKeyRef = useRef('');
+  const searchHitsRef = useRef([]);
+  const searchMatchIdxRef = useRef(0);
 
   const [notesFontSize, setNotesFontSize] = useState(() => localStorage.getItem('ssc_notes_font') || 'lg');
   const [notesComfort, setNotesComfort] = useState(() => localStorage.getItem('ssc_notes_comfort') === '1');
@@ -91,8 +94,6 @@ export function SyllabusWorkspace({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMatchIdx, setSearchMatchIdx] = useState(0);
   const [searchMatchCount, setSearchMatchCount] = useState(0);
-  const searchHitsRef = useRef([]);
-  const searchMatchIdxRef = useRef(0);
   const [bookmarks, setBookmarks] = useState(() => {
     if (!activeNotes?.id) return [];
     try {
@@ -174,37 +175,43 @@ export function SyllabusWorkspace({
   }, []);
 
   const clearSearchHighlights = useCallback(() => {
-    if (!notesRef.current) return;
-    notesRef.current.querySelectorAll('mark.search-hit').forEach((mark) => {
+    const root = notesRef.current;
+    if (!root) return;
+    root.querySelectorAll('mark.search-hit').forEach((mark) => {
       const parent = mark.parentNode;
       if (!parent) return;
       while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
       parent.removeChild(mark);
       parent.normalize?.();
     });
+    searchHitsRef.current = [];
   }, []);
 
   const applySearchHighlights = useCallback((query) => {
     const root = notesRef.current;
     clearSearchHighlights();
     const q = (query || '').trim();
-    if (!root || !q) {
-      searchHitsRef.current = [];
-      return [];
-    }
+    if (!root || !q) return [];
 
     const needle = q.toLowerCase();
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (p.closest('mark.search-hit')) return NodeFilter.FILTER_REJECT;
+        const tag = p.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
     const textNodes = [];
     let node;
-    while ((node = walker.nextNode())) {
-      // Skip empty / whitespace-only
-      if (!node.textContent?.trim()) continue;
-      // Don't search inside existing user highlights? Still search — ok
-      textNodes.push(node);
-    }
+    while ((node = walker.nextNode())) textNodes.push(node);
 
     for (const textNode of textNodes) {
+      if (!textNode.isConnected || !textNode.parentNode) continue;
       const text = textNode.textContent || '';
       const lower = text.toLowerCase();
       const ranges = [];
@@ -214,23 +221,23 @@ export function SyllabusWorkspace({
         ranges.push([idx, idx + needle.length]);
         start = idx + needle.length;
       }
-      // Wrap from end → start so indices stay valid in this node
-      for (let i = ranges.length - 1; i >= 0; i -= 1) {
-        const [s, e] = ranges[i];
-        try {
-          const range = document.createRange();
-          range.setStart(textNode, s);
-          range.setEnd(textNode, e);
-          const mark = document.createElement('mark');
-          mark.className = 'search-hit';
-          range.surroundContents(mark);
-        } catch {
-          // cross-boundary / split nodes — skip
-        }
+      if (!ranges.length) continue;
+
+      const parent = textNode.parentNode;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      for (const [s, e] of ranges) {
+        if (s > last) frag.appendChild(document.createTextNode(text.slice(last, s)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-hit';
+        mark.textContent = text.slice(s, e);
+        frag.appendChild(mark);
+        last = e;
       }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      parent.replaceChild(frag, textNode);
     }
 
-    // Re-query in document order (wrapping from end shuffles push order)
     const ordered = Array.from(root.querySelectorAll('mark.search-hit'));
     searchHitsRef.current = ordered;
     return ordered;
@@ -241,10 +248,9 @@ export function SyllabusWorkspace({
     const root = notesRef.current;
     if (!container || !root) return;
 
-    let marks = Array.from(root.querySelectorAll('mark.search-hit')).filter((m) => m.isConnected);
+    let marks = Array.from(root.querySelectorAll('mark.search-hit'));
     if (!marks.length && searchQuery.trim()) {
       marks = applySearchHighlights(searchQuery);
-      setSearchMatchCount(marks.length);
     }
     searchHitsRef.current = marks;
     if (!marks.length || idx < 0 || idx >= marks.length) return;
@@ -254,30 +260,29 @@ export function SyllabusWorkspace({
     });
     searchMatchIdxRef.current = idx;
     setSearchMatchIdx(idx);
+    setSearchMatchCount(marks.length);
 
     const mark = marks[idx];
-    const offset = mark.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 48;
-    container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      const top = mark.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 56;
+      container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    });
   }, [applySearchHighlights, searchQuery]);
 
   const goToSearchMatch = useCallback((direction = 1) => {
     const q = searchQuery.trim();
     if (!q) return;
 
-    const root = notesRef.current;
-    let marks = root
-      ? Array.from(root.querySelectorAll('mark.search-hit')).filter((m) => m.isConnected)
+    let marks = notesRef.current
+      ? Array.from(notesRef.current.querySelectorAll('mark.search-hit'))
       : [];
-
-    if (!marks.length) {
-      marks = applySearchHighlights(q);
-    }
+    if (!marks.length) marks = applySearchHighlights(q);
     searchHitsRef.current = marks;
-    setSearchMatchCount(marks.length);
 
     if (!marks.length) {
       searchMatchIdxRef.current = 0;
       setSearchMatchIdx(0);
+      setSearchMatchCount(0);
       return;
     }
 
@@ -297,14 +302,23 @@ export function SyllabusWorkspace({
     else setSearchMatchIdx(0);
   }, [applySearchHighlights, jumpToHit, searchQuery]);
 
-  // Live-highlight as user types (debounced) so matches are always visible
+  // Sync notes HTML imperatively — keeps search marks alive across React re-renders
+  useLayoutEffect(() => {
+    if (activeView !== 'notes' || !notesRef.current) return;
+    const key = `${activeNotes?.id || ''}::${localNotesHtml}`;
+    if (notesHtmlSyncKeyRef.current === key) return;
+    notesHtmlSyncKeyRef.current = key;
+    notesRef.current.innerHTML = localNotesHtml || '';
+  }, [activeView, activeNotes?.id, localNotesHtml]);
+
+  // Live-highlight as user types (debounced)
   useEffect(() => {
     if (activeView !== 'notes') return undefined;
     const q = searchQuery.trim();
     const t = setTimeout(() => {
+      if (!notesRef.current) return;
       if (!q) {
         clearSearchHighlights();
-        searchHitsRef.current = [];
         searchMatchIdxRef.current = 0;
         setSearchMatchCount(0);
         setSearchMatchIdx(0);
@@ -315,7 +329,7 @@ export function SyllabusWorkspace({
       searchMatchIdxRef.current = 0;
       setSearchMatchIdx(0);
       marks.forEach((m, i) => m.classList.toggle('search-hit--active', i === 0));
-    }, q ? 220 : 0);
+    }, q ? 180 : 0);
     return () => clearTimeout(t);
   }, [searchQuery, localNotesHtml, activeView, applySearchHighlights, clearSearchHighlights]);
 
@@ -1071,7 +1085,6 @@ export function SyllabusWorkspace({
                   id="notes-content-view"
                   contentEditable={isEditingNotes}
                   suppressContentEditableWarning
-                  dangerouslySetInnerHTML={{ __html: localNotesHtml }}
                   data-placeholder="Tap to start writing your notes…"
                 />
 
