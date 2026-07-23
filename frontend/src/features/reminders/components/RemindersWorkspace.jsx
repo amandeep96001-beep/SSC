@@ -10,18 +10,19 @@ import {
   Check,
   BellOff,
   Sparkles,
+  Mail,
 } from 'lucide-react';
 import {
-  loadReminders,
-  saveReminders,
-  createReminder,
-  deleteReminder,
-  toggleReminder,
+  fetchReminders,
+  createReminderApi,
+  deleteReminderApi,
+  toggleReminderApi,
   formatTimeLabel,
   repeatLabel,
   todayISO,
   notificationPermission,
   setPermissionPrompted,
+  loadRemindersLocal,
 } from '../remindersStorage';
 import { requestNotificationPermission } from '../reminderScheduler';
 import { showAppToast } from '@/shared/utils/appToast';
@@ -36,18 +37,27 @@ const EMPTY_FORM = {
 };
 
 export function RemindersWorkspace() {
-  const [reminders, setReminders] = useState(() => loadReminders());
+  const [reminders, setReminders] = useState(() => loadRemindersLocal());
   const [form, setForm] = useState(EMPTY_FORM);
   const [perm, setPerm] = useState(() => notificationPermission());
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const refresh = useCallback(() => {
-    setReminders(loadReminders());
-    setPerm(notificationPermission());
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const rows = await fetchReminders();
+      setReminders(rows);
+    } finally {
+      setLoading(false);
+      setPerm(notificationPermission());
+    }
   }, []);
 
   useEffect(() => {
-    const onChange = () => refresh();
+    refresh();
+    const onChange = () => setReminders(loadRemindersLocal());
     window.addEventListener('ssc-reminders-changed', onChange);
     window.addEventListener('ssc-reminder-fired', onChange);
     return () => {
@@ -61,21 +71,19 @@ export function RemindersWorkspace() {
     const result = await requestNotificationPermission();
     setPerm(result);
     if (result === 'granted') {
-      showAppToast('Notifications on. We will ping you at study time.', {
+      showAppToast('Browser alerts on. Server cron will also email you at study time.', {
         variant: 'success',
         title: 'Reminders ready',
       });
     } else if (result === 'denied') {
-      showAppToast('Notifications blocked. Enable them in browser settings.', {
+      showAppToast('Browser blocked. Email reminders still work if SMTP is set.', {
         variant: 'warn',
         title: 'Permission denied',
       });
-    } else if (result === 'unsupported') {
-      showAppToast('This browser does not support notifications.', { variant: 'warn' });
     }
   };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) {
       showAppToast('Give your reminder a short title.', { variant: 'warn' });
@@ -85,38 +93,45 @@ export function RemindersWorkspace() {
       showAppToast('Pick a date for a one-time reminder.', { variant: 'warn' });
       return;
     }
-    const rem = createReminder(form);
-    const next = [rem, ...loadReminders().filter((r) => r.id !== rem.id)];
-    saveReminders(next);
-    setReminders(next);
-    setForm({ ...EMPTY_FORM, date: todayISO() });
-    setShowForm(false);
-    showAppToast(
-      form.repeat === 'once'
-        ? `Set for ${form.date} at ${formatTimeLabel(form.time)}.`
-        : `${repeatLabel(form.repeat)} at ${formatTimeLabel(form.time)}.`,
-      { variant: 'success', title: 'Reminder saved' }
-    );
-    if (notificationPermission() === 'default') {
-      enableNotifications();
+    setSaving(true);
+    try {
+      await createReminderApi(form);
+      setReminders(loadRemindersLocal());
+      setForm({ ...EMPTY_FORM, date: todayISO() });
+      setShowForm(false);
+      showAppToast(
+        `Saved. Cron will notify you at ${formatTimeLabel(form.time)} (email + in-app).`,
+        { variant: 'success', title: 'Reminder set' }
+      );
+      if (notificationPermission() === 'default') enableNotifications();
+    } catch (err) {
+      showAppToast(err.message || 'Could not save reminder.', { variant: 'error' });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleToggle = (id) => {
-    const next = toggleReminder(id);
-    setReminders(next);
+  const handleToggle = async (id, enabled) => {
+    try {
+      await toggleReminderApi(id, !enabled);
+      setReminders(loadRemindersLocal());
+    } catch (err) {
+      showAppToast(err.message || 'Update failed.', { variant: 'error' });
+    }
   };
 
-  const handleDelete = (id) => {
-    const next = deleteReminder(id);
-    setReminders(next);
-    showAppToast('Reminder removed.', { variant: 'info', durationMs: 1800 });
+  const handleDelete = async (id) => {
+    try {
+      await deleteReminderApi(id);
+      setReminders(loadRemindersLocal());
+      showAppToast('Reminder removed.', { variant: 'info', durationMs: 1800 });
+    } catch (err) {
+      showAppToast(err.message || 'Delete failed.', { variant: 'error' });
+    }
   };
 
   const activeCount = reminders.filter((r) => r.enabled).length;
-  const upcoming = [...reminders]
-    .filter((r) => r.enabled)
-    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  const upcoming = reminders.filter((r) => r.enabled);
 
   return (
     <div className="study-workspace reminders-workspace">
@@ -127,7 +142,7 @@ export function RemindersWorkspace() {
           </p>
           <h1>Reminders</h1>
           <p className="reminders-lede">
-            Set a study time. When it comes, the app will notify you — so showing up becomes automatic.
+            Set a study time. Our server cron checks every minute and notifies you by email — even if the app is closed.
           </p>
         </div>
         <div className="reminders-hero__status">
@@ -135,16 +150,13 @@ export function RemindersWorkspace() {
             {perm === 'granted' ? <BellRing size={18} /> : <BellOff size={18} />}
             <div>
               <strong>
-                {perm === 'granted' && 'Notifications on'}
-                {perm === 'denied' && 'Notifications blocked'}
-                {perm === 'default' && 'Notifications off'}
-                {perm === 'unsupported' && 'Not supported'}
+                {perm === 'granted' && 'Browser alerts on'}
+                {perm === 'denied' && 'Browser alerts blocked'}
+                {perm === 'default' && 'Browser alerts off'}
+                {perm === 'unsupported' && 'Browser alerts N/A'}
               </strong>
               <span>
-                {perm === 'granted' && 'Browser alerts will fire at reminder time.'}
-                {perm === 'denied' && 'Allow notifications in your browser settings.'}
-                {perm === 'default' && 'Turn on alerts so you never miss study time.'}
-                {perm === 'unsupported' && 'In-app toasts will still appear while open.'}
+                <Mail size={12} style={{ display: 'inline', verticalAlign: '-2px' }} /> Server cron emails you at reminder time (needs SMTP + account email).
               </span>
             </div>
             {perm !== 'granted' && perm !== 'unsupported' && (
@@ -234,18 +246,23 @@ export function RemindersWorkspace() {
               </label>
             )}
           </div>
-          <button type="submit" className="reminders-submit">
+          <button type="submit" className="reminders-submit" disabled={saving}>
             <Check size={16} />
-            Save reminder
+            {saving ? 'Saving…' : 'Save reminder'}
           </button>
         </form>
       )}
 
-      {upcoming.length === 0 && !showForm ? (
+      {loading ? (
+        <div className="reminders-empty">
+          <Bell size={28} strokeWidth={1.5} />
+          <h2>Loading reminders…</h2>
+        </div>
+      ) : upcoming.length === 0 && reminders.length === 0 && !showForm ? (
         <div className="reminders-empty">
           <Bell size={28} strokeWidth={1.5} />
           <h2>No study reminders yet</h2>
-          <p>Pick a time you can keep. Consistency beats intensity.</p>
+          <p>Pick a time you can keep. The server will email you when it is time.</p>
           <button type="button" className="reminders-submit" onClick={() => setShowForm(true)}>
             <Plus size={16} />
             Create your first reminder
@@ -258,7 +275,7 @@ export function RemindersWorkspace() {
               <button
                 type="button"
                 className={`reminders-card__toggle${r.enabled ? ' is-on' : ''}`}
-                onClick={() => handleToggle(r.id)}
+                onClick={() => handleToggle(r.id, r.enabled)}
                 aria-pressed={r.enabled}
                 title={r.enabled ? 'Pause reminder' : 'Resume reminder'}
               >
@@ -290,7 +307,7 @@ export function RemindersWorkspace() {
       )}
 
       <p className="reminders-footnote">
-        Tip: keep ExamPrep open or pinned in a tab for the most reliable alerts. Browser notifications need permission once.
+        Cron runs every minute on the server. You get an email at reminder time (account email + SMTP required), plus an in-app notification when you open ExamPrep.
       </p>
     </div>
   );

@@ -14,7 +14,7 @@ export async function requireAuth(req, res, next) {
     const token = header.slice(7);
     const payload = verifyToken(token);
 
-    const user = await User.findById(payload.userId).select('_id username role').lean();
+    const user = await User.findById(payload.userId).select('_id username email role').lean();
     if (!user) {
       return res.status(401).json({
         status: 'error',

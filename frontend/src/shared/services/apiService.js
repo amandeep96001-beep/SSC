@@ -82,6 +82,7 @@ export const apiService = {
   get: (endpoint, options) => request(endpoint, { method: 'GET', ...options }),
   post: (endpoint, body, options) => request(endpoint, { method: 'POST', body, ...options }),
   put: (endpoint, body, options) => request(endpoint, { method: 'PUT', body, ...options }),
+  patch: (endpoint, body, options) => request(endpoint, { method: 'PATCH', body, ...options }),
   delete: (endpoint, options) => request(endpoint, { method: 'DELETE', ...options }),
   addVocabBulkApi: (body, options) => request('/study/vocab/bulk', { method: 'POST', body, ...options }),
 

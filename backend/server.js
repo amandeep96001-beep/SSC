@@ -28,6 +28,10 @@ async function start() {
 
   const app = createApp();
 
+  // Study reminder cron (email + in-app) — every minute
+  const { startReminderCron } = await import('./src/modules/reminders/reminder.cron.js');
+  startReminderCron();
+
   app.listen(PORT, () => {
     console.log(`🚀 Server listening on port ${PORT}`);
     const origins = [

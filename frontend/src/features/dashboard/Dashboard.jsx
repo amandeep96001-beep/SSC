@@ -27,6 +27,7 @@ import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
 import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE } from '@/shared/utils/parseBulkQuestions';
 import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
+import { fetchNotifications, markNotificationsReadApi } from '@/features/reminders/remindersStorage';
 import '@/features/home/home.css';
 import '@/features/admin/admin.css';
 import '@/features/reminders/reminders.css';
@@ -283,11 +284,43 @@ export function Dashboard() {
     trapHistory();
   }, [activeView, user]);
 
-  // Study reminders — fire browser + in-app alerts while logged in
+  // Study reminders — local browser alerts while tab open
   useEffect(() => {
     if (!user) return undefined;
     startReminderScheduler();
     return undefined;
+  }, [user]);
+
+  // Server cron notifications — poll unread and toast
+  useEffect(() => {
+    if (!user) return undefined;
+    let cancelled = false;
+
+    const pull = async () => {
+      try {
+        const rows = await fetchNotifications({ unreadOnly: true });
+        if (cancelled || !rows.length) return;
+        const latest = rows[0];
+        showAppToast(latest.body || 'Time to study.', {
+          variant: 'info',
+          title: latest.title || 'Study reminder',
+          durationMs: 9000,
+        });
+        await markNotificationsReadApi(rows.map((n) => n.id));
+      } catch {
+        /* offline / not critical */
+      }
+    };
+
+    pull();
+    const id = window.setInterval(pull, 60000);
+    const onFocus = () => pull();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [user]);
 
   // Register in-app back behavior with the global trap (never leaves the page)

@@ -1,4 +1,6 @@
-const STORAGE_KEY = 'ssc_study_reminders_v1';
+import { apiService } from '@/shared/services/apiService';
+
+const LOCAL_KEY = 'ssc_study_reminders_v1';
 const PERMISSION_PROMPTED_KEY = 'ssc_reminders_perm_prompted';
 
 function parseList(raw) {
@@ -10,69 +12,75 @@ function parseList(raw) {
   }
 }
 
-export function loadReminders() {
-  return parseList(localStorage.getItem(STORAGE_KEY));
-}
-
-export function saveReminders(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list || []));
+function emitChanged() {
   window.dispatchEvent(new CustomEvent('ssc-reminders-changed'));
 }
 
-export function createReminderId() {
-  return `rem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+export function loadRemindersLocal() {
+  return parseList(localStorage.getItem(LOCAL_KEY));
 }
 
-export function createReminder({
-  title,
-  message = '',
-  time,
-  date = null,
-  repeat = 'daily',
-  enabled = true,
-}) {
-  return {
-    id: createReminderId(),
-    title: String(title || 'Study time').trim() || 'Study time',
-    message: String(message || '').trim(),
-    time: time || '09:00',
-    date: repeat === 'once' ? (date || todayISO()) : null,
-    repeat: ['once', 'daily', 'weekdays'].includes(repeat) ? repeat : 'daily',
-    enabled: Boolean(enabled),
-    lastFiredKey: null,
-    createdAt: Date.now(),
-  };
+export function saveRemindersLocal(list) {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(list || []));
+  emitChanged();
 }
 
-export function upsertReminder(reminder) {
-  const list = loadReminders();
-  const idx = list.findIndex((r) => r.id === reminder.id);
-  if (idx >= 0) list[idx] = reminder;
-  else list.unshift(reminder);
-  saveReminders(list);
-  return list;
+export async function fetchReminders() {
+  try {
+    const res = await apiService.get('/reminders');
+    const rows = Array.isArray(res?.data) ? res.data : [];
+    saveRemindersLocal(rows);
+    return rows;
+  } catch {
+    return loadRemindersLocal();
+  }
 }
 
-export function deleteReminder(id) {
-  const list = loadReminders().filter((r) => r.id !== id);
-  saveReminders(list);
-  return list;
+export async function createReminderApi(payload) {
+  const res = await apiService.post('/reminders', {
+    title: payload.title,
+    message: payload.message || '',
+    time: payload.time,
+    date: payload.date || null,
+    repeat: payload.repeat || 'daily',
+    timezone: payload.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata',
+    enabled: true,
+  });
+  const row = res?.data;
+  if (row) {
+    const next = [row, ...loadRemindersLocal().filter((r) => r.id !== row.id)];
+    saveRemindersLocal(next);
+  }
+  return row;
 }
 
-export function toggleReminder(id, enabled) {
-  const list = loadReminders().map((r) =>
-    r.id === id ? { ...r, enabled: enabled ?? !r.enabled } : r
-  );
-  saveReminders(list);
-  return list;
+export async function updateReminderApi(id, patch) {
+  const res = await apiService.patch(`/reminders/${id}`, patch);
+  const row = res?.data;
+  if (row) {
+    const next = loadRemindersLocal().map((r) => (r.id === id ? row : r));
+    saveRemindersLocal(next);
+  }
+  return row;
 }
 
-export function markReminderFired(id, fireKey) {
-  const list = loadReminders().map((r) =>
-    r.id === id ? { ...r, lastFiredKey: fireKey } : r
-  );
-  saveReminders(list);
-  return list;
+export async function deleteReminderApi(id) {
+  await apiService.delete(`/reminders/${id}`);
+  saveRemindersLocal(loadRemindersLocal().filter((r) => r.id !== id));
+}
+
+export async function toggleReminderApi(id, enabled) {
+  return updateReminderApi(id, { enabled });
+}
+
+export async function fetchNotifications({ unreadOnly = false } = {}) {
+  const q = unreadOnly ? '?unread=1' : '';
+  const res = await apiService.get(`/reminders/notifications/list${q}`);
+  return Array.isArray(res?.data) ? res.data : [];
+}
+
+export async function markNotificationsReadApi(ids) {
+  await apiService.post('/reminders/notifications/read', ids ? { ids } : {});
 }
 
 export function todayISO(d = new Date()) {
@@ -108,4 +116,31 @@ export function setPermissionPrompted() {
 export function notificationPermission() {
   if (typeof Notification === 'undefined') return 'unsupported';
   return Notification.permission;
+}
+
+/** @deprecated local-only helpers kept for scheduler fallback */
+export function loadReminders() {
+  return loadRemindersLocal();
+}
+
+export function saveReminders(list) {
+  saveRemindersLocal(list);
+}
+
+export function createReminderId() {
+  return `rem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function createReminder(payload) {
+  return {
+    id: createReminderId(),
+    title: String(payload.title || 'Study time').trim() || 'Study time',
+    message: String(payload.message || '').trim(),
+    time: payload.time || '09:00',
+    date: payload.repeat === 'once' ? (payload.date || todayISO()) : null,
+    repeat: ['once', 'daily', 'weekdays'].includes(payload.repeat) ? payload.repeat : 'daily',
+    enabled: true,
+    lastFiredKey: null,
+    createdAt: Date.now(),
+  };
 }

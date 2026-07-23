@@ -25,6 +25,36 @@ function createTransport() {
   });
 }
 
+/**
+ * Generic mail sender used by OTP + study reminders.
+ * @returns {{ sent: boolean, reason?: string }}
+ */
+export async function sendMail({ to, subject, text, html }) {
+  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local';
+  if (!to) return { sent: false, reason: 'no_recipient' };
+
+  if (!smtpConfigured()) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
+    }
+    console.info(`[mail] SMTP not configured — would send to ${to}: ${subject}`);
+    console.info(`[mail] ${text}`);
+    return { sent: false, reason: 'smtp_not_configured' };
+  }
+
+  try {
+    const transporter = createTransport();
+    await transporter.sendMail({ from, to, subject, text, html });
+    return { sent: true };
+  } catch (err) {
+    console.error('[mail] SMTP send failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Unable to send email. Please try again shortly.');
+    }
+    return { sent: false, reason: err.message };
+  }
+}
+
 function buildOtpEmailHtml(code, { title, subtitle, lead }) {
   const digits = String(code).split('').map((d) => (
     `<td style="width:42px;height:52px;text-align:center;vertical-align:middle;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;letter-spacing:0;color:#1a1d2e;background:#ffffff;border:1px solid rgba(99,102,241,0.22);border-radius:12px;">${d}</td>`
@@ -101,7 +131,6 @@ function buildOtpEmailHtml(code, { title, subtitle, lead }) {
 export async function sendOtpEmail(email, code, options = {}) {
   const purpose = options.purpose || 'email_verify';
   const isReset = purpose === 'password_reset';
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local';
   const subject = isReset
     ? 'Your ExamPrep password reset code'
     : 'Your ExamPrep verification code';
@@ -129,10 +158,21 @@ export async function sendOtpEmail(email, code, options = {}) {
   }
 
   try {
-    const transporter = createTransport();
-    await transporter.sendMail({ from, to: email, subject, text: copy.text, html });
-    return { sent: true };
+    const result = await sendMail({ to: email, subject, text: copy.text, html });
+    if (result.sent) return { sent: true };
+    console.info(`[auth:otp] Code for ${email}: ${code}`);
+    if (String(process.env.SMTP_DEBUG || '').toLowerCase() === '1'
+      || String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true') {
+      return { sent: false, debugOtp: code };
+    }
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Unable to send verification email. Please try again shortly.');
+    }
+    throw new Error(
+      'Unable to send verification email. Gmail SMTP login failed — create a new App Password and update SMTP_PASS.'
+    );
   } catch (err) {
+    if (err.message?.includes('Unable to send') || err.message?.includes('SMTP')) throw err;
     console.error('[auth:otp] SMTP send failed:', err.message);
     console.info(`[auth:otp] Code for ${email}: ${code}`);
     if (process.env.NODE_ENV === 'production') {
