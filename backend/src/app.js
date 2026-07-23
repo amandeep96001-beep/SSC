@@ -48,7 +48,22 @@ function getAllowedOrigins() {
 
 function isOriginAllowed(origin, allowedOrigins) {
   const normalized = normalizeOrigin(origin);
-  return allowedOrigins.includes(normalized) || isVercelOrigin(normalized);
+  if (allowedOrigins.includes(normalized) || isVercelOrigin(normalized)) return true;
+
+  // Local/LAN phone testing (non-production only)
+  if (process.env.NODE_ENV === 'production') return false;
+  try {
+    const { hostname, protocol } = new URL(normalized);
+    if (protocol !== 'http:' && protocol !== 'https:') return false;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+    // Private network ranges
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 export function createApp() {

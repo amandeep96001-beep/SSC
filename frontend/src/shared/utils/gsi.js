@@ -1,8 +1,9 @@
-/** Google Identity Services — load once; support ID-token init + auth-code popup. */
+/** Google Identity Services — preload once; ID-token (mobile-friendly) + auth-code popup. */
 
 let scriptPromise = null;
 let initializeStarted = false;
 let codeClient = null;
+let credentialHandlers = { current: null };
 
 export function loadGsiScript() {
   if (typeof window === 'undefined') {
@@ -25,7 +26,6 @@ export function loadGsiScript() {
 
     const existing = document.querySelector('script[data-examprep-gsi="1"]');
     if (existing) {
-      // load may have already fired (HMR / remount) — don't hang waiting for it
       if (window.google?.accounts?.id) {
         finish();
         return;
@@ -54,27 +54,143 @@ export function loadGsiScript() {
   return scriptPromise;
 }
 
-/** Ensure accounts.id is initialized (used for disableAutoSelect on logout). */
-export async function ensureGsiInitialized(clientId) {
-  const gsi = await loadGsiScript();
+/** Call on auth screen mount so click keeps the user-gesture for popups. */
+export function preloadGsi() {
+  return loadGsiScript().catch(() => null);
+}
+
+function wireIdCallback(clientId) {
+  const gsi = window.google?.accounts?.id;
   if (!gsi) throw new Error('Google Identity Services unavailable');
 
-  if (!initializeStarted) {
-    initializeStarted = true;
-    gsi.initialize({
-      client_id: clientId,
-      callback: () => {},
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-  }
-
+  gsi.initialize({
+    client_id: clientId,
+    callback: (response) => {
+      const handlers = credentialHandlers.current;
+      credentialHandlers.current = null;
+      if (!handlers) return;
+      if (response?.credential) {
+        handlers.resolve(response.credential);
+        return;
+      }
+      handlers.reject(new Error('Google sign-in failed.'));
+    },
+    auto_select: false,
+    cancel_on_tap_outside: true,
+    use_fedcm_for_prompt: true,
+  });
+  initializeStarted = true;
   return gsi;
+}
+
+/** Ensure accounts.id is initialized (used for disableAutoSelect on logout). */
+export async function ensureGsiInitialized(clientId) {
+  await loadGsiScript();
+  return wireIdCallback(clientId);
+}
+
+/**
+ * ID-token via One Tap / FedCM prompt — works better than popups on many phones.
+ */
+export async function requestGoogleCredential(clientId) {
+  await loadGsiScript();
+  const gsi = wireIdCallback(clientId);
+
+  return new Promise((resolve, reject) => {
+    credentialHandlers.current = { resolve, reject };
+    let settled = false;
+
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      credentialHandlers.current = null;
+      reject(err);
+    };
+
+    const ok = (credential) => {
+      if (settled) return;
+      settled = true;
+      credentialHandlers.current = null;
+      resolve(credential);
+    };
+
+    credentialHandlers.current = {
+      resolve: ok,
+      reject: fail,
+    };
+
+    try {
+      gsi.prompt((notification) => {
+        if (settled) return;
+        const skipped = notification?.isNotDisplayed?.()
+          || notification?.isSkippedMoment?.()
+          || notification?.isDismissedMoment?.();
+        if (skipped) {
+          fail(Object.assign(new Error('Google prompt unavailable'), {
+            promptUnavailable: true,
+            cancelled: notification?.isDismissedMoment?.() === true,
+          }));
+        }
+      });
+    } catch (err) {
+      fail(err instanceof Error ? err : new Error('Google sign-in failed.'));
+    }
+  });
+}
+
+/**
+ * Render official GIS button into `el` (most reliable on mobile).
+ * Returns a cleanup function.
+ */
+export async function mountGoogleButton(el, clientId, { onCredential, onError, width } = {}) {
+  if (!el || !clientId) return () => {};
+  await loadGsiScript();
+  wireIdCallback(clientId);
+
+  credentialHandlers.current = {
+    resolve: (credential) => onCredential?.(credential),
+    reject: (err) => {
+      if (!err?.cancelled) onError?.(err);
+    },
+  };
+
+  // Re-bind initialize so button uses the same handlers
+  window.google.accounts.id.initialize({
+    client_id: clientId,
+    callback: (response) => {
+      if (response?.credential) {
+        onCredential?.(response.credential);
+        return;
+      }
+      onError?.(new Error('Google sign-in failed.'));
+    },
+    auto_select: false,
+    cancel_on_tap_outside: true,
+    use_fedcm_for_prompt: true,
+  });
+  initializeStarted = true;
+
+  el.innerHTML = '';
+  const w = Math.max(240, Math.min(width || el.clientWidth || 320, 400));
+  window.google.accounts.id.renderButton(el, {
+    type: 'standard',
+    theme: 'outline',
+    size: 'large',
+    text: 'continue_with',
+    shape: 'rectangular',
+    width: w,
+    logo_alignment: 'left',
+  });
+
+  return () => {
+    el.innerHTML = '';
+  };
 }
 
 /**
  * Open Google's auth-code popup and resolve with the authorization code.
  * Backend exchanges it via redirect_uri=postmessage.
+ * Prefer calling after preloadGsi() so the click gesture is preserved.
  */
 const codeHandlers = { current: null };
 
@@ -122,6 +238,36 @@ export async function requestGoogleAuthCode(clientId) {
 
     codeClient.requestCode();
   });
+}
+
+/**
+ * Mobile-safe sign-in: try ID credential prompt, then auth-code popup.
+ * @returns {Promise<{ code?: string, credential?: string }>}
+ */
+export async function signInWithGoogle(clientId) {
+  const mobile = typeof navigator !== 'undefined'
+    && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      || (navigator.maxTouchPoints > 1 && window.innerWidth < 900));
+
+  if (mobile) {
+    try {
+      const credential = await requestGoogleCredential(clientId);
+      return { credential };
+    } catch (err) {
+      if (err?.cancelled) throw err;
+      // Fall through to code popup / button
+    }
+  }
+
+  try {
+    const code = await requestGoogleAuthCode(clientId);
+    return { code };
+  } catch (err) {
+    if (!mobile) throw err;
+    // Last resort on mobile: credential prompt again after popup fail
+    const credential = await requestGoogleCredential(clientId);
+    return { credential };
+  }
 }
 
 export function disableGsiAutoSelect() {

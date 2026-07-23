@@ -127,6 +127,13 @@ export function saveReminders(list) {
   saveRemindersLocal(list);
 }
 
+export function markReminderFired(id, key) {
+  const next = loadRemindersLocal().map((r) =>
+    r.id === id ? { ...r, lastFiredKey: key, lastFiredAt: Date.now() } : r
+  );
+  saveRemindersLocal(next);
+}
+
 export function createReminderId() {
   return `rem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }

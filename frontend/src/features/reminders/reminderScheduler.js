@@ -1,4 +1,4 @@
-import { showAppToast } from '@/shared/utils/appToast';
+import { notifyReminder } from '@/shared/utils/appToast';
 import {
   loadReminders,
   markReminderFired,
@@ -6,7 +6,7 @@ import {
   notificationPermission,
 } from './remindersStorage';
 
-const CHECK_MS = 20000;
+const CHECK_MS = 15000;
 let timerId = null;
 let started = false;
 
@@ -40,33 +40,12 @@ function isDue(reminder, { dateISO, timeHM, weekday }) {
   return true;
 }
 
-function showBrowserNotification(reminder) {
-  if (typeof Notification === 'undefined') return;
-  if (Notification.permission !== 'granted') return;
-  try {
-    const n = new Notification(reminder.title || 'Study time', {
-      body: reminder.message || 'Your study reminder is here. Open ExamPrep and start.',
-      icon: '/favicon.svg',
-      badge: '/favicon.svg',
-      tag: `ssc-reminder-${reminder.id}`,
-      renotify: true,
-    });
-    n.onclick = () => {
-      window.focus?.();
-      n.close();
-    };
-  } catch {
-    /* ignore — some browsers block without service worker */
-  }
-}
-
 function fireReminder(reminder, key) {
   markReminderFired(reminder.id, key);
-  showBrowserNotification(reminder);
-  showAppToast(reminder.message || 'Time to study — you set this reminder.', {
-    variant: 'info',
-    title: reminder.title || 'Study reminder',
-    durationMs: 8000,
+  notifyReminder({
+    title: reminder.title || 'Study session',
+    body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
+    tag: `ssc-reminder-${reminder.id}`,
   });
   window.dispatchEvent(
     new CustomEvent('ssc-reminder-fired', { detail: { id: reminder.id, title: reminder.title } })

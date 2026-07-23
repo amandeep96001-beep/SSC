@@ -6,12 +6,17 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
-import { requestGoogleAuthCode } from '@/shared/utils/gsi';
+import { preloadGsi, mountGoogleButton, signInWithGoogle } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
 import '../auth.css';
 
 const OTP_LEN = 6;
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
+
+/** Never surface raw API / stack messages in the UI. */
+function toastAuthError(fallback = 'Something went wrong. Please try again.') {
+  showAppToast(fallback, { variant: 'error' });
+}
 
 function GoogleMark({ className }) {
   return (
@@ -24,23 +29,91 @@ function GoogleMark({ className }) {
   );
 }
 
-function GoogleSignInButton({ disabled, onCode, onError }) {
+function GoogleSignInButton({ disabled, onAuth, onError }) {
   const [busy, setBusy] = useState(false);
+  const [useOfficialBtn, setUseOfficialBtn] = useState(false);
+  const hostRef = useRef(null);
+  const onAuthRef = useRef(onAuth);
+  const onErrorRef = useRef(onError);
+  onAuthRef.current = onAuth;
+  onErrorRef.current = onError;
+
+  const preferOfficial = typeof navigator !== 'undefined'
+    && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      || (navigator.maxTouchPoints > 1 && window.innerWidth < 900));
+
+  useEffect(() => {
+    preloadGsi();
+  }, []);
+
+  // Official Google button on mobile — popups are unreliable there
+  useEffect(() => {
+    if (!preferOfficial || !GOOGLE_CLIENT_ID) return undefined;
+    let cleanup = () => {};
+    let cancelled = false;
+
+    const tryMount = async () => {
+      // wait one frame so hostRef is in DOM when we switch to official layout
+      setUseOfficialBtn(true);
+      await new Promise((r) => requestAnimationFrame(r));
+      if (cancelled || !hostRef.current) {
+        if (!cancelled) setUseOfficialBtn(false);
+        return;
+      }
+      try {
+        cleanup = await mountGoogleButton(hostRef.current, GOOGLE_CLIENT_ID, {
+          width: hostRef.current?.clientWidth || 320,
+          onCredential: async (credential) => {
+            setBusy(true);
+            try {
+              await onAuthRef.current?.({ credential });
+            } finally {
+              setBusy(false);
+            }
+          },
+          onError: (err) => {
+            if (!err?.cancelled) onErrorRef.current?.();
+          },
+        });
+      } catch {
+        if (!cancelled) setUseOfficialBtn(false);
+      }
+    };
+
+    tryMount();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [preferOfficial]);
 
   const handleClick = async () => {
     if (!GOOGLE_CLIENT_ID || disabled || busy) return;
     setBusy(true);
     try {
-      const code = await requestGoogleAuthCode(GOOGLE_CLIENT_ID);
-      await onCode?.(code);
+      const payload = await signInWithGoogle(GOOGLE_CLIENT_ID);
+      await onAuth?.(payload);
     } catch (err) {
-      if (!err?.cancelled) {
-        onError?.(err?.message || 'Google sign-in failed.');
-      }
+      if (!err?.cancelled) onError?.();
     } finally {
       setBusy(false);
     }
   };
+
+  if (useOfficialBtn) {
+    return (
+      <div className={`auth-google-host${busy || disabled ? ' is-busy' : ''}`}>
+        {busy && (
+          <div className="auth-google-host__busy">
+            <Loader2 size={18} className="spin-icon" />
+            <span>Connecting…</span>
+          </div>
+        )}
+        <div ref={hostRef} className="auth-google-host__btn" aria-hidden={busy} />
+      </div>
+    );
+  }
 
   return (
     <button
@@ -157,37 +230,32 @@ export function AuthPanel({
     requestAnimationFrame(() => focusOtp(0));
   };
 
-  const handleGoogleCode = async (code) => {
+  const handleGoogleAuth = async (payload) => {
     if (!loginWithGoogle) {
-      showAppToast('Google sign-in is not wired up.', { variant: 'error' });
+      toastAuthError('Google sign-in is unavailable right now.');
       return;
     }
     setIsSubmitting(true);
     try {
-      const res = await loginWithGoogle({ code });
+      const res = await loginWithGoogle(payload);
       if (!res.success) {
-        showAppToast(res.message || 'Google sign-in failed.', { variant: 'error' });
+        toastAuthError('Google sign-in could not be completed. Please try again.');
       }
-    } catch (err) {
-      showAppToast(err?.message || 'Google sign-in failed.', { variant: 'error' });
+    } catch {
+      toastAuthError('Google sign-in could not be completed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleGoogleError = (message) => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'this site';
-    showAppToast(
-      message
-        || `Google sign-in failed. In Google Cloud → Credentials, add ${origin} under Authorized JavaScript origins.`,
-      { variant: 'error', durationMs: 10000 },
-    );
+  const handleGoogleError = () => {
+    toastAuthError('Google sign-in could not be completed. Please try again.');
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      showAppToast('Please enter your email and password.', { variant: 'error' });
+      toastAuthError('Please enter your email and password.');
       return;
     }
     setIsSubmitting(true);
@@ -195,14 +263,14 @@ export function AuthPanel({
       const res = await loginUser(email.trim(), password);
       if (res.needsVerification) {
         goToVerify(res.email || email.trim(), res.debugOtp);
-        showAppToast(res.message || 'Please verify your email to continue.', {
+        showAppToast('Please verify your email to continue.', {
           variant: 'warn',
           title: 'Verification required',
         });
         return;
       }
       if (!res.success) {
-        showAppToast(res.message || 'Invalid credentials.', { variant: 'error' });
+        toastAuthError('Invalid email or password.');
       }
     } finally {
       setIsSubmitting(false);
@@ -213,13 +281,11 @@ export function AuthPanel({
     e.preventDefault();
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      showAppToast('Please enter a valid email address.', { variant: 'error' });
+      toastAuthError('Please enter a valid email address.');
       return;
     }
     if (!password || password.length < 8) {
-      showAppToast('Password must be at least 8 characters and include letters and numbers.', {
-        variant: 'error',
-      });
+      toastAuthError('Password must be at least 8 characters and include letters and numbers.');
       return;
     }
     setIsSubmitting(true);
@@ -227,14 +293,14 @@ export function AuthPanel({
       const res = await registerUser(trimmed, password);
       if (res.needsVerification) {
         goToVerify(res.email || trimmed, res.debugOtp);
-        showAppToast(res.message || 'A verification code has been sent to your email.', {
+        showAppToast('A verification code has been sent to your email.', {
           variant: 'success',
           title: 'Check your inbox',
         });
         return;
       }
       if (!res.success) {
-        showAppToast(res.message || 'Unable to create account.', { variant: 'error' });
+        toastAuthError('Unable to create account. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -244,14 +310,14 @@ export function AuthPanel({
   const handleVerify = async (e) => {
     e.preventDefault();
     if (!/^\d{6}$/.test(otpValue)) {
-      showAppToast('Enter the 6-digit verification code.', { variant: 'error' });
+      toastAuthError('Enter the 6-digit verification code.');
       return;
     }
     setIsSubmitting(true);
     try {
       const res = await verifyOtp(email, otpValue);
       if (res.success) {
-        showAppToast(res.message || 'Email verified. You can now sign in.', {
+        showAppToast('Email verified. You can now sign in.', {
           variant: 'success',
           title: 'Verified',
         });
@@ -260,7 +326,7 @@ export function AuthPanel({
         setOtpDigits(Array(OTP_LEN).fill(''));
         setDebugOtp('');
       } else {
-        showAppToast(res.message || 'Incorrect verification code.', { variant: 'error' });
+        toastAuthError('Incorrect verification code.');
         setOtpDigits(Array(OTP_LEN).fill(''));
         requestAnimationFrame(() => focusOtp(0));
       }
@@ -285,10 +351,10 @@ export function AuthPanel({
             durationMs: 10000,
           });
         } else {
-          showAppToast(res.message || 'A new code has been sent.', { variant: 'success' });
+          showAppToast('A new code has been sent.', { variant: 'success' });
         }
       } else {
-        showAppToast(res.message || 'Unable to resend code.', { variant: 'error' });
+        toastAuthError('Unable to resend code. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -298,18 +364,18 @@ export function AuthPanel({
   const handleForgot = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
-      showAppToast('Enter your account email.', { variant: 'error' });
+      toastAuthError('Enter your account email.');
       return;
     }
     if (!forgotPassword) {
-      showAppToast('Password reset is not available.', { variant: 'error' });
+      toastAuthError('Password reset is not available.');
       return;
     }
     setIsSubmitting(true);
     try {
       const res = await forgotPassword(email.trim());
       if (!res.success) {
-        showAppToast(res.message || 'Unable to send reset code.', { variant: 'error' });
+        toastAuthError('Unable to send reset code. Please try again.');
         return;
       }
       setEmail(res.email || email.trim());
@@ -319,7 +385,7 @@ export function AuthPanel({
       setOtpDigits(Array(OTP_LEN).fill(''));
       setResendIn(30);
       setDebugOtp(res.debugOtp || '');
-      showAppToast(res.message || 'If that email exists, a reset code was sent.', {
+      showAppToast('If that email exists, a reset code was sent.', {
         variant: 'success',
         durationMs: 7000,
       });
@@ -335,29 +401,29 @@ export function AuthPanel({
   const handleReset = async (e) => {
     e.preventDefault();
     if (otpValue.length !== OTP_LEN) {
-      showAppToast('Enter the 6-digit code from your email.', { variant: 'error' });
+      toastAuthError('Enter the 6-digit code from your email.');
       return;
     }
     if (!password || password.length < 8) {
-      showAppToast('Password must be at least 8 characters.', { variant: 'error' });
+      toastAuthError('Password must be at least 8 characters.');
       return;
     }
     if (password !== confirmPassword) {
-      showAppToast('Passwords do not match.', { variant: 'error' });
+      toastAuthError('Passwords do not match.');
       return;
     }
     if (!resetPassword) {
-      showAppToast('Password reset is not available.', { variant: 'error' });
+      toastAuthError('Password reset is not available.');
       return;
     }
     setIsSubmitting(true);
     try {
       const res = await resetPassword(email, otpValue, password);
       if (!res.success) {
-        showAppToast(res.message || 'Password reset failed.', { variant: 'error' });
+        toastAuthError('Password reset failed. Please try again.');
         return;
       }
-      showAppToast(res.message || 'Password updated. Sign in with your new password.', {
+      showAppToast('Password updated. Sign in with your new password.', {
         variant: 'success',
       });
       setMode('login');
@@ -785,7 +851,7 @@ export function AuthPanel({
             <div className="auth-divider"><span>or</span></div>
             <GoogleSignInButton
               disabled={isSubmitting}
-              onCode={handleGoogleCode}
+              onAuth={handleGoogleAuth}
               onError={handleGoogleError}
             />
           </>

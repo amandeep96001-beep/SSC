@@ -7,7 +7,7 @@ import { useDrills } from '@/features/drills/hooks/useDrills';
 import { useStudy } from '@/features/study/hooks/useStudy';
 import { XCircle, X, Menu } from 'lucide-react';
 import { apiService } from '@/shared/services/apiService';
-import { showAppToast } from '@/shared/utils/appToast';
+import { showAppToast, notifyReminder } from '@/shared/utils/appToast';
 import './Dashboard.css';
 import '@/features/study/study.css';
 import '@/features/analytics/performance.css';
@@ -291,21 +291,25 @@ export function Dashboard() {
     return undefined;
   }, [user]);
 
-  // Server cron notifications — poll unread and toast
+  // Server cron notifications — poll unread → OS notification + top toast
   useEffect(() => {
     if (!user) return undefined;
     let cancelled = false;
+    const seen = new Set();
 
     const pull = async () => {
       try {
         const rows = await fetchNotifications({ unreadOnly: true });
         if (cancelled || !rows.length) return;
-        const latest = rows[0];
-        showAppToast(latest.body || 'Time to study.', {
-          variant: 'info',
-          title: latest.title || 'Study reminder',
-          durationMs: 9000,
-        });
+        for (const row of rows) {
+          if (!row?.id || seen.has(row.id)) continue;
+          seen.add(row.id);
+          notifyReminder({
+            title: row.title || 'Study reminder',
+            body: row.body || 'Your study time is here. Open ExamPrep and start.',
+            tag: `ssc-server-${row.id}`,
+          });
+        }
         await markNotificationsReadApi(rows.map((n) => n.id));
       } catch {
         /* offline / not critical */
@@ -313,13 +317,18 @@ export function Dashboard() {
     };
 
     pull();
-    const id = window.setInterval(pull, 60000);
+    const id = window.setInterval(pull, 20000);
     const onFocus = () => pull();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') pull();
+    };
     window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVis);
     return () => {
       cancelled = true;
       window.clearInterval(id);
       window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVis);
     };
   }, [user]);
 
@@ -551,11 +560,17 @@ export function Dashboard() {
   const globalError = studyError;
 
   useEffect(() => {
-    if (globalError) showAppToast(globalError, { variant: 'error' });
+    if (globalError) {
+      console.warn('[study]', globalError);
+      showAppToast('Something went wrong. Please try again.', { variant: 'error' });
+    }
   }, [globalError]);
 
   useEffect(() => {
-    if (drillError) showAppToast(drillError, { variant: 'error' });
+    if (drillError) {
+      console.warn('[drill]', drillError);
+      showAppToast('Something went wrong. Please try again.', { variant: 'error' });
+    }
   }, [drillError]);
 
   const handleOpenEditModal = async (e, topic) => {

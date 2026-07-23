@@ -19,6 +19,23 @@ import {
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
+function deriveLastStudyAt(progress = [], mockProgress = [], stored = null) {
+  let max = 0;
+  if (stored) {
+    const t = new Date(stored).getTime();
+    if (!Number.isNaN(t)) max = t;
+  }
+  for (const row of progress) {
+    const t = new Date(row?.timestamp || 0).getTime();
+    if (t > max) max = t;
+  }
+  for (const row of mockProgress) {
+    const t = new Date(row?.timestamp || 0).getTime();
+    if (t > max) max = t;
+  }
+  return max > 0 ? new Date(max).toISOString() : null;
+}
+
 function publicUserPayload(user, progress = [], mockProgress = [], token = null) {
   const payload = {
     username: user.username,
@@ -26,11 +43,21 @@ function publicUserPayload(user, progress = [], mockProgress = [], token = null)
     displayName: user.displayName || null,
     emailVerified: Boolean(user.emailVerified),
     role: user.role || 'user',
+    lastStudyAt: deriveLastStudyAt(progress, mockProgress, user.lastStudyAt),
     progress,
     mockProgress
   };
   if (token) payload.token = token;
   return payload;
+}
+
+async function touchLastStudyAt(userId) {
+  if (!userId) return;
+  try {
+    await User.updateOne({ _id: userId }, { $set: { lastStudyAt: new Date() } });
+  } catch {
+    /* non-critical */
+  }
 }
 
 function csvEscape(v) {
@@ -260,8 +287,14 @@ export const saveProgress = async (req, res, next) => {
       timestamp: new Date()
     });
 
+    await touchLastStudyAt(req.user.id);
+
     const updatedProgress = await Progress.find({ username }).lean();
-    res.json({ status: 'success', data: updatedProgress });
+    res.json({
+      status: 'success',
+      data: updatedProgress,
+      lastStudyAt: new Date().toISOString(),
+    });
   } catch (error) {
     next(error);
   }
@@ -297,8 +330,14 @@ export const saveMockProgress = async (req, res, next) => {
       timestamp: new Date()
     });
 
+    await touchLastStudyAt(req.user.id);
+
     const updatedMockProgress = await MockProgress.find({ username }).lean();
-    res.json({ status: 'success', data: updatedMockProgress });
+    res.json({
+      status: 'success',
+      data: updatedMockProgress,
+      lastStudyAt: new Date().toISOString(),
+    });
   } catch (error) {
     next(error);
   }
@@ -313,6 +352,14 @@ export const getMe = async (req, res, next) => {
       User.findById(req.user.id).lean(),
     ]);
 
+    const lastStudyAt = deriveLastStudyAt(progress, mockProgress, dbUser?.lastStudyAt);
+    if (lastStudyAt && !dbUser?.lastStudyAt) {
+      User.updateOne(
+        { _id: req.user.id },
+        { $set: { lastStudyAt: new Date(lastStudyAt) } }
+      ).catch(() => {});
+    }
+
     res.json({
       status: 'success',
       data: publicUserPayload(
@@ -320,7 +367,9 @@ export const getMe = async (req, res, next) => {
           username,
           email: dbUser?.email || req.user.email || null,
           displayName: dbUser?.displayName || null,
-          role: req.user.role || 'user',
+          emailVerified: Boolean(dbUser?.emailVerified),
+          role: req.user.role || dbUser?.role || 'user',
+          lastStudyAt: dbUser?.lastStudyAt || lastStudyAt,
         },
         progress,
         mockProgress

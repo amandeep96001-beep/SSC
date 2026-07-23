@@ -6,12 +6,14 @@ import {
   deleteReminder,
   listNotifications,
   markNotificationsRead,
+  testNotify,
 } from './reminder.controller.js';
 
 const router = express.Router();
 
 router.get('/notifications/list', listNotifications);
 router.post('/notifications/read', markNotificationsRead);
+router.post('/notifications/test', testNotify);
 
 router.get('/', listReminders);
 router.post('/', createReminder);

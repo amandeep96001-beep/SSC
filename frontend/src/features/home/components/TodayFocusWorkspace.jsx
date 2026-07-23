@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot, Bell } from 'lucide-react';
+import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot, Bell, Clock } from 'lucide-react';
 import { useExam } from '@/shared/context/useExam';
 import { APP_NAME } from '@/shared/brand';
 import { ExamDatePicker } from '@/shared/components/ui/ExamDatePicker';
 import { filterProgressForExam, latestProgressByTopic } from '@/shared/utils/examProgress';
+import { deriveLastStudyAt, formatLastStudyLabel } from '@/shared/utils/lastStudy';
 import '@/shared/components/ui/exam-date-picker.css';
 
 function topicLabel(topicId) {
@@ -92,6 +93,16 @@ export function TodayFocusWorkspace({
     else setActiveView?.('drill');
   };
 
+  const lastStudyAt = useMemo(
+    () => deriveLastStudyAt({
+      progress: user?.progress,
+      mockProgress: user?.mockProgress,
+      lastStudyAt: user?.lastStudyAt,
+    }),
+    [user?.progress, user?.mockProgress, user?.lastStudyAt]
+  );
+  const lastStudyLabel = formatLastStudyLabel(lastStudyAt);
+
   return (
     <div className="today-focus">
       <header className="today-focus__hero">
@@ -108,6 +119,14 @@ export function TodayFocusWorkspace({
           <ChevronRight size={14} />
         </button>
       </header>
+
+      <div className="today-last-study" title={lastStudyAt ? new Date(lastStudyAt).toLocaleString() : undefined}>
+        <Clock size={15} strokeWidth={2} aria-hidden="true" />
+        <div>
+          <span>Last studied</span>
+          <strong>{lastStudyLabel}</strong>
+        </div>
+      </div>
 
       <ExamDatePicker
         value={examDate}

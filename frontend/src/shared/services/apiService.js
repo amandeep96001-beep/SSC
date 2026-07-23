@@ -7,6 +7,13 @@ function resolveApiBase() {
   if (typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')) {
     return '/api';
   }
+  // Phone / LAN access: hit API on same host, not phone-localhost
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location;
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `${protocol}//${hostname}:5000/api`;
+    }
+  }
   return 'http://localhost:5000/api';
 }
 

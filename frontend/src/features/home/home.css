@@ -246,6 +246,44 @@
   cursor: pointer;
 }
 
+.today-last-study {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-muted);
+}
+
+.today-last-study svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.today-last-study div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.today-last-study span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.today-last-study strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  letter-spacing: -0.01em;
+}
+
 .today-focus__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

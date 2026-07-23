@@ -1,11 +1,28 @@
 import Reminder from './reminder.model.js';
 import AppNotification from './notification.model.js';
+import User from '../auth/user.model.js';
 import { getZonedParts, isReminderDue, fireKeyFor } from './reminder.time.js';
 import { sendReminderEmail } from './reminder.mail.js';
 import { getDBStatus } from '../../config/db.config.js';
 
 let started = false;
 let timerId = null;
+
+async function resolveReminderEmail(reminder) {
+  if (reminder.email) return reminder.email;
+  try {
+    const u = await User.findById(reminder.userId).select('email').lean();
+    const email = u?.email || null;
+    if (email) {
+      reminder.email = email;
+      // persist for next fire without another lookup
+      await Reminder.updateOne({ _id: reminder._id }, { $set: { email } });
+    }
+    return email;
+  } catch {
+    return null;
+  }
+}
 
 async function processDueReminders() {
   if (!getDBStatus()) return;
@@ -33,7 +50,7 @@ async function processDueReminders() {
       await AppNotification.create({
         userId: reminder.userId,
         title: reminder.title,
-        body: reminder.message || 'Time to study — open ExamPrep and start.',
+        body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
         kind: 'reminder',
         reminderId: reminder._id,
       });
@@ -42,16 +59,19 @@ async function processDueReminders() {
     }
 
     try {
+      const email = await resolveReminderEmail(reminder);
       const mail = await sendReminderEmail({
-        email: reminder.email,
+        email,
         title: reminder.title,
         message: reminder.message,
         time: reminder.time,
       });
       if (mail.sent) {
-        console.info(`[reminders:cron] email sent → ${reminder.email} (${reminder.title})`);
+        console.info(`[reminders:cron] email sent → ${email} (${reminder.title})`);
       } else {
-        console.info(`[reminders:cron] email skipped (${mail.reason || 'unknown'}) for ${reminder.username}`);
+        console.info(
+          `[reminders:cron] email skipped (${mail.reason || 'unknown'}) for ${reminder.username || reminder.userId}`
+        );
       }
     } catch (err) {
       console.error('[reminders:cron] email failed:', err.message);

@@ -45,6 +45,12 @@ const UserSchema = new mongoose.Schema({
     default: 'user',
     index: true,
   },
+  /** Latest topic-test / mock activity (updated on save progress) */
+  lastStudyAt: {
+    type: Date,
+    required: false,
+    index: true,
+  },
 });
 
 const User = mongoose.model('User', UserSchema);

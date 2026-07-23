@@ -2,6 +2,7 @@ import Reminder from './reminder.model.js';
 import AppNotification from './notification.model.js';
 import { normalizeTime } from './reminder.time.js';
 import User from '../auth/user.model.js';
+import { sendReminderEmail } from './reminder.mail.js';
 
 function toClient(doc) {
   const r = doc.toObject ? doc.toObject() : doc;
@@ -151,4 +152,47 @@ export async function markNotificationsRead(req, res, next) {
     next(error);
   }
 }
-5
+
+/** Instant test: push in-app notification + send email to the signed-in user. */
+export async function testNotify(req, res, next) {
+  try {
+    let email = req.user.email;
+    if (!email) {
+      const u = await User.findById(req.user.id).select('email').lean();
+      email = u?.email || null;
+    }
+
+    const title = 'Study reminder (test)';
+    const body = 'This is a test. Real reminders will look like this — email + app alert.';
+
+    const notif = await AppNotification.create({
+      userId: req.user.id,
+      title,
+      body,
+      kind: 'reminder',
+      read: true, // test already shown in UI — don't re-toast via poller
+    });
+
+    let mail = { sent: false, reason: 'no_email' };
+    if (email) {
+      mail = await sendReminderEmail({
+        email,
+        title,
+        message: body,
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        notificationId: String(notif._id),
+        email: email || null,
+        mailSent: Boolean(mail.sent),
+        mailReason: mail.reason || null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}

@@ -30,7 +30,9 @@ function createTransport() {
  * @returns {{ sent: boolean, reason?: string }}
  */
 export async function sendMail({ to, subject, text, html }) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local';
+  const from = String(process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local')
+    .trim()
+    .replace(/^["']+|["']+$/g, '');
   if (!to) return { sent: false, reason: 'no_recipient' };
 
   if (!smtpConfigured()) {

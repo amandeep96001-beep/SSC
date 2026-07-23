@@ -338,7 +338,11 @@ export function useStudy() {
         if (res.success && res.data?.data) {
           const updatedProgress = res.data.data;
           setUser(prev => {
-            const next = { ...prev, progress: updatedProgress };
+            const next = {
+              ...prev,
+              progress: updatedProgress,
+              lastStudyAt: res.data?.lastStudyAt || new Date().toISOString(),
+            };
             localStorage.setItem('ssc_user', JSON.stringify(next));
             return next;
           });
@@ -426,7 +430,11 @@ export function useStudy() {
         if (res.success && res.data?.data) {
           const updatedMockProgress = res.data.data;
           setUser(prev => {
-            const next = { ...prev, mockProgress: updatedMockProgress };
+            const next = {
+              ...prev,
+              mockProgress: updatedMockProgress,
+              lastStudyAt: res.data?.lastStudyAt || new Date().toISOString(),
+            };
             localStorage.setItem('ssc_user', JSON.stringify(next));
             return next;
           });

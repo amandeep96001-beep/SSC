@@ -6,7 +6,7 @@ import { dailyStickyCount } from '../stickyNotesStorage';
 import { loadFabPosition, saveFabPosition, clampFabPos } from '../notesFloatingStorage';
 import '../notes-floating-dock.css';
 
-const DRAG_THRESHOLD = 6;
+const DRAG_THRESHOLD = 2;
 
 export function NotesFloatingDock({
   enabled = true,
@@ -24,11 +24,13 @@ export function NotesFloatingDock({
   const dragState = useRef({
     active: false,
     moved: false,
+    pointerId: null,
     startX: 0,
     startY: 0,
     originX: 0,
     originY: 0
   });
+  const openedByPointerRef = useRef(false);
 
   const refreshCount = useCallback(() => {
     setNoteCount(dailyStickyCount());
@@ -76,50 +78,81 @@ export function NotesFloatingDock({
   }, [open, refreshCount]);
 
   const onFabPointerDown = useCallback((e) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
+    if (e.button != null && e.button !== 0) return;
     dragState.current = {
       active: true,
       moved: false,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
       originX: pos.x,
       originY: pos.y
     };
-    setDragging(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // Don't preventDefault / capture until we know it's a drag —
+    // otherwise mobile treats a tap as a stuck gesture and needs a long press.
   }, [pos.x, pos.y]);
 
   const onFabPointerMove = useCallback((e) => {
-    if (!dragState.current.active) return;
-    const dx = e.clientX - dragState.current.startX;
-    const dy = e.clientY - dragState.current.startY;
-    if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
-      dragState.current.moved = true;
-    }
-    if (!dragState.current.moved) return;
+    const ds = dragState.current;
+    if (!ds.active) return;
+    if (ds.pointerId != null && e.pointerId !== ds.pointerId) return;
 
+    const dx = e.clientX - ds.startX;
+    const dy = e.clientY - ds.startY;
+    const dist = Math.hypot(dx, dy);
+
+    if (!ds.moved) {
+      if (dist < DRAG_THRESHOLD) return;
+      ds.moved = true;
+      setDragging(true);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch { /* noop */ }
+    }
+
+    e.preventDefault();
     const vw = window.innerWidth || 1;
     const vh = window.innerHeight || 1;
     const next = clampFabPos({
-      x: dragState.current.originX + (dx / vw) * 100,
-      y: dragState.current.originY + (dy / vh) * 100
+      x: ds.originX + (dx / vw) * 100,
+      y: ds.originY + (dy / vh) * 100
     });
     setPos(next);
   }, []);
 
-  const onFabPointerUp = useCallback((e) => {
-    if (!dragState.current.active) return;
-    const wasDrag = dragState.current.moved;
-    dragState.current.active = false;
+  const endFabPointer = useCallback((e) => {
+    const ds = dragState.current;
+    if (!ds.active) return;
+    if (ds.pointerId != null && e.pointerId !== ds.pointerId) return;
+
+    const wasDrag = ds.moved;
+    ds.active = false;
+    ds.pointerId = null;
     setDragging(false);
     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* noop */ }
 
     if (wasDrag) {
       saveFabPosition(posRef.current);
-    } else {
-      setOpen((v) => !v);
+      return;
     }
+    // Tap / click → open (or close) Quick Notes
+    openedByPointerRef.current = true;
+    setOpen((v) => !v);
+  }, []);
+
+  const onFabClick = useCallback((e) => {
+    // Prefer pointerup path; ignore the follow-up click so we don't double-toggle.
+    if (openedByPointerRef.current) {
+      openedByPointerRef.current = false;
+      e.preventDefault();
+      return;
+    }
+    if (dragState.current.moved) {
+      e.preventDefault();
+      return;
+    }
+    // Fallback for browsers that skip pointerup quirks
+    setOpen((v) => !v);
   }, []);
 
   const closePanel = useCallback(() => {
@@ -149,8 +182,9 @@ export function NotesFloatingDock({
         aria-expanded={open}
         onPointerDown={onFabPointerDown}
         onPointerMove={onFabPointerMove}
-        onPointerUp={onFabPointerUp}
-        onPointerCancel={onFabPointerUp}
+        onPointerUp={endFabPointer}
+        onPointerCancel={endFabPointer}
+        onClick={onFabClick}
       >
         <GripVertical size={12} className="notes-fab__grip" aria-hidden />
         <StickyNote size={20} className="notes-fab__icon" aria-hidden />
