@@ -15,10 +15,15 @@
     100dvh (URL bar), so the PAGE scrolls and the workspace card slides under
     the fixed hamburger after inner scroll ends.
     Auth (no .lms-container) must keep document scroll.
+    .lms-mounted is set in JS on login — more reliable than :has() alone
+    right after the auth → dashboard SPA transition.
   */
   html:has(.lms-container),
+  html.lms-mounted,
   html:has(.lms-container) body,
-  html:has(.lms-container) #root {
+  html.lms-mounted body,
+  html:has(.lms-container) #root,
+  html.lms-mounted #root {
     height: 100%;
     max-height: 100dvh;
     overflow: hidden;

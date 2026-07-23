@@ -284,6 +284,53 @@ export function Dashboard() {
     trapHistory();
   }, [activeView, user]);
 
+  // After login, kill leftover auth-page scroll so fixed hamburger
+  // doesn't sit on top of workspace titles (refresh looks fine; SPA entry doesn't).
+  useEffect(() => {
+    if (!user) {
+      document.documentElement.classList.remove('lms-mounted');
+      return undefined;
+    }
+
+    const fullscreen =
+      activeView === 'test' ||
+      activeView === 'results' ||
+      (activeView === 'mock_exam_active' && Boolean(activeMockTestId));
+
+    if (fullscreen) {
+      document.documentElement.classList.remove('lms-mounted');
+      return undefined;
+    }
+
+    document.documentElement.classList.add('lms-mounted');
+
+    const resetShellScroll = () => {
+      const ae = document.activeElement;
+      if (ae instanceof HTMLElement && ae !== document.body) ae.blur();
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const root = document.getElementById('root');
+      if (root) root.scrollTop = 0;
+    };
+
+    resetShellScroll();
+    const raf = window.requestAnimationFrame(() => {
+      resetShellScroll();
+      window.requestAnimationFrame(resetShellScroll);
+    });
+    // iOS often dismisses the login keyboard a beat later and re-scrolls
+    const t1 = window.setTimeout(resetShellScroll, 120);
+    const t2 = window.setTimeout(resetShellScroll, 400);
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      document.documentElement.classList.remove('lms-mounted');
+    };
+  }, [user, activeView, activeMockTestId]);
+
   // Study reminders — local browser alerts while tab open
   useEffect(() => {
     if (!user) return undefined;
