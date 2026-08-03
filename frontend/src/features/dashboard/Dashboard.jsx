@@ -62,6 +62,11 @@ const AdminWorkspace = lazy(() =>
 const RemindersWorkspace = lazy(() =>
   import('@/features/reminders/components/RemindersWorkspace').then((m) => ({ default: m.RemindersWorkspace }))
 );
+const SyllabusRoadmapWorkspace = lazy(() =>
+  import('@/features/roadmap/components/SyllabusRoadmapWorkspace').then((m) => ({
+    default: m.SyllabusRoadmapWorkspace,
+  }))
+);
 
 function WorkspaceFallback() {
   return (
@@ -83,6 +88,7 @@ const VALID_VIEWS = new Set([
   'subjects',
   'topics',
   'notes',
+  'roadmap',
   'revision',
   'reminders',
   'mock',
@@ -937,6 +943,8 @@ export function Dashboard() {
               onOpenNotesDock={openNotesDock}
             />
           )}
+
+          {activeView === 'roadmap' && <SyllabusRoadmapWorkspace />}
 
           {activeView === 'performance' && (
             <PerformanceWorkspace user={user} />

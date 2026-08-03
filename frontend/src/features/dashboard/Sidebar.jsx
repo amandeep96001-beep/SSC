@@ -13,7 +13,8 @@ import {
   Moon,
   Home,
   Shield,
-  Bell
+  Bell,
+  Map
 } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
@@ -140,6 +141,14 @@ export function Sidebar({
         >
           <BookMarked className="nav-icon" size={18} strokeWidth={1.75} />
           <span>Syllabus & Notes</span>
+        </button>
+
+        <button 
+          className={`nav-item ${activeView === 'roadmap' ? 'active' : ''}`}
+          onClick={() => go('roadmap')}
+        >
+          <Map className="nav-icon" size={18} strokeWidth={1.75} />
+          <span>Syllabus Roadmap</span>
         </button>
 
         <button 
