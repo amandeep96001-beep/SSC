@@ -6,6 +6,7 @@ import { Vocab } from './vocab.model.js';
 import TopicDto from './topic.dto.js';
 import VocabDto from './vocab.dto.js';
 import { shuffle } from '../../shared/utils/shuffle.js';
+import { filterNewTopicQuestions } from './questionDedupe.js';
 
 function parseSource(req) {
   const source = String(req.query.source || 'global').toLowerCase();
@@ -284,15 +285,27 @@ export const addTopic = async (req, res, next) => {
 
       await topicRepository.create(newTopic);
 
-      const seedQuestions = Array.isArray(dto.questions) && dto.questions.length > 0
-        ? dto.questions.map((q) => ({ ...q, topicId: finalId }))
-        : [{
-            topicId: finalId,
-            q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
-            o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
-            a: 0,
-            e: 'Seeded question to verify study progress for this official topic.'
-          }];
+      let seedQuestions;
+      if (Array.isArray(dto.questions) && dto.questions.length > 0) {
+        const { toInsert } = filterNewTopicQuestions(dto.questions, finalId);
+        seedQuestions = toInsert.length > 0
+          ? toInsert
+          : [{
+              topicId: finalId,
+              q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+              o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+              a: 0,
+              e: 'Seeded question to verify study progress for this official topic.'
+            }];
+      } else {
+        seedQuestions = [{
+          topicId: finalId,
+          q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+          o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+          a: 0,
+          e: 'Seeded question to verify study progress for this official topic.'
+        }];
+      }
 
       await questionRepository.insertMany(seedQuestions);
 
@@ -333,15 +346,27 @@ export const addTopic = async (req, res, next) => {
 
     await topicRepository.create(newTopic);
 
-    const seedQuestions = Array.isArray(dto.questions) && dto.questions.length > 0
-      ? dto.questions.map((q) => ({ ...q, topicId: finalId }))
-      : [{
-          topicId: finalId,
-          q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
-          o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
-          a: 0,
-          e: 'This is a custom-seeded question to verify study progress for custom notes.'
-        }];
+    let seedQuestions;
+    if (Array.isArray(dto.questions) && dto.questions.length > 0) {
+      const { toInsert } = filterNewTopicQuestions(dto.questions, finalId);
+      seedQuestions = toInsert.length > 0
+        ? toInsert
+        : [{
+            topicId: finalId,
+            q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+            o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+            a: 0,
+            e: 'This is a custom-seeded question to verify study progress for custom notes.'
+          }];
+    } else {
+      seedQuestions = [{
+        topicId: finalId,
+        q: `Syllabus Check: Have you reviewed all the study notes for '${dto.name}'?`,
+        o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+        a: 0,
+        e: 'This is a custom-seeded question to verify study progress for custom notes.'
+      }];
+    }
 
     await questionRepository.insertMany(seedQuestions);
 
@@ -389,18 +414,38 @@ export const updateTopic = async (req, res, next) => {
 
     await topicRepository.update(topicId, updateData);
 
+    let questionsReport = null;
     if (dto.questions.length > 0) {
-      const qsToInsert = dto.questions.map((q) => ({ ...q, topicId }));
-      await questionRepository.insertMany(qsToInsert);
+      const existing = await questionRepository.findByTopicId(topicId);
+      const { toInsert, duplicates, invalid, received } = filterNewTopicQuestions(
+        dto.questions,
+        topicId,
+        existing.map((q) => q.q)
+      );
+
+      if (toInsert.length > 0) {
+        await questionRepository.insertMany(toInsert);
+      }
+
+      questionsReport = {
+        received,
+        inserted: toInsert.length,
+        duplicates,
+        invalid,
+      };
     }
 
     res.json({
       status: 'success',
+      message: questionsReport
+        ? `Topic updated. ${questionsReport.inserted} MCQ(s) added, ${questionsReport.duplicates} duplicate(s) skipped${questionsReport.invalid ? `, ${questionsReport.invalid} invalid` : ''}.`
+        : 'Topic updated successfully.',
       data: {
         id: topicId,
         name: dto.name,
         syllabus: updateData.syllabus,
-        isOwned: isUserOwned(topic, req.user.id)
+        isOwned: isUserOwned(topic, req.user.id),
+        questionsReport,
       }
     });
   } catch (error) {

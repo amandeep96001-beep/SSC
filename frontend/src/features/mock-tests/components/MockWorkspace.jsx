@@ -237,7 +237,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
             <h1 style={{ margin: '0 0 6px 0' }}>Full Mock Exams</h1>
             <p style={{ margin: 0 }}>
               {exam.fullName} mocks only · pattern {expectedTotal || exam.mockQuestions} Q · {exam.mockMinutes} min · {exam.markingLabel}.
-              Set section weights below, then add questions — no JSON required.
+              Set section weights below, then add questions as a JSON array.
             </p>
           </div>
           <button className="btn-create-topic" style={{ marginLeft: 'auto' }} onClick={() => {
@@ -392,15 +392,16 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                       ))}
                     </div>
                     <p className="mock-field-hint">
-                      Used when a question has no Section line. Override with Section: {sections[0] || '…'}
+                      Used when a question has no <code>section</code> field. Override per item with
+                      {` "section": "${sections[0] || '…'}"`}.
                     </p>
                   </div>
 
                   <label className="mock-field mock-field--questions">
-                    <span>Questions</span>
+                    <span>Questions (JSON)</span>
                     <textarea
                       className="mock-premium-input mock-bulk-input"
-                      placeholder="Enter questions using the format shown on the right…"
+                      placeholder='[{ "section": "…", "q": "...", "o": ["A","B","C","D"], "a": "B", "e": "..." }]'
                       rows={12}
                       value={bulkText}
                       onChange={(e) => setBulkText(e.target.value)}
@@ -432,9 +433,11 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
             </div>
 
             <aside className="mock-glass-card mock-format-card">
-              <h3>Question format</h3>
+              <h3>Question format (JSON)</h3>
               <p className="mock-format-intro">
-                Use plain text as below. Sections for <strong>{exam.name}</strong>: {sections.join(', ')}.
+                Paste a JSON array. Each item needs <code>q</code>, <code>o</code> (4 options),
+                <code>a</code> (0–3 or &quot;A&quot;–&quot;D&quot;), optional <code>e</code> and <code>section</code>.
+                Sections for <strong>{exam.name}</strong>: {sections.join(', ')}.
                 {limitsLabel ? (
                   <>
                     <br />

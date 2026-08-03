@@ -64,6 +64,7 @@ export function AdminWorkspace() {
   const [tcsUploading, setTcsUploading] = useState(false);
   const [tcsMsg, setTcsMsg] = useState('');
   const [tcsErr, setTcsErr] = useState('');
+  const [tcsUploadReport, setTcsUploadReport] = useState(null);
   const [tcsStats, setTcsStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [instituteSummary, setInstituteSummary] = useState(null);
@@ -366,7 +367,7 @@ export function AdminWorkspace() {
     if (items.length === 0) {
       setTcsErr(
         errors[0]
-          || 'No valid questions found. Use: Q: … / A) B) C) D) / Ans: C'
+          || 'No valid questions found. Paste a JSON array: [{ "q", "o":[4], "a", "e" }]'
       );
       return;
     }
@@ -385,6 +386,7 @@ export function AdminWorkspace() {
   const uploadQueue = async () => {
     setTcsMsg('');
     setTcsErr('');
+    setTcsUploadReport(null);
     if (queue.length === 0) {
       setTcsErr('Add at least one question to the queue before uploading.');
       return;
@@ -393,10 +395,20 @@ export function AdminWorkspace() {
     setTcsUploading(true);
     try {
       const res = await apiService.post('/questions/tcs/bulk', queue);
+      const data = res?.data || {};
       setTcsMsg(res?.message || 'Upload complete.');
-      if (res?.data?.stats) setTcsStats(res.data.stats);
+      if (data.bySubject && typeof data.bySubject === 'object') {
+        setTcsUploadReport({
+          inserted: data.inserted ?? 0,
+          duplicates: data.duplicates ?? 0,
+          invalid: data.invalid ?? 0,
+          received: data.received ?? queue.length,
+          bySubject: data.bySubject,
+        });
+      }
+      if (data.stats) setTcsStats(data.stats);
       else await loadTcsStats();
-      if ((res?.data?.inserted ?? 0) > 0) setQueue([]);
+      if ((data.inserted ?? 0) > 0) setQueue([]);
     } catch (e) {
       setTcsErr(e.message || 'Upload failed.');
     } finally {
@@ -595,30 +607,18 @@ export function AdminWorkspace() {
         ) : (
           <div className="admin-q-form">
             <p className="admin-bulk-guide">
-              Enter multiple questions using the format below. The selected subject and topic
-              will be applied to every question in this import.
+              Paste a JSON array of questions. Fields: <code>q</code>, <code>o</code> (4 options),
+              <code>a</code> (0–3 or &quot;A&quot;–&quot;D&quot;), optional <code>e</code>. Selected subject and topic
+              apply to every question in this import.
             </p>
-            <pre className="admin-bulk-example">{`Q: Question text here?
-A) Option one
-B) Option two
-C) Option three
-D) Option four
-Ans: C
-E: Short explanation (optional)
-
-Q: Next question?
-A) …
-B) …
-C) …
-D) …
-Ans: A`}</pre>
+            <pre className="admin-bulk-example">{BULK_SAMPLE}</pre>
             <label className="admin-field">
-              <span>Question list</span>
+              <span>Question list (JSON)</span>
               <textarea
                 className="admin-bulk-input"
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder="Enter or paste questions using the format shown above…"
+                placeholder='[{ "q": "...", "o": ["A","B","C","D"], "a": "B", "e": "..." }]'
                 rows={14}
                 spellCheck={false}
               />
@@ -671,6 +671,29 @@ Ans: A`}</pre>
 
         {tcsMsg && <p className="admin-ok">{tcsMsg}</p>}
         {tcsErr && <p className="admin-err">{tcsErr}</p>}
+        {tcsUploadReport?.bySubject && (
+          <div className="admin-upload-report">
+            <p className="admin-upload-report__summary">
+              Total: {tcsUploadReport.received} received · {tcsUploadReport.inserted} added ·{' '}
+              {tcsUploadReport.duplicates} duplicate · {tcsUploadReport.invalid} invalid
+            </p>
+            <ul className="admin-upload-report__list">
+              {Object.entries(tcsUploadReport.bySubject)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([subject, row]) => (
+                  <li key={subject}>
+                    <strong>{subject}</strong>
+                    <span>
+                      {row.inserted} added
+                      {row.duplicates ? ` · ${row.duplicates} duplicate` : ''}
+                      {row.invalid ? ` · ${row.invalid} invalid` : ''}
+                      {' '}({row.received} received)
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       <div className="admin-exam-tabs">

@@ -659,7 +659,11 @@ export function useStudy() {
     });
     if (result.success && result.data.data) {
       await refreshTopics();
-      return { success: true };
+      return {
+        success: true,
+        message: result.data.message,
+        questionsReport: result.data.data.questionsReport || null,
+      };
     }
     return { success: false, message: updateTopicApi.error || 'Failed to update custom topic.' };
   }, [updateTopicApi, refreshTopics]);

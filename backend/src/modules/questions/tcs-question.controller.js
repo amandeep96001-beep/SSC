@@ -177,20 +177,41 @@ export const bulkUploadTcsQuestions = async (req, res, next) => {
     const toInsert = [];
     let invalid = 0;
     let duplicates = 0;
+    /** @type {Record<string, { inserted: number, duplicates: number, invalid: number, received: number }>} */
+    const bySubject = {};
+
+    const bump = (subject, field) => {
+      const key = subject || 'Unknown';
+      if (!bySubject[key]) {
+        bySubject[key] = { inserted: 0, duplicates: 0, invalid: 0, received: 0 };
+      }
+      bySubject[key][field] += 1;
+      bySubject[key].received += 1;
+    };
+
+    const guessSubject = (raw) => {
+      if (!raw || typeof raw !== 'object') return 'Unknown';
+      return normalizeSubject(raw.subject ?? raw.section)
+        || (raw.topicId ? subjectFromTopicId(raw.topicId) : null)
+        || 'Unknown';
+    };
 
     for (const raw of list) {
       const item = normalizeItem(raw);
       if (!item) {
         invalid++;
+        bump(guessSubject(raw), 'invalid');
         continue;
       }
       const key = normalizeQuestionText(item.question);
       if (seen.has(key)) {
         duplicates++;
+        bump(item.subject, 'duplicates');
         continue;
       }
       seen.add(key);
       toInsert.push(item);
+      bump(item.subject, 'inserted');
     }
 
     let inserted = 0;
@@ -201,16 +222,30 @@ export const bulkUploadTcsQuestions = async (req, res, next) => {
 
     const stats = await TCSQuestionRepository.getCountBySubject();
 
+    const subjectLines = Object.entries(bySubject)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([subject, row]) => {
+        const parts = [`${row.inserted} added`];
+        if (row.duplicates) parts.push(`${row.duplicates} duplicate`);
+        if (row.invalid) parts.push(`${row.invalid} invalid`);
+        return `${subject}: ${parts.join(', ')}`;
+      });
+
+    const summary = subjectLines.length
+      ? ` ${subjectLines.join(' · ')}`
+      : '';
+
     res.status(inserted > 0 ? 201 : 200).json({
       status: 'success',
       message: inserted > 0
-        ? `Imported ${inserted} question(s). ${duplicates} duplicate(s), ${invalid} invalid skipped.`
-        : `Nothing new imported. ${duplicates} duplicate(s), ${invalid} invalid skipped.`,
+        ? `Imported ${inserted} question(s). ${duplicates} duplicate(s), ${invalid} invalid skipped.${summary}`
+        : `Nothing new imported. ${duplicates} duplicate(s), ${invalid} invalid skipped.${summary}`,
       data: {
         inserted,
         duplicates,
         invalid,
         received: list.length,
+        bySubject,
         stats
       }
     });

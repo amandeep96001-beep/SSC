@@ -10,6 +10,7 @@
     "seed": "node scripts/seed.js",
     "migrate-data": "node scripts/migrateEmbeddedData.js",
     "clean-db": "node scripts/clean_duplicates.js",
+    "clean-topic-dupes": "node scripts/clean_topic_duplicates.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

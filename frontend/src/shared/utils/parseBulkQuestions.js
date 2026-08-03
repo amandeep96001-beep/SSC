@@ -2,8 +2,12 @@ import { normalizeMcqField } from '@/shared/utils/formatMcqText';
 
 /**
  * Parse bulk MCQ paste for mocks, topic notes, and TCS bank.
- * Preferred: plain text blocks (no JSON knowledge required).
- * Also accepts a JSON array / { questions: [...] }.
+ * Preferred: JSON array / { questions: [...] }.
+ * Also accepts legacy plain-text blocks.
+ *
+ * JSON fields per question:
+ *   q (or question), o (or options)[4], a (or correctAnswer: 0–3 / "A"–"D"),
+ *   e (or explanation), optional section / subject / category / topic
  *
  * Underline: wrap with __like this__ or <u>like this</u>
  * Blank: use ____ (underscores) in the question or options
@@ -45,23 +49,31 @@ const SECTION_ALIASES = {
 
 export const MOCK_SECTIONS = ['English', 'GK', 'Quant', 'Reasoning'];
 
-export const BULK_MCQ_EXAMPLE = `Q: Select the synonym of the underlined word.
-She felt __excruciating__ pain after the fall.
-A) Mild
-B) Painful
-C) Soft
-D) Calm
-Ans: B
-E: Excruciating means extremely painful.
+/** Pretty JSON sample shown in upload hints / Load sample */
+export const BULK_MCQ_EXAMPLE = `[
+  {
+    "q": "Select the synonym of the underlined word. She felt __excruciating__ pain after the fall.",
+    "o": ["Mild", "Painful", "Soft", "Calm"],
+    "a": "B",
+    "e": "Excruciating means extremely painful."
+  },
+  {
+    "q": "Fill in the blank. Grey ________ is no sure sign of wisdom.",
+    "o": ["heir", "air", "hare", "hair"],
+    "a": "D",
+    "e": "Grey hair is the correct collocation."
+  }
+]`;
 
-Q: Fill in the blank.
-Grey ________ is no sure sign of wisdom.
-A) heir
-B) air
-C) hare
-D) hair
-Ans: D
-E: Grey hair is the correct collocation.`;
+/** Short single-question JSON for compact hint panels */
+export const BULK_MCQ_EXAMPLE_SHORT = `[
+  {
+    "q": "Select the synonym of Abundant.",
+    "o": ["Scarce", "Plentiful", "Rare", "Empty"],
+    "a": "B",
+    "e": "Plentiful means existing in great quantity."
+  }
+]`;
 
 export function buildBulkMockExample(sections = MOCK_SECTIONS) {
   const samples = {
@@ -94,22 +106,23 @@ export function buildBulkMockExample(sections = MOCK_SECTIONS) {
   const list = (sections || []).filter(Boolean);
   const use = list.length ? list : MOCK_SECTIONS;
 
-  return use.map((section, idx) => {
+  const rows = use.map((section) => {
     const sample = samples[section] || {
       q: `Sample question for ${section}?`,
       o: ['Option A', 'Option B', 'Option C', 'Option D'],
       a: 'A',
       e: `Explanation for ${section}.`,
     };
-    return `Section: ${section}
-Q: ${sample.q}
-A) ${sample.o[0]}
-B) ${sample.o[1]}
-C) ${sample.o[2]}
-D) ${sample.o[3]}
-Ans: ${sample.a}
-E: ${sample.e}`;
-  }).join('\n\n');
+    return {
+      section,
+      q: sample.q,
+      o: sample.o,
+      a: sample.a,
+      e: sample.e,
+    };
+  });
+
+  return JSON.stringify(rows, null, 2);
 }
 
 export const BULK_MOCK_EXAMPLE = buildBulkMockExample(MOCK_SECTIONS);
@@ -321,7 +334,7 @@ export function parseBulkQuestions(raw, meta = {}) {
   blocks.forEach((block, i) => {
     const parsed = parseOneBlock(block, allowedSections);
     if (!parsed) {
-      errors.push(`Block #${i + 1}: invalid format (requires Q, A–D options, and Ans)`);
+      errors.push(`Block #${i + 1}: invalid format (prefer JSON: q, o[4], a)`);
       return;
     }
     items.push({

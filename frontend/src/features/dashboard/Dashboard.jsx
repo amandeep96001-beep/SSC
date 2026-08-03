@@ -25,7 +25,7 @@ import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock
 import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
-import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE } from '@/shared/utils/parseBulkQuestions';
+import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT } from '@/shared/utils/parseBulkQuestions';
 import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
 import { fetchNotifications, markNotificationsReadApi } from '@/features/reminders/remindersStorage';
 import '@/features/home/home.css';
@@ -665,15 +665,21 @@ export function Dashboard() {
     });
 
     if (res.success) {
-      setTopicAddSuccess(
-        parsedQuestions?.length
-          ? `Topic updated. ${parsedQuestions.length} MCQ(s) appended.`
-          : 'Topic updated successfully.'
-      );
+      const report = res.questionsReport;
+      if (report) {
+        setTopicAddSuccess(
+          `Topic updated. ${report.inserted} added · ${report.duplicates} duplicate skipped`
+          + (report.invalid ? ` · ${report.invalid} invalid` : '')
+          + ` (${report.received} received).`
+        );
+      } else {
+        setTopicAddSuccess(res.message || 'Topic updated successfully.');
+      }
+      setEditTopicQuestionsJson('');
       setTimeout(() => {
         setEditModalOpen(false);
         setTopicAddSuccess('');
-      }, 1500);
+      }, report ? 2500 : 1500);
     } else {
       setTopicAddError(res.message || 'Failed to update topic.');
     }
@@ -1096,15 +1102,16 @@ Tip: 12.5% = 1/8
               <div className="form-group">
                 <label>Practice MCQs <em style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--text-muted)' }}>(optional)</em></label>
                 <p className="mcq-bulk-guide">
-                  Add questions in plain text. Format:
+                  Add questions as a JSON array. Fields: <code>q</code>, <code>o</code> (4 options),
+                  <code>a</code> (0–3 or &quot;A&quot;–&quot;D&quot;), optional <code>e</code>.
                 </p>
-                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE.split('\n\n')[0]}</pre>
+                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE_SHORT}</pre>
                 <textarea
                   className="mcq-bulk-textarea"
                   rows="8"
                   value={newTopicQuestionsJson}
                   onChange={e => setNewTopicQuestionsJson(e.target.value)}
-                  placeholder="Enter questions using the format above…"
+                  placeholder='[{ "q": "...", "o": ["A","B","C","D"], "a": "B", "e": "..." }]'
                 />
               </div>
               
@@ -1172,15 +1179,15 @@ Tip: 12.5% = 1/8
               <div className="form-group">
                 <label>Add practice MCQs <em style={{ fontStyle: 'normal', fontWeight: 500, color: 'var(--text-muted)' }}>(optional)</em></label>
                 <p className="mcq-bulk-guide">
-                  New questions are appended to this topic. Use the format below
+                  New questions are appended to this topic. Paste a JSON array:
                 </p>
-                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE.split('\n\n')[0]}</pre>
+                <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE_SHORT}</pre>
                 <textarea 
                   className="mcq-bulk-textarea"
                   rows="8" 
                   value={editTopicQuestionsJson} 
                   onChange={e => setEditTopicQuestionsJson(e.target.value)} 
-                  placeholder="Enter questions using the format above…"
+                  placeholder='[{ "q": "...", "o": ["A","B","C","D"], "a": "B", "e": "..." }]'
                 />
               </div>
 

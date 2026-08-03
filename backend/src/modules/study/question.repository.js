@@ -14,6 +14,11 @@ class QuestionRepository {
     return await Question.insertMany(questionsArray);
   }
 
+  async deleteByIds(ids) {
+    if (!ids?.length) return { deletedCount: 0 };
+    return await Question.deleteMany({ _id: { $in: ids } });
+  }
+
   async deleteByTopicId(topicId) {
     return await Question.deleteMany({ topicId });
   }
