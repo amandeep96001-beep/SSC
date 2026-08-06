@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
-import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
+import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
 import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
 import { progressForTopic } from '@/shared/utils/examProgress';
 import { useExam } from '@/shared/context/useExam';
@@ -405,7 +405,8 @@ export function SyllabusWorkspace({
   const handleSaveNotes = useCallback(async () => {
     if (!notesRef.current) return;
     setIsSaving(true);
-    const newHtml = notesRef.current.innerHTML;
+    const newHtml = prepareNotesHtml(notesRef.current.innerHTML);
+    notesRef.current.innerHTML = newHtml;
     const res = await persistNotesHtml(newHtml, { closeEditor: true });
     setIsSaving(false);
     if (!res.success) {
@@ -414,6 +415,25 @@ export function SyllabusWorkspace({
       showAppToast('Notes saved.', { variant: 'success', durationMs: 1800 });
     }
   }, [persistNotesHtml]);
+
+  const handleNotesPaste = useCallback((e) => {
+    if (!isEditingNotes) return;
+    const html = e.clipboardData?.getData('text/html') || '';
+    const text = e.clipboardData?.getData('text/plain') || '';
+    if (!html && !text) return;
+    e.preventDefault();
+    const cleaned = prepareNotesFromClipboard(html, text);
+    if (!cleaned) return;
+    // insertHTML keeps caret position better than rewriting whole editor
+    try {
+      document.execCommand('insertHTML', false, cleaned);
+    } catch {
+      if (notesRef.current) {
+        notesRef.current.innerHTML = `${notesRef.current.innerHTML}${cleaned}`;
+      }
+    }
+    setLocalNotesHtml(notesRef.current?.innerHTML || cleaned);
+  }, [isEditingNotes]);
 
   const handleHighlight = useCallback(async (color) => {
     const selection = window.getSelection();
@@ -1099,6 +1119,7 @@ export function SyllabusWorkspace({
                   id="notes-content-view"
                   contentEditable={isEditingNotes}
                   suppressContentEditableWarning
+                  onPaste={handleNotesPaste}
                   data-placeholder="Tap to start writing your notes…"
                 />
 

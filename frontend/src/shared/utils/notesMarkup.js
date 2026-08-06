@@ -1,5 +1,5 @@
 function escapeHtml(text) {
-  return text
+  return String(text || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -9,16 +9,22 @@ function escapeHtml(text) {
 function decodeBasicEntities(text) {
   return String(text || '')
     .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/&apos;/gi, "'");
+    .replace(/&apos;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&mdash;/gi, '—')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&rarr;/gi, '→')
+    .replace(/&larr;/gi, '←');
 }
 
 function inlineMarkdown(text) {
-  return escapeHtml(text)
+  return escapeHtml(decodeBasicEntities(text))
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code>$1</code>');
@@ -26,42 +32,42 @@ function inlineMarkdown(text) {
 
 export function isLikelyHtml(content) {
   if (!content) return false;
-  return /<(?:p|h[1-6]|ul|ol|li|div|mark|br|strong|em|code|table|tr|td|th|span|blockquote|hr|pre|figure)\b/i.test(content);
+  return /<(?:p|h[1-6]|ul|ol|li|div|mark|br|strong|em|b|i|code|table|tr|td|th|span|blockquote|hr|pre|figure|section|article)\b/i.test(content);
 }
 
-const CALLOUT_RE = /^(definition|tip|note|remember|example|formula|trick|shortcut|important)\s*:/i;
+const CALLOUT_RE = /^(definition|tip|note|remember|example|formula|trick|shortcut|important|key|pyq|exam)\s*:/i;
 
-const BOX_CHARS = /[┌┐└┘├┤┬┴┼═║│─━┃┏┓┗┛┣┫┳┻╋]/;
-const ARROW_CHARS = /[▼▲►◀→←↓↑⟶⇢➥➜]/;
+const BOX_CHARS = /[┌┐└┘├┤┬┴┼═║│─━┃┏┓┗┛┣┫┳┻╋╔╗╚╝╠╣╦╩╬]/;
+const ARROW_CHARS = /[▼▲►◀→←↓↑⟶⇢➥➜⇒⇓⇑]/;
 
 function looksLikeAsciiDiagram(text) {
   const lines = String(text || '').split('\n').filter((l) => l.trim());
   if (lines.length < 2) return false;
   const boxLines = lines.filter((l) => BOX_CHARS.test(l)).length;
-  const arrowOnly = lines.filter((l) => /^\s*[↓↑▼▲→←➜]+\s*$/.test(l)).length;
-  const connector = lines.filter((l) => /──►|-->|⇒|→/.test(l)).length;
-  return boxLines >= 2 || (arrowOnly >= 1 && lines.length >= 3) || (connector >= 1 && boxLines >= 1);
+  const arrowOnly = lines.filter((l) => /^\s*[↓↑▼▲→←➜⇓]+\s*$/.test(l)).length;
+  const connector = lines.filter((l) => /──►|-->|⇒|→|=>/.test(l)).length;
+  const plusBox = lines.filter((l) => /^\s*\+[-+]+\+\s*$/.test(l)).length;
+  return boxLines >= 2 || plusBox >= 2 || (arrowOnly >= 1 && lines.length >= 3) || (connector >= 1 && boxLines >= 1);
 }
 
 function extractBoxLabels(text) {
   const labels = [];
   const lines = String(text || '').split('\n');
 
-  // Horizontal multi-box rows: several │ title │ on one line with arrows between
   for (const line of lines) {
-    if (!/│/.test(line)) continue;
-    if (/└|┌|┬|┴|┼/.test(line)) continue;
+    if (!/[│|]/.test(line)) continue;
+    if (/[└┌┬┴┼╔╗╚╝]/.test(line) && !/│/.test(line)) continue;
+    if (/^\s*[+|+][-+|]+[+|]/.test(line)) continue;
     const cells = [];
-    const re = /│([^│└┐]+?)│/g;
+    const re = /[│|]([^│|└┐]+?)[│|]/g;
     let m;
     while ((m = re.exec(line))) {
       const inner = m[1].trim();
-      if (inner) cells.push(inner);
+      if (!inner || /^[-─=]+$/.test(inner)) continue;
+      if (/^[─\s►→←➜⇐⇒<>\-]+$/.test(inner)) continue; // arrow gutter between boxes
+      cells.push(inner);
     }
-    if (cells.length >= 2) {
-      // Pair title/subtitle across consecutive content rows handled below
-      labels.push({ _rowCells: cells });
-    }
+    if (cells.length >= 2) labels.push({ _rowCells: cells });
   }
 
   if (labels.some((l) => l._rowCells)) {
@@ -76,21 +82,20 @@ function extractBoxLabels(text) {
     if (nodes.length >= 2) return nodes;
   }
 
-  // Vertical single-box stack
   let current = null;
   for (const line of lines) {
-    if (/┌/.test(line) && /┐/.test(line)) {
+    if (/[┌╔+]/.test(line) && /[┐╗+]/.test(line)) {
       current = { title: '', subtitle: '' };
       continue;
     }
-    if (current && /│/.test(line)) {
-      const inner = line.replace(/^[^│]*│/, '').replace(/│[\s\S]*$/, '').trim();
-      if (!inner) continue;
+    if (current && /[│|]/.test(line)) {
+      const inner = line.replace(/^[^│|]*/, '').replace(/^[│|]/, '').replace(/[│|][\s\S]*$/, '').trim();
+      if (!inner || /^[-─=]+$/.test(inner)) continue;
       if (!current.title) current.title = inner;
       else if (!current.subtitle) current.subtitle = inner;
       continue;
     }
-    if (current && /└/.test(line) && /┘/.test(line)) {
+    if (current && /[└╚+]/.test(line) && /[┘╝+]/.test(line)) {
       labels.push(current);
       current = null;
     }
@@ -102,8 +107,8 @@ function extractArrowChain(text) {
   const lines = String(text || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const nodes = [];
   for (const line of lines) {
-    if (/^[↓↑▼▲→←➜─│\s]+$/.test(line)) continue;
-    if (BOX_CHARS.test(line)) continue;
+    if (/^[↓↑▼▲→←➜─│|=\s⇓]+$/.test(line)) continue;
+    if (BOX_CHARS.test(line) || /^\s*\+[-+]+\+/.test(line)) continue;
     nodes.push(line.replace(/\s+/g, ' ').trim());
   }
   return nodes;
@@ -139,8 +144,8 @@ export function asciiDiagramToHtml(rawText) {
   if (!looksLikeAsciiDiagram(text)) return null;
 
   const boxNodes = extractBoxLabels(text);
-  const hasHorizontalArrows = /──►|-->|⇒/.test(text) || (text.includes('►') && text.split('\n').some((l) => /│/.test(l) && /──►|►/.test(l)));
-  const hasVerticalFlow = /▼|↓/.test(text);
+  const hasHorizontalArrows = /──►|-->|⇒|=>/.test(text) || (text.includes('►') && text.split('\n').some((l) => /[│|]/.test(l) && /──►|►/.test(l)));
+  const hasVerticalFlow = /▼|↓|⇓/.test(text);
 
   if (boxNodes.length >= 2 && hasHorizontalArrows && !hasVerticalFlow) {
     return renderSequenceDiagram(boxNodes);
@@ -166,6 +171,47 @@ function convertAsciiPreBlocks(html) {
     }
     return asciiDiagramToHtml(text) || full;
   });
+}
+
+/** Turn consecutive ascii-looking <p> lines into a diagram */
+function convertLooseAsciiParagraphs(html) {
+  return html.replace(/(?:<p\b[^>]*>[\s\S]*?<\/p>\s*){2,}/gi, (block) => {
+    const texts = [...block.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map((m) =>
+      decodeBasicEntities(m[1].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).trimEnd()
+    );
+    const joined = texts.join('\n');
+    if (!looksLikeAsciiDiagram(joined)) return block;
+    return asciiDiagramToHtml(joined) || block;
+  });
+}
+
+function renderMarkdownTable(rows) {
+  if (!rows.length) return '';
+  const parts = ['<div class="notes-table-wrapper"><table class="notes-table">'];
+  rows.forEach((row, rowIndex) => {
+    const cols = row;
+    if (cols.length > 0 && cols.every((c) => /^:?-{3,}:?$/.test(c))) return;
+    parts.push('<tr>');
+    cols.forEach((col) => {
+      const tag = rowIndex === 0 ? 'th' : 'td';
+      parts.push(`<${tag}>${inlineMarkdown(col)}</${tag}>`);
+    });
+    parts.push('</tr>');
+  });
+  parts.push('</table></div>');
+  return parts.join('');
+}
+
+function parsePipeRow(line) {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return null;
+  // markdown table row or loose pipe row
+  if (!/\|/.test(trimmed)) return null;
+  let cols = trimmed.split('|').map((c) => c.trim());
+  if (cols[0] === '') cols.shift();
+  if (cols[cols.length - 1] === '') cols.pop();
+  if (cols.length < 2) return null;
+  return cols;
 }
 
 export function markdownToHtml(markdown) {
@@ -197,31 +243,10 @@ export function markdownToHtml(markdown) {
   };
 
   const closeTable = () => {
-    if (inTable) {
-      parts.push('<div class="notes-table-wrapper"><table class="notes-table">');
-      tableRows.forEach((row, rowIndex) => {
-        const trimmedRow = row.trim();
-        const cols = trimmedRow.split('|').map((c) => c.trim());
-
-        if (cols[0] === '') cols.shift();
-        if (cols[cols.length - 1] === '') cols.pop();
-
-        if (cols.length > 0 && cols.every((c) => /^-+$/.test(c))) {
-          return;
-        }
-
-        parts.push('<tr>');
-        cols.forEach((col) => {
-          const cellContent = inlineMarkdown(col);
-          const tag = rowIndex === 0 ? 'th' : 'td';
-          parts.push(`<${tag}>${cellContent}</${tag}>`);
-        });
-        parts.push('</tr>');
-      });
-      parts.push('</table></div>');
-      tableRows = [];
-      inTable = false;
-    }
+    if (!inTable) return;
+    parts.push(renderMarkdownTable(tableRows));
+    tableRows = [];
+    inTable = false;
   };
 
   const flushAscii = () => {
@@ -236,13 +261,19 @@ export function markdownToHtml(markdown) {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
 
-    if (looksLikeAsciiDiagram(line) || (asciiBuf.length && (BOX_CHARS.test(line) || ARROW_CHARS.test(line) || /──►|│/.test(line) || /^\s*$/.test(line)))) {
+    const isDiagramLine =
+      BOX_CHARS.test(line) ||
+      ARROW_CHARS.test(line) ||
+      /──►|-->|=>/.test(line) ||
+      /^\s*\+[-+]+\+\s*$/.test(line) ||
+      /^\s*\+[-+]+\+.*\+[-+]+\+\s*$/.test(line);
+
+    if (isDiagramLine || (asciiBuf.length && (!trimmed || isDiagramLine))) {
       if (!trimmed && asciiBuf.length) {
-        // keep blank lines inside diagram until block ends on next non-diagram line
         asciiBuf.push(line);
         continue;
       }
-      if (BOX_CHARS.test(line) || ARROW_CHARS.test(line) || /──►|│/.test(line)) {
+      if (isDiagramLine) {
         closeList();
         closeTable();
         asciiBuf.push(line);
@@ -251,16 +282,12 @@ export function markdownToHtml(markdown) {
     }
 
     if (asciiBuf.length) {
-      // end diagram on blank or normal text
-      if (!trimmed || !BOX_CHARS.test(line)) {
-        // drop trailing blanks
-        while (asciiBuf.length && !asciiBuf[asciiBuf.length - 1].trim()) asciiBuf.pop();
-        flushAscii();
-        if (!trimmed) {
-          closeList();
-          closeTable();
-          continue;
-        }
+      while (asciiBuf.length && !asciiBuf[asciiBuf.length - 1].trim()) asciiBuf.pop();
+      flushAscii();
+      if (!trimmed) {
+        closeList();
+        closeTable();
+        continue;
       }
     }
 
@@ -277,10 +304,29 @@ export function markdownToHtml(markdown) {
       continue;
     }
 
-    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+    // Tab-separated pseudo-table row
+    if (trimmed.includes('\t') && trimmed.split('\t').length >= 2 && !trimmed.startsWith('#')) {
+      closeList();
+      const cols = trimmed.split('\t').map((c) => c.trim()).filter(Boolean);
+      if (cols.length >= 2) {
+        if (!inTable) inTable = true;
+        tableRows.push(cols);
+        continue;
+      }
+    }
+
+    const pipeCols = parsePipeRow(trimmed);
+    if (pipeCols && (trimmed.startsWith('|') || trimmed.endsWith('|') || (pipeCols.length >= 3 && inTable))) {
       closeList();
       if (!inTable) inTable = true;
-      tableRows.push(trimmed);
+      tableRows.push(pipeCols);
+      continue;
+    }
+    // also accept "A | B | C" without edge pipes when already in table or looks tabular
+    if (pipeCols && pipeCols.length >= 3 && !trimmed.startsWith('#') && !/^[*-]/.test(trimmed)) {
+      closeList();
+      if (!inTable) inTable = true;
+      tableRows.push(pipeCols);
       continue;
     }
     closeTable();
@@ -298,7 +344,7 @@ export function markdownToHtml(markdown) {
 
     if (
       trimmed.length >= 4 &&
-      trimmed.length <= 80 &&
+      trimmed.length <= 90 &&
       trimmed === trimmed.toUpperCase() &&
       /[A-Z]/.test(trimmed) &&
       !/^[\d|=\-*_#~\s]+$/.test(trimmed)
@@ -308,18 +354,21 @@ export function markdownToHtml(markdown) {
       continue;
     }
 
+    if (trimmed.startsWith('#### ')) {
+      closeList();
+      parts.push(`<h3>${inlineMarkdown(trimmed.slice(5))}</h3>`);
+      continue;
+    }
     if (trimmed.startsWith('### ')) {
       closeList();
       parts.push(`<h3>${inlineMarkdown(trimmed.slice(4))}</h3>`);
       continue;
     }
-
     if (trimmed.startsWith('## ')) {
       closeList();
       parts.push(`<h2>${inlineMarkdown(trimmed.slice(3))}</h2>`);
       continue;
     }
-
     if (trimmed.startsWith('# ')) {
       closeList();
       parts.push(`<h2>${inlineMarkdown(trimmed.slice(2))}</h2>`);
@@ -376,27 +425,65 @@ function fixLatexFragments(html) {
     .replace(/\$\\rightarrow\$/gi, '→')
     .replace(/\$\\leftarrow\$/gi, '←')
     .replace(/\$\\Rightarrow\$/gi, '⇒')
+    .replace(/\$\\Leftrightarrow\$/gi, '⇔')
     .replace(/\$\\to\$/gi, '→')
-    .replace(/\$([^$]{1,24})\$/g, (_, expr) => {
+    .replace(/\$\\times\$/gi, '×')
+    .replace(/\$\\div\$/gi, '÷')
+    .replace(/\$\\pm\$/gi, '±')
+    .replace(/\$\\approx\$/gi, '≈')
+    .replace(/\$\\neq\$/gi, '≠')
+    .replace(/\$\\leq\$/gi, '≤')
+    .replace(/\$\\geq\$/gi, '≥')
+    .replace(/\$\\%/g, '%')
+    .replace(/\$([^$]{1,40})\$/g, (_, expr) => {
       const cleaned = String(expr).replace(/\\/g, '').trim();
       return escapeHtml(cleaned);
     });
 }
 
+function cleanTableHtml(table) {
+  let cleaned = table
+    .replace(/\s+(?:style|class|data-[a-z0-9_-]+|id|_ngcontent[^=]*|_nghost[^=]*)\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
+    .replace(/<\/?span\b[^>]*>/gi, '')
+    .replace(/<b\b[^>]*>/gi, '<strong>')
+    .replace(/<\/b>/gi, '</strong>');
+
+  if (!/\bnotes-table\b/.test(cleaned)) {
+    cleaned = cleaned.replace(/<table\b/i, '<table class="notes-table"');
+  } else {
+    cleaned = cleaned.replace(/<table\b[^>]*>/i, '<table class="notes-table">');
+  }
+
+  cleaned = cleaned.replace(
+    /<(thead|tr)\b[^>]*>\s*(?:<td\b[^>]*>\s*(?:<strong\b[^>]*>[\s\S]*?<\/strong>|<b\b[^>]*>[\s\S]*?<\/b>)\s*<\/td>\s*){2,}<\/(?:thead|tr)>/i,
+    (row) => row.replace(/<\/?td\b/gi, (t) => t.replace('td', 'th'))
+  );
+  cleaned = cleaned.replace(/<td\b([^>]*)>\s*<strong\b[^>]*>([\s\S]*?)<\/strong>\s*<\/td>/gi, '<th$1>$2</th>');
+  return cleaned;
+}
+
 function wrapTables(html) {
-  return html.replace(/<table\b[^>]*>[\s\S]*?<\/table>/gi, (table) => {
-    if (/notes-table-wrapper/.test(table)) return table;
-    const cleaned = table
-      .replace(/\s+(?:style|class|data-[a-z0-9_-]+|id|_ngcontent[^=]*|_nghost[^=]*)\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
-      .replace(/<table\b/i, '<table class="notes-table"')
-      .replace(/<td\b([^>]*)>\s*<strong\b[^>]*>([\s\S]*?)<\/strong>\s*<\/td>/gi, '<th$1>$2</th>');
-    return `<div class="notes-table-wrapper">${cleaned}</div>`;
+  const tables = [];
+  // Pull existing wrapped tables
+  let out = html.replace(/<div class="notes-table-wrapper">\s*(<table\b[\s\S]*?<\/table>)\s*<\/div>/gi, (_, table) => {
+    const token = `__NOTES_WRAPTABLE_${tables.length}__`;
+    tables.push(cleanTableHtml(table));
+    return token;
   });
+  // Remaining bare tables
+  out = out.replace(/<table\b[^>]*>[\s\S]*?<\/table>/gi, (table) => {
+    const token = `__NOTES_WRAPTABLE_${tables.length}__`;
+    tables.push(cleanTableHtml(table));
+    return token;
+  });
+  return out.replace(/__NOTES_WRAPTABLE_(\d+)__/g, (_, i) => (
+    `<div class="notes-table-wrapper">${tables[Number(i)] || ''}</div>`
+  ));
 }
 
 function stripJunkAttributes(html) {
   return html
-    .replace(/\s+(?:style|data-[a-z0-9_-]+|_ngcontent[^=]*|_nghost[^=]*|jslog|jsname|jsaction|dir|role|aria-level|translate)\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
+    .replace(/\s+(?:style|data-[a-z0-9_-]+|_ngcontent[^=]*|_nghost[^=]*|jslog|jsname|jsaction|dir|role|aria-level|translate|contenteditable)\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
     .replace(/\s+class\s*=\s*(["'])(?:(?!\1).)*?\1/gi, (match, q) => {
       if (/notes-/.test(match)) {
         const kept = [...match.matchAll(/notes-[\w-]+/g)].map((m) => m[0]);
@@ -406,23 +493,80 @@ function stripJunkAttributes(html) {
     });
 }
 
-/** Clean pasted Word/Docs/Gemini HTML into readable study notes */
-export function normalizeImportedHtml(raw) {
-  let html = String(raw || '');
-
-  html = html
+function stripChromeNoise(html) {
+  return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<link\b[^>]*>/gi, '')
+    .replace(/<meta\b[^>]*>/gi, '')
     .replace(/<!---->/g, '')
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/<\/?font\b[^>]*>/gi, '')
-    .replace(/<\/?o:p\b[^>]*>/gi, '');
+    .replace(/<\/?o:p\b[^>]*>/gi, '')
+    .replace(/<\/?(?:xml|w:|m:)[^>]*>/gi, '')
+    .replace(/<\/?(?:section|article|header|footer|main|aside|nav)\b[^>]*>/gi, '');
+}
 
-  // Convert ASCII <pre> diagrams before other transforms smash whitespace
+function tidyStructure(html) {
+  return html
+    .replace(/<p>\s*(?:&nbsp;|\s)*<\/p>/gi, '')
+    .replace(/<(strong|em|b|i)>\s*<\/\1>/gi, '')
+    .replace(/<\/?p>(\s*)(?=<h[2-6]\b)/gi, '$1')
+    .replace(/(<\/h[2-6]>)(\s*)<p>/gi, '$1$2')
+    .replace(/<\/?p>(\s*)(?=<(?:ul|ol|table|figure|pre)\b)/gi, '$1')
+    .replace(/(<\/(?:ul|ol|table|figure|pre)>)(\s*)<p>/gi, '$1$2')
+    .replace(/<\/?p>(\s*)(?=<div class="notes-)/gi, '$1')
+    .replace(/(<\/div>)(\s*)<p>/gi, '$1$2')
+    .replace(/<p>\s*(<(?:ul|ol|table|figure|div|h[2-6]|pre)\b)/gi, '$1')
+    .replace(/(<\/(?:ul|ol|table|figure|div|h[2-6]|pre)>)\s*<\/p>/gi, '$1')
+    .replace(/(?:<\/p>\s*){2,}/gi, '</p>')
+    .replace(/(?:<p>\s*){2,}/gi, '<p>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Promote lone bold paragraphs that look like section titles */
+function promoteBoldHeadings(html) {
+  return html.replace(/<p\b[^>]*>\s*<(?:strong|b)\b[^>]*>([\s\S]*?)<\/(?:strong|b)>\s*<\/p>/gi, (full, inner) => {
+    const text = decodeBasicEntities(String(inner).replace(/<[^>]+>/g, '')).trim();
+    if (text.length < 3 || text.length > 90) return full;
+    if (/[.!?]$/.test(text) && text.length > 40) return full;
+    if (/^(tip|note|remember|definition|important|example)\b/i.test(text)) {
+      return `<div class="notes-callout"><strong>${escapeHtml(text.split(':')[0])}</strong>${text.includes(':') ? ` ${inlineMarkdown(text.slice(text.indexOf(':') + 1).trim())}` : ''}</div>`;
+    }
+    return `<h3>${escapeHtml(text)}</h3>`;
+  });
+}
+
+/** If HTML still contains markdown tables / headings as plain text, convert those islands */
+function convertEmbeddedMarkdownIslands(html) {
+  // Paragraph that is purely a markdown heading
+  html = html.replace(/<p\b[^>]*>\s*(#{1,4})\s+([\s\S]*?)<\/p>/gi, (_, hashes, body) => {
+    const text = decodeBasicEntities(String(body).replace(/<[^>]+>/g, '')).trim();
+    const level = Math.min(hashes.length + 1, 3);
+    return `<h${level}>${inlineMarkdown(text)}</h${level}>`;
+  });
+
+  // Block of pipe-table lines stuck in consecutive paragraphs
+  html = html.replace(/(?:<p\b[^>]*>\s*\|[\s\S]*?\|\s*<\/p>\s*){2,}/gi, (block) => {
+    const rows = [...block.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+      .map((m) => parsePipeRow(decodeBasicEntities(m[1].replace(/<[^>]+>/g, '').trim())))
+      .filter(Boolean);
+    if (rows.length < 2) return block;
+    return renderMarkdownTable(rows);
+  });
+
+  return html;
+}
+
+/** Clean pasted Word/Docs/Gemini/Notion HTML into readable study notes */
+export function normalizeImportedHtml(raw) {
+  let html = String(raw || '');
+
+  html = stripChromeNoise(html);
   html = convertAsciiPreBlocks(html);
 
-  // Protect diagrams, code, and tables from div→p rewrite
   const protectedDiagrams = protectBlocks(html, /<figure class="notes-diagram\b[\s\S]*?<\/figure>/gi, 'NOTES_DIAG');
   html = protectedDiagrams.html;
   const protectedPre = protectBlocks(html, /<pre\b[\s\S]*?<\/pre>/gi, 'NOTES_PRE');
@@ -435,7 +579,6 @@ export function normalizeImportedHtml(raw) {
   html = html.replace(/<b\b[^>]*>/gi, '<strong>').replace(/<\/b>/gi, '</strong>');
   html = html.replace(/<i\b[^>]*>/gi, '<em>').replace(/<\/i>/gi, '</em>');
 
-  // Unwrap chrome wrappers; keep semantic blocks
   html = html
     .replace(/(?:<br\s*\/?>\s*){2,}/gi, '</p><p>')
     .replace(/<div\b[^>]*>\s*/gi, '<p>')
@@ -448,21 +591,12 @@ export function normalizeImportedHtml(raw) {
   html = wrapTables(html);
   html = stripJunkAttributes(html);
   html = fixLatexFragments(html);
+  html = convertLooseAsciiParagraphs(html);
+  html = convertEmbeddedMarkdownIslands(html);
+  html = promoteBoldHeadings(html);
+  html = tidyStructure(html);
 
-  html = html
-    .replace(/<p>\s*(?:&nbsp;|\s)*<\/p>/gi, '')
-    .replace(/<\/?p>(\s*)(?=<h[2-6]\b)/gi, '$1')
-    .replace(/(<\/h[2-6]>)(\s*)<p>/gi, '$1$2')
-    .replace(/<\/?p>(\s*)(?=<(?:ul|ol|table|figure|pre)\b)/gi, '$1')
-    .replace(/(<\/(?:ul|ol|table|figure|pre)>)(\s*)<p>/gi, '$1$2')
-    .replace(/<p>\s*(<(?:ul|ol|table|figure|div|h[2-6]|pre)\b)/gi, '$1')
-    .replace(/(<\/(?:ul|ol|table|figure|div|h[2-6]|pre)>)\s*<\/p>/gi, '$1')
-    .replace(/(?:<\/p>\s*){2,}/gi, '</p>')
-    .replace(/(?:<p>\s*){2,}/gi, '<p>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  if (!/<(?:p|h[2-6]|ul|ol|li|table|blockquote|figure class="notes-)/i.test(html)) {
+  if (!/<(?:p|h[2-6]|ul|ol|li|table|blockquote|figure)\b/i.test(html)) {
     return markdownToHtml(html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''));
   }
 
@@ -474,7 +608,6 @@ export function normalizeImportedHtml(raw) {
 }
 
 function stripThemeBreakingStyles(html) {
-  // Study notes should inherit app theme — drop leftover inline presentation.
   return html
     .replace(/\s*style\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
     .replace(/\s*color\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '')
@@ -482,14 +615,38 @@ function stripThemeBreakingStyles(html) {
     .replace(/\s*size\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '');
 }
 
+function alreadyCleanNotes(html) {
+  if (!html) return false;
+  if (/style\s*=|_ngcontent|Google Sans|mso-|\$\\rightarrow\$/i.test(html)) return false;
+  // Clean enough if it already uses our diagram/table classes and has no junk attrs
+  return /class="notes-(?:diagram|table)/.test(html) && !/data-path-to-node|_ngcontent/i.test(html);
+}
+
+/**
+ * Universal notes normalizer — call on upload, paste, and load.
+ * Accepts Markdown, HTML (Gemini/Docs/Word), or mixed paste.
+ */
 export function prepareNotesHtml(content) {
   if (!content) return '';
-  // Already converted diagrams — still re-clean styles/junk if re-saved HTML
-  if (/class="notes-diagram/.test(content) && !/style\s*=|_ngcontent|Google Sans|\$\\rightarrow\$/i.test(content)) {
-    return content;
+  const raw = String(content).trim();
+  if (!raw) return '';
+
+  // Already app-clean: light pass only (still strip rogue styles)
+  if (alreadyCleanNotes(raw)) {
+    return stripThemeBreakingStyles(tidyStructure(raw));
   }
-  let html = isLikelyHtml(content) ? normalizeImportedHtml(content) : markdownToHtml(content);
+
+  let html = isLikelyHtml(raw) ? normalizeImportedHtml(raw) : markdownToHtml(raw);
   html = stripThemeBreakingStyles(html);
   html = convertAsciiPreBlocks(html);
+  html = convertLooseAsciiParagraphs(html);
+  html = wrapTables(html);
+  html = tidyStructure(html);
   return html;
+}
+
+/** Prefer clipboard HTML when present; always normalize. */
+export function prepareNotesFromClipboard(html, plainText) {
+  const source = (html && html.trim()) || (plainText && plainText.trim()) || '';
+  return prepareNotesHtml(source);
 }

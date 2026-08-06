@@ -24,7 +24,7 @@ import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
 import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
-import { prepareNotesHtml } from '@/shared/utils/notesMarkup';
+import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
 import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT } from '@/shared/utils/parseBulkQuestions';
 import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
 import { fetchNotifications, markNotificationsReadApi } from '@/features/reminders/remindersStorage';
@@ -1088,7 +1088,25 @@ export function Dashboard() {
                 <textarea 
                   rows="10" 
                   value={newTopicNotes} 
-                  onChange={e => setNewTopicNotes(e.target.value)} 
+                  onChange={e => setNewTopicNotes(e.target.value)}
+                  onPaste={(e) => {
+                    const html = e.clipboardData?.getData('text/html') || '';
+                    const text = e.clipboardData?.getData('text/plain') || '';
+                    if (!html && !text) return;
+                    // Let default paste happen for plain typing comfort; normalize on blur if huge HTML paste
+                    if (html && html.length > 200) {
+                      e.preventDefault();
+                      const cleaned = prepareNotesFromClipboard(html, text);
+                      const el = e.target;
+                      const start = el.selectionStart ?? newTopicNotes.length;
+                      const end = el.selectionEnd ?? start;
+                      const next = `${newTopicNotes.slice(0, start)}${cleaned}${newTopicNotes.slice(end)}`;
+                      setNewTopicNotes(next);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTopicNotes.trim()) setNewTopicNotes(prepareNotesHtml(newTopicNotes));
+                  }}
                   required 
                   placeholder={`Paste plain text, Markdown, or HTML. Examples:
 
@@ -1104,7 +1122,7 @@ Tip: 12.5% = 1/8
 2. Simplify`}
                 />
                 <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.45 }}>
-                  Tip: Use <code>## Heading</code>, <code>- bullets</code>, <code>1. numbered</code>, or paste HTML — we auto-format for easy reading.
+                  Tip: Paste anything (Gemini / Docs / Markdown) — we auto-clean tables, diagrams, and formatting.
                 </span>
               </div>
               <div className="form-group">
@@ -1176,12 +1194,28 @@ Tip: 12.5% = 1/8
                 <textarea 
                   rows="10" 
                   value={editTopicNotes} 
-                  onChange={e => setEditTopicNotes(e.target.value)} 
+                  onChange={e => setEditTopicNotes(e.target.value)}
+                  onPaste={(e) => {
+                    const html = e.clipboardData?.getData('text/html') || '';
+                    const text = e.clipboardData?.getData('text/plain') || '';
+                    if (html && html.length > 200) {
+                      e.preventDefault();
+                      const cleaned = prepareNotesFromClipboard(html, text);
+                      const el = e.target;
+                      const start = el.selectionStart ?? editTopicNotes.length;
+                      const end = el.selectionEnd ?? start;
+                      const next = `${editTopicNotes.slice(0, start)}${cleaned}${editTopicNotes.slice(end)}`;
+                      setEditTopicNotes(next);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (editTopicNotes.trim()) setEditTopicNotes(prepareNotesHtml(editTopicNotes));
+                  }}
                   required 
                   placeholder="Paste plain text, Markdown, or HTML — we format it for easy reading."
                 />
                 <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.45 }}>
-                  Tip: <code>## Heading</code>, <code>- bullets</code>, <code>1. numbered</code>, or paste HTML.
+                  Tip: Paste Gemini / Docs / Markdown — tables & diagrams auto-format.
                 </span>
               </div>
               <div className="form-group">
