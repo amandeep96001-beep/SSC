@@ -9,8 +9,8 @@
   font-size: 1.125rem;
   line-height: 1.85;
   letter-spacing: -0.011em;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: break-word;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -25,12 +25,12 @@
 
 .notes-reader p {
   margin: 0 0 1.2em;
-  max-width: 62ch;
+  max-width: none;
 }
 
 .notes-reader li {
   margin-bottom: 0.5em;
-  max-width: 62ch;
+  max-width: none;
 }
 
 .notes-reader h2,
@@ -393,10 +393,12 @@
   /* ---- Reading body: large enough for daily study ---- */
   .notes-sheet--premium .notes-reader,
   .notes-reader {
-    padding: 22px 18px 36px !important;
+    padding: 20px 16px 36px !important;
     font-size: 1.125rem !important;
     line-height: 1.85 !important;
     max-width: none !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
   }
 
   .notes-reader--size-sm { font-size: 1.02rem !important; line-height: 1.75 !important; }
@@ -452,12 +454,20 @@
   }
 
   .notes-table {
-    font-size: 0.9rem !important;
+    font-size: 0.88rem !important;
+    min-width: 560px;
   }
 
   .notes-table th,
   .notes-table td {
     padding: 10px 12px !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  .notes-table td:first-child,
+  .notes-table th:first-child {
+    white-space: nowrap !important;
   }
 
   /* Editing: calm field, no dashed cage fighting the text */

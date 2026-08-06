@@ -41,6 +41,22 @@ import {
   Bookmark
 } from 'lucide-react';
 
+/** Prefer server notes when local cache is dirty Gemini paste or missing upgraded diagrams. */
+function pickNotesSource(activeNotes) {
+  if (!activeNotes) return '';
+  const server = activeNotes.notes || '';
+  const stored = activeNotes.id ? localStorage.getItem(`ssc_notes_${activeNotes.id}`) : null;
+  if (!stored) return server;
+  const dirtyCache = /_ngcontent|Google Sans|\$\\rightarrow\$/i.test(stored);
+  const serverHasDiagrams = /notes-diagram/.test(server);
+  const storedHasDiagrams = /notes-diagram/.test(stored);
+  if (dirtyCache || (serverHasDiagrams && !storedHasDiagrams)) {
+    localStorage.setItem(`ssc_notes_${activeNotes.id}`, server);
+    return server;
+  }
+  return stored;
+}
+
 export function SyllabusWorkspace({
   activeView,
   setActiveView,
@@ -72,8 +88,7 @@ export function SyllabusWorkspace({
   const [noQuestionsFlash, setNoQuestionsFlash] = useState(false);
   const [localNotesHtml, setLocalNotesHtml] = useState(() => {
     if (!activeNotes) return '';
-    const stored = localStorage.getItem(`ssc_notes_${activeNotes.id}`);
-    return prepareNotesHtml(stored || activeNotes.notes || '');
+    return prepareNotesHtml(pickNotesSource(activeNotes));
   });
   const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
   const notesRef = useRef(null);
@@ -107,8 +122,7 @@ export function SyllabusWorkspace({
 
   if (activeNotes !== prevActiveNotes) {
     setPrevActiveNotes(activeNotes);
-    const stored = activeNotes ? localStorage.getItem(`ssc_notes_${activeNotes.id}`) : null;
-    setLocalNotesHtml(prepareNotesHtml(stored || activeNotes?.notes || ''));
+    setLocalNotesHtml(prepareNotesHtml(pickNotesSource(activeNotes)));
     setReadingProgress(0);
     setShowScrollTop(false);
     setSearchQuery('');
