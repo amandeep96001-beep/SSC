@@ -119,6 +119,7 @@ export function Dashboard() {
     testSummary,
     user,
     loading: studyLoading,
+    notesLoading,
     error: studyError,
     skipToSubjects,
     selectSubject,
@@ -938,6 +939,7 @@ export function Dashboard() {
               handleDeleteClick={handleDeleteClick}
               handleDeleteSubjectClick={handleDeleteSubjectClick}
               activeNotes={activeNotes}
+              notesLoading={notesLoading}
               startTest={startTest}
               updateCustomTopic={updateCustomTopic}
               onOpenNotesDock={openNotesDock}

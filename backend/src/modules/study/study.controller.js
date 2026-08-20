@@ -221,7 +221,7 @@ export const getTopicTest = async (req, res, next) => {
 
     const questions = await questionRepository.findByTopicId(topicId);
 
-    let testQuestions = questions.map(q => ({
+    let pool = questions.map(q => ({
       q: q.q,
       o: q.o,
       a: q.a,
@@ -229,9 +229,29 @@ export const getTopicTest = async (req, res, next) => {
       state: q.state
     }));
 
-    testQuestions = shuffle(testQuestions);
-    if (testQuestions.length > 25) {
-      testQuestions = testQuestions.slice(0, 25);
+    // Parse requested count — default 25, max 500
+    const rawCount = parseInt(req.query.count, 10);
+    const requestedCount = !Number.isNaN(rawCount) && rawCount > 0
+      ? Math.min(rawCount, 500)
+      : 25;
+
+    // Always shuffle the base pool for variety
+    pool = shuffle(pool);
+
+    let testQuestions;
+    if (requestedCount <= pool.length) {
+      // Simple case: enough questions — just take the first N after shuffle
+      testQuestions = pool.slice(0, requestedCount);
+    } else {
+      // Count > available — build enough by cycling through shuffled copies
+      // Each pass is independently shuffled so questions don't repeat in the same order
+      testQuestions = [];
+      let remaining = requestedCount;
+      while (remaining > 0) {
+        const pass = shuffle([...pool]);
+        testQuestions = testQuestions.concat(pass.slice(0, remaining));
+        remaining -= pass.length;
+      }
     }
 
     res.json({ status: 'success', data: testQuestions });

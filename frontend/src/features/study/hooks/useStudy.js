@@ -118,7 +118,12 @@ export function useStudy() {
   const getTopicsApi = useApi(useCallback((subName, source) =>
     apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics?source=${encodeURIComponent(source || 'global')}`), []));
   const getNotesApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/notes`), []));
-  const getTestApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/test`), []));
+  const getTestApi = useApi(useCallback((id, count) => {
+    const url = count && count > 0
+      ? `/study/topics/${id}/test?count=${encodeURIComponent(count)}`
+      : `/study/topics/${id}/test`;
+    return apiService.get(url);
+  }, []));
   const addTopicApi = useApi(useCallback(({ subjectName, body }) => apiService.post(`/study/subjects/${encodeURIComponent(subjectName)}/topics`, body), []));
   const addSubjectApi = useApi(useCallback((body) => apiService.post('/study/subjects', body), []));
   const deleteSubjectApi = useApi(useCallback(({ name, scope } = {}) => {
@@ -289,21 +294,55 @@ export function useStudy() {
     setActiveView('topics');
   }, [getTopicsApi]);
 
+  // Tracks the abort controller for the latest in-flight notes request.
+  // If the user clicks a different topic before the previous fetch completes,
+  // we abort the old request so stale data never overwrites the new one.
+  const notesFetchAbortRef = useRef(null);
+  const [notesLoading, setNotesLoading] = useState(false);
+
   const selectTopic = useCallback(async (topicId) => {
-    setSelectedTopicId(topicId);
-    const result = await getNotesApi.execute(topicId);
-    if (result.success && result.data.data) {
-      setActiveNotes(result.data.data);
-      setActiveView('notes');
+    // Cancel any pending notes request immediately
+    if (notesFetchAbortRef.current) {
+      notesFetchAbortRef.current.abort();
     }
-  }, [getNotesApi]);
+    const controller = new AbortController();
+    notesFetchAbortRef.current = controller;
+
+    setSelectedTopicId(topicId);
+    setActiveNotes(null);        // clear stale notes right away
+    setActiveView('notes');      // show loading state immediately
+    setNotesLoading(true);
+
+    try {
+      const result = await apiService.get(`/study/topics/${topicId}/notes`, {
+        signal: controller.signal,
+      });
+      // Only update state if this request wasn't aborted by a newer click
+      if (!controller.signal.aborted) {
+        if (result?.data) {
+          setActiveNotes(result.data);
+        }
+        setNotesLoading(false);
+      }
+    } catch (err) {
+      // Ignore abort errors (user navigated away) — surface real errors
+      if (err.name !== 'AbortError' && !err.message?.includes('aborted') && !err.message?.includes('timed out')) {
+        console.warn('[selectTopic] notes fetch failed:', err.message);
+      }
+      if (!controller.signal.aborted) {
+        setNotesLoading(false);
+      }
+    }
+  }, []);
 
   const submitExam = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
 
-    const elapsedSeconds = 900 - timerValueRef.current;
+    const elapsedSeconds = startTimeRef.current
+      ? Math.round((Date.now() - startTimeRef.current) / 1000)
+      : Math.max(0, timerValueRef.current > 0 ? (900 - timerValueRef.current) : 0);
     const elapsedMins = Math.floor(elapsedSeconds / 60);
     const elapsedSecs = elapsedSeconds % 60;
 
@@ -467,9 +506,9 @@ export function useStudy() {
     setActiveView('results');
   }, [user, updateMockProgressApi, examId, exam]);
 
-  const startTest = useCallback(async () => {
+  const startTest = useCallback(async (count) => {
     if (!selectedTopicId) return { success: false };
-    const result = await getTestApi.execute(selectedTopicId);
+    const result = await getTestApi.execute(selectedTopicId, count);
     if (result.success && result.data.data) {
       const questions = result.data.data;
       // Filter out the auto-seeded placeholder question
@@ -488,10 +527,15 @@ export function useStudy() {
       initialStatuses[0] = 'not-answered';
       setQuestionStatuses(initialStatuses);
 
-      setTimer(900);
+      // Timer scales with question count: 36 seconds per question, min 10 min, max 3 hrs
+      const seconds = count && count > 0
+        ? Math.min(10800, Math.max(600, count * 36))
+        : 900;
+      setTimer(seconds);
+      timerValueRef.current = seconds;
       startTimeRef.current = Date.now();
       setActiveView('test');
-      return { success: true };
+      return { success: true, count: qLen };
     }
     return { success: false };
   }, [selectedTopicId, getTestApi]);
@@ -750,7 +794,8 @@ export function useStudy() {
     timer,
     testSummary,
     user,
-    loading: subjectsLoading || getTopicsApi.loading || getNotesApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
+    loading: subjectsLoading || getTopicsApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
+    notesLoading,
     error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
     skipToSubjects,
     selectSubject,

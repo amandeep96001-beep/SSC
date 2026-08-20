@@ -76,6 +76,7 @@ export function SyllabusWorkspace({
   handleDeleteClick,
   handleDeleteSubjectClick,
   activeNotes,
+  notesLoading = false,
   startTest,
   updateCustomTopic,
   onOpenNotesDock
@@ -86,6 +87,12 @@ export function SyllabusWorkspace({
   const [isSaving, setIsSaving] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [noQuestionsFlash, setNoQuestionsFlash] = useState(false);
+  const [testQuestionCount, setTestQuestionCount] = useState(25);
+
+  // Real questions in DB for this topic (excluding the seeded placeholder)
+  const availableQCount = (activeNotes?.questions || []).filter(
+    (q) => !q.q?.startsWith('Syllabus Check:')
+  ).length;
   const [localNotesHtml, setLocalNotesHtml] = useState(() => {
     if (!activeNotes) return '';
     return prepareNotesHtml(pickNotesSource(activeNotes));
@@ -132,6 +139,11 @@ export function SyllabusWorkspace({
     searchMatchIdxRef.current = 0;
     setIsEditingNotes(false);
     setManageFlash('');
+    // Reset count to available questions for new topic
+    const newAvail = (activeNotes?.questions || []).filter(
+      (q) => !q.q?.startsWith('Syllabus Check:')
+    ).length;
+    if (newAvail > 0) setTestQuestionCount(newAvail);
     try {
       const bm = activeNotes ? localStorage.getItem(`ssc_bookmarks_${activeNotes.id}`) : null;
       setBookmarks(bm ? JSON.parse(bm) : []);
@@ -780,8 +792,43 @@ export function SyllabusWorkspace({
         </div>
       )}
 
+      {/* --- VIEW: TOPIC NOTES LOADING STATE --- */}
+      {activeView === 'notes' && (notesLoading || !activeNotes) && (
+        <div className="study-workspace syllabus-flow">
+          <header className="syllabus-page-header notes-toolbar-header">
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <span className="notes-breadcrumb">Revision Notes</span>
+                <h1>{notesLoading ? 'Loading notes…' : 'Could not load notes'}</h1>
+                {!notesLoading && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0' }}>
+                    Network issue or topic not found. Go back and try again.
+                  </p>
+                )}
+              </div>
+              <div className="syllabus-page-header__actions notes-toolbar-actions">
+                <button
+                  type="button"
+                  className="notes-tool-icon notes-tool-icon--ghost"
+                  onClick={() => setActiveView('topics')}
+                  title="Back to topics"
+                  aria-label="Back to topics"
+                >
+                  <ArrowLeft size={18} strokeWidth={1.75} />
+                </button>
+              </div>
+            </div>
+          </header>
+          {notesLoading && (
+            <div className="app-loader-overlay" style={{ position: 'relative', top: 40 }} aria-busy="true" aria-label="Loading notes">
+              <div className="app-loader-spinner" />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* --- VIEW: TOPIC REVISION NOTES & TEST STARTER --- */}
-      {activeView === 'notes' && activeNotes && (
+      {activeView === 'notes' && activeNotes && !notesLoading && (
         <div className={`study-workspace syllabus-flow notes-flow${notesFocus ? ' notes-flow--focus' : ''}`}>
           {!notesFocus && (
           <header className="syllabus-page-header notes-toolbar-header">
@@ -863,7 +910,7 @@ export function SyllabusWorkspace({
                       <RotateCcw size={16} /> Reset local edits
                     </button>
                     <button type="button" className="btn-take-test" onClick={async () => {
-                      const res = await startTest();
+                      const res = await startTest(testQuestionCount);
                       setShowActionsMenu(false);
                       if (res?.noQuestions) {
                         setNoQuestionsFlash(true);
@@ -871,7 +918,7 @@ export function SyllabusWorkspace({
                       }
                     }}>
                       <ClipboardList size={16} />
-                      Take Topic Test
+                      Take Topic Test ({testQuestionCount} Q)
                     </button>
 
                     <div className="notes-actions-divider">
@@ -1132,21 +1179,50 @@ export function SyllabusWorkspace({
                     </div>
                   ) : (
                     <>
-                      <p className="notes-footer-hint">Lock it in — test yourself while it is fresh.</p>
-                      <button
-                        type="button"
-                        className="btn-take-test notes-cta-btn"
-                        onClick={async () => {
-                          const res = await startTest();
-                          if (res?.noQuestions) {
-                            setNoQuestionsFlash(true);
-                            setTimeout(() => setNoQuestionsFlash(false), 4000);
-                          }
-                        }}
-                      >
-                        <ClipboardList size={18} />
-                        Take Topic Test
-                      </button>
+                      {/* DB question count badge */}
+                      {availableQCount > 0 ? (
+                        <p className="notes-footer-hint">
+                          <strong className="notes-q-count-badge">{availableQCount}</strong> questions available in DB — choose how many to attempt:
+                        </p>
+                      ) : (
+                        <p className="notes-footer-hint">Lock it in — test yourself while it is fresh.</p>
+                      )}
+                      <div className="notes-test-launcher">
+                        <label className="notes-test-count-label" htmlFor="test-q-count">
+                          No. of Q:
+                        </label>
+                        <input
+                          id="test-q-count"
+                          type="number"
+                          className="notes-test-count-input"
+                          min={1}
+                          max={999}
+                          value={testQuestionCount}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(v) && v >= 1) setTestQuestionCount(v);
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          aria-label="Number of test questions"
+                        />
+                        {availableQCount > 0 && testQuestionCount > availableQCount && (
+                          <span className="notes-test-repeat-hint">♻️ questions repeat</span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-take-test notes-cta-btn"
+                          onClick={async () => {
+                            const res = await startTest(testQuestionCount);
+                            if (res?.noQuestions) {
+                              setNoQuestionsFlash(true);
+                              setTimeout(() => setNoQuestionsFlash(false), 4000);
+                            }
+                          }}
+                        >
+                          <ClipboardList size={18} />
+                          Start Test
+                        </button>
+                      </div>
                     </>
                   )}
                 </footer>

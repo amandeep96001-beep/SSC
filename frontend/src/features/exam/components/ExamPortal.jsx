@@ -141,7 +141,7 @@ export function ExamPortal({
               <div className="avatar">{user?.username?.slice(0, 2).toUpperCase() || 'US'}</div>
               <div>
                 <div className="exam-user-name">{user?.username || 'Student'}</div>
-                <div className="exam-user-meta">{qCount} Questions · 15 Mins</div>
+                <div className="exam-user-meta">{qCount} Questions · {Math.round(timer / 60)} Mins</div>
               </div>
             </div>
             <div className="palette-header">
@@ -166,12 +166,6 @@ export function ExamPortal({
                 );
               })}
             </div>
-
-            {qCount > 0 && qCount < 25 && (
-              <div className="palette-warning">
-                <strong>Note:</strong> Only {qCount} questions available. Add more MCQs to this topic to simulate a full 25-Q mock test.
-              </div>
-            )}
 
             <div className="legend-box">
               <div className="legend-item">
