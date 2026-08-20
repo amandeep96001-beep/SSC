@@ -554,9 +554,9 @@ export function markdownToHtml(markdown) {
       continue;
     }
 
-    if (/^[*-]\s+/.test(trimmed)) {
+    if (/^[*\-‣•]\s+/.test(trimmed)) {
       openList('ul');
-      parts.push(`<li>${inlineMarkdown(trimmed.replace(/^[*-]\s+/, ''))}</li>`);
+      parts.push(`<li>${inlineMarkdown(trimmed.replace(/^[*\-‣•]\s+/, ''))}</li>`);
       continue;
     }
 
@@ -621,9 +621,12 @@ function fixLatexFragments(html) {
     .replace(/\$\\leq\$/gi, '≤')
     .replace(/\$\\geq\$/gi, '≥')
     .replace(/\$\\%/g, '%')
-    .replace(/\$([^$]{1,40})\$/g, (_, expr) => {
-      const cleaned = String(expr).replace(/\\/g, '').trim();
-      return escapeHtml(cleaned);
+    .replace(/\$([^\s$][^$]{0,250}[^\s$]|[^\s$])\$/g, (_, expr) => {
+      let cleaned = String(expr).trim();
+      // Remove any HTML tags that might have mistakenly ended up inside the math block
+      cleaned = cleaned.replace(/<\/?(?:p|ul|li|div|span|br|ol|strong|em|b|i)[^>]*>/gi, ' ');
+      cleaned = cleaned.replace(/&lt;\/?(?:p|ul|li|div|span|br|ol|strong|em|b|i)[^&]*&gt;/gi, ' ');
+      return `<span class="notes-math-inline">${escapeHtml(cleaned)}</span>`;
     });
 }
 
