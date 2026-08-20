@@ -40,6 +40,10 @@ const CALLOUT_RE = /^(definition|tip|note|remember|example|formula|trick|shortcu
 const BOX_CHARS = /[┌┐└┘├┤┬┴┼═║│─━┃┏┓┗┛┣┫┳┻╋╔╗╚╝╠╣╦╩╬]/;
 const ARROW_CHARS = /[▼▲►◀→←↓↑⟶⇢➥➜⇒⇓⇑]/;
 
+// Tree-structure chars: ├── └── │ and their variants
+const TREE_BRANCH = /^[│├└][-─ ]*[├└]?/;
+const TREE_LINE_RE = /^[ \t]*[│├└](?:[─ ]+|──+)/;
+
 function looksLikeAsciiDiagram(text) {
   const lines = String(text || '').split('\n').filter((l) => l.trim());
   if (lines.length < 2) return false;
@@ -48,6 +52,120 @@ function looksLikeAsciiDiagram(text) {
   const connector = lines.filter((l) => /──►|-->|⇒|→|=>/.test(l)).length;
   const plusBox = lines.filter((l) => /^\s*\+[-+]+\+\s*$/.test(l)).length;
   return boxLines >= 2 || plusBox >= 2 || (arrowOnly >= 1 && lines.length >= 3) || (connector >= 1 && boxLines >= 1);
+}
+
+/** Detect a block that is a tree (├──, └──, │ lines) */
+function looksLikeTree(text) {
+  const lines = String(text || '').split('\n').filter((l) => l.trim());
+  if (lines.length < 2) return false;
+  const treeLines = lines.filter((l) => TREE_LINE_RE.test(l) || /^[ \t]*│/.test(l));
+  return treeLines.length >= 2;
+}
+
+/**
+ * Parse tree-style text into a nested node array.
+ * Each node: { label, depth, children }
+ */
+function parseTreeLines(text) {
+  const raw = String(text || '').split('\n');
+  // First non-connector line is the root title
+  const roots = [];
+  const stack = []; // { node, depth }
+
+  for (const rawLine of raw) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) continue;
+
+    // Measure indent depth by prefix chars before the actual label
+    // Pattern: optional leading whitespace + branch chars + spaces → label
+    const prefixMatch = line.match(/^([ \t│├└─]*?)([├└]──?\s*|[├└]─+\s*)(.*)$/);
+    if (!prefixMatch) {
+      // Root-level title (no branch chars)
+      const label = line.replace(/^[│ \t]+/, '').trim();
+      if (!label) continue;
+      // Count leading │ / spaces as depth indicator
+      const indentLen = line.search(/[├└│]/);
+      const depth = indentLen <= 0 ? 0 : Math.round(indentLen / 4);
+      const node = { label, depth, children: [] };
+      if (depth === 0) {
+        roots.push(node);
+        stack.length = 0;
+        stack.push(node);
+      } else {
+        // find parent
+        while (stack.length > 1 && stack[stack.length - 1].depth >= depth) stack.pop();
+        const parent = stack[stack.length - 1];
+        parent.children.push(node);
+        stack.push(node);
+      }
+      continue;
+    }
+
+    const prefix = prefixMatch[1];
+    const label = prefixMatch[3].trim();
+    if (!label) continue;
+
+    // depth = count of indent groups (4 chars each) in prefix
+    const pipeCount = (prefix.match(/│/g) || []).length;
+    const spaceDepth = Math.floor((prefix.replace(/│/g, '').length) / 4);
+    const depth = pipeCount + spaceDepth + 1;
+
+    const node = { label, depth, children: [] };
+
+    // Pop stack until we find a node shallower than current
+    while (stack.length > 0 && stack[stack.length - 1].depth >= depth) stack.pop();
+
+    if (stack.length === 0) {
+      roots.push(node);
+    } else {
+      stack[stack.length - 1].children.push(node);
+    }
+    stack.push(node);
+  }
+
+  return roots;
+}
+
+/** Recursively emit <ul> tree HTML */
+function renderTreeNodes(nodes, depth) {
+  if (!nodes.length) return '';
+  const depthClass = `notes-tree__level--${Math.min(depth, 4)}`;
+  const items = nodes.map((n) => {
+    const hasKids = n.children.length > 0;
+    const kids = hasKids ? renderTreeNodes(n.children, depth + 1) : '';
+    const icon = hasKids ? '<span class="notes-tree__icon notes-tree__icon--branch" aria-hidden="true">⊞</span>'
+      : '<span class="notes-tree__icon notes-tree__icon--leaf" aria-hidden="true">◆</span>';
+    return `<li class="notes-tree__item ${hasKids ? 'notes-tree__item--branch' : 'notes-tree__item--leaf'}">${icon}<span class="notes-tree__label">${inlineMarkdown(n.label)}</span>${kids}</li>`;
+  }).join('');
+  return `<ul class="notes-tree__list ${depthClass}">${items}</ul>`;
+}
+
+/** Convert a tree-format text block to rich HTML */
+export function treeToHtml(rawText) {
+  const text = decodeBasicEntities(rawText).replace(/\r\n/g, '\n').trim();
+  if (!looksLikeTree(text)) return null;
+
+  const lines = text.split('\n');
+  // First line with no branch prefix = root title
+  let rootTitle = '';
+  const bodyLines = [];
+  let foundRoot = false;
+  for (const l of lines) {
+    if (!foundRoot && !TREE_LINE_RE.test(l) && !/^[ \t]*│/.test(l)) {
+      rootTitle = l.trim();
+      foundRoot = true;
+    } else {
+      bodyLines.push(l);
+    }
+  }
+
+  const nodes = parseTreeLines(bodyLines.join('\n'));
+  const titleHtml = rootTitle
+    ? `<div class="notes-tree__root-title">${inlineMarkdown(rootTitle)}</div>`
+    : '';
+  const treeHtml = renderTreeNodes(nodes, 1);
+
+  return `<figure class="notes-diagram notes-tree" role="img" aria-label="Tree diagram">${titleHtml}${treeHtml}</figure>`;
 }
 
 function extractBoxLabels(text) {
@@ -224,6 +342,7 @@ export function markdownToHtml(markdown) {
   let inTable = false;
   let tableRows = [];
   let asciiBuf = [];
+  let treeBuf = [];  // Buffer for tree-structure lines
 
   const closeList = () => {
     if (inList) {
@@ -257,9 +376,41 @@ export function markdownToHtml(markdown) {
     parts.push(diagram || `<pre class="notes-diagram notes-diagram--ascii"><code>${escapeHtml(block)}</code></pre>`);
   };
 
+  const flushTree = () => {
+    if (!treeBuf.length) return;
+    const block = treeBuf.join('\n');
+    treeBuf = [];
+    const tree = treeToHtml(block);
+    parts.push(tree || `<pre class="notes-diagram notes-diagram--ascii"><code>${escapeHtml(block)}</code></pre>`);
+  };
+
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
+
+    // --- Tree-structure detection (├──, └──, │) ---
+    const isTreeLine = TREE_LINE_RE.test(line) || /^[ \t]*│/.test(line);
+    // A non-empty, non-tree line that follows tree lines = flush tree first
+    if (treeBuf.length && !isTreeLine) {
+      // Allow blank lines within tree
+      if (!trimmed) {
+        treeBuf.push(line);
+        continue;
+      }
+      while (treeBuf.length && !treeBuf[treeBuf.length - 1].trim()) treeBuf.pop();
+      flushTree();
+    }
+    if (isTreeLine) {
+      closeList();
+      closeTable();
+      flushAscii();
+      treeBuf.push(line);
+      continue;
+    }
+    // If previous line had no branch char but tree is buffered, might be root title — keep
+    if (!isTreeLine && treeBuf.length === 0 && !trimmed) {
+      // plain blank — handled below
+    }
 
     const isDiagramLine =
       BOX_CHARS.test(line) ||
@@ -391,6 +542,10 @@ export function markdownToHtml(markdown) {
     parts.push(`<p>${inlineMarkdown(trimmed)}</p>`);
   }
 
+  if (treeBuf.length) {
+    while (treeBuf.length && !treeBuf[treeBuf.length - 1].trim()) treeBuf.pop();
+    flushTree();
+  }
   if (asciiBuf.length) {
     while (asciiBuf.length && !asciiBuf[asciiBuf.length - 1].trim()) asciiBuf.pop();
     flushAscii();

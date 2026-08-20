@@ -12,6 +12,157 @@
   margin: 2.25rem 0;
 }
 
+/* =====================================================
+   TREE DIAGRAM  (├── └── │ structures)
+   ===================================================== */
+.notes-reader .notes-tree {
+  font-family: var(--font-body, inherit);
+  padding: 18px 18px 14px;
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-hover);
+  margin: 1.75rem 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Root label chip */
+.notes-tree__root-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-muted);
+  border: 1px solid var(--color-primary);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-bottom: 14px;
+  letter-spacing: -0.01em;
+}
+
+/* Top-level list */
+.notes-tree__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 0;
+}
+
+/* Nested lists — indent + left accent bar */
+.notes-tree__list .notes-tree__list {
+  margin-top: 6px;
+  margin-left: 22px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-color);
+}
+
+/* Each tree item row */
+.notes-tree__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0 5px 4px;
+}
+
+.notes-tree__item + .notes-tree__item {
+  border-top: 1px dashed var(--border-subtle);
+}
+
+/* Icon + label inline row */
+.notes-tree__item > .notes-tree__icon,
+.notes-tree__item > .notes-tree__label {
+  display: inline;
+}
+
+.notes-tree__item {
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.notes-tree__item > .notes-tree__list {
+  flex: 0 0 100%;
+  margin-top: 4px;
+}
+
+/* Icons */
+.notes-tree__icon {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  margin-top: 3px;
+  line-height: 1;
+}
+
+.notes-tree__icon--branch {
+  color: var(--color-primary);
+}
+
+.notes-tree__icon--leaf {
+  color: var(--text-muted);
+  font-size: 0.5rem;
+}
+
+/* Labels */
+.notes-tree__label {
+  font-size: 0.93rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.45;
+  flex: 1;
+}
+
+/* Branch items (have children) — bolder */
+.notes-tree__item--branch > .notes-tree__label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Depth colour theming */
+.notes-tree__level--1 > .notes-tree__item--branch > .notes-tree__label {
+  color: var(--color-primary);
+}
+
+.notes-tree__level--2 {
+  border-left-color: rgba(var(--color-primary-rgb, 99, 102, 241), 0.35);
+}
+
+.notes-tree__level--3 {
+  border-left-color: rgba(var(--color-primary-rgb, 99, 102, 241), 0.2);
+}
+
+.notes-tree__level--4 {
+  border-left-color: var(--border-subtle);
+}
+
+/* Dark-mode adjustments */
+[data-theme="dark"] .notes-reader .notes-tree {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .notes-tree__root-title {
+  background: rgba(var(--color-primary-rgb, 99, 102, 241), 0.15);
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .notes-reader .notes-tree {
+    padding: 12px 10px 10px;
+  }
+
+  .notes-tree__label {
+    font-size: 0.88rem;
+  }
+
+  .notes-tree__list .notes-tree__list {
+    margin-left: 14px;
+    padding-left: 8px;
+  }
+}
+
+
 /* Premium Notes Table */
 .notes-table-wrapper {
   display: block;

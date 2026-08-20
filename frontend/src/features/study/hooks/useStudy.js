@@ -18,15 +18,21 @@ function normalizeSubjects(list) {
   });
 }
 
-function filterByExamSubjects(list, examSubjects, isMine) {
-  if (isMine) return list;
+function filterByExamSubjects(list, examSubjects, { isMine = false, showAll = false } = {}) {
+  // My Notes: always full list. Official: show every catalog subject;
+  // exam-mapped ones stay first (in exam order), extras append after.
+  if (isMine || showAll || !(examSubjects || []).length) {
+    if (!(examSubjects || []).length) return list;
+    const allowed = (examSubjects || []).map((s) => String(s).toLowerCase());
+    const byName = new Map(list.map((s) => [s.name.toLowerCase(), s]));
+    const ordered = allowed.map((key) => byName.get(key)).filter(Boolean);
+    const rest = list.filter((s) => !allowed.includes(s.name.toLowerCase()));
+    return [...ordered, ...rest];
+  }
+
   const allowed = (examSubjects || []).map((s) => String(s).toLowerCase());
-  if (!allowed.length) return [];
   const byName = new Map(list.map((s) => [s.name.toLowerCase(), s]));
-  // Preserve exam config order; include only subjects that exist in the catalog
-  return allowed
-    .map((key) => byName.get(key))
-    .filter(Boolean);
+  return allowed.map((key) => byName.get(key)).filter(Boolean);
 }
 
 export function useStudy() {
@@ -97,7 +103,13 @@ export function useStudy() {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const contentSourceRef = useRef(contentSource);
-  contentSourceRef.current = contentSource;
+
+  // Keep ref in sync after each render so callbacks always read the latest value
+  // without needing contentSource in their dependency arrays.
+  // Must be in useEffect (not render body) — React 19 disallows ref mutation during render.
+  useEffect(() => {
+    contentSourceRef.current = contentSource;
+  });
 
   // APIs
   const { execute: fetchSubjectsApi, loading: subjectsLoading, error: subjectsError } = useApi(
@@ -133,8 +145,18 @@ export function useStudy() {
     setSubjectsRaw(normalizeSubjects(getListFromResponse(result)));
   }, [fetchSubjectsApi]);
 
+  const isMineMode = contentSource === 'mine';
+  const isAdminUser = user?.role === 'admin';
+  /** Admin can manage Official Syllabus; anyone can manage My Notes */
+  const canManageContent = isMineMode || (contentSource === 'global' && isAdminUser);
+
   const subjects = useMemo(
-    () => filterByExamSubjects(subjectsRaw, examSubjects, contentSource === 'mine'),
+    () =>
+      filterByExamSubjects(subjectsRaw, examSubjects, {
+        isMine: contentSource === 'mine',
+        // Official syllabus: show full catalog (exam subjects first, then the rest)
+        showAll: contentSource === 'global'
+      }),
     [subjectsRaw, examSubjects, contentSource]
   );
 
@@ -691,25 +713,22 @@ export function useStudy() {
     fetchSubjects(contentSource);
   }, [user?.id, user?.username, contentSource, fetchSubjects]);
 
-  // If exam changes while viewing a subject that isn't on this exam, go back to the subject list
+  // If exam changes while viewing a subject that was only valid for the previous exam,
+  // keep the subject open if it still exists in the official catalog.
   useEffect(() => {
     if (contentSource !== 'global' || !selectedSubject) return;
-    const allowed = new Set((examSubjects || []).map((s) => String(s).toLowerCase()));
-    if (!allowed.has(String(selectedSubject).toLowerCase())) {
-      setSelectedSubject(null);
-      setTopicsList([]);
-      setSelectedTopicId(null);
-      setActiveNotes(null);
-      if (activeView === 'topics' || activeView === 'notes') {
-        setActiveView('subjects');
-      }
+    const stillInCatalog = subjectsRaw.some(
+      (s) => String(s.name).toLowerCase() === String(selectedSubject).toLowerCase()
+    );
+    if (stillInCatalog) return;
+    setSelectedSubject(null);
+    setTopicsList([]);
+    setSelectedTopicId(null);
+    setActiveNotes(null);
+    if (activeView === 'topics' || activeView === 'notes') {
+      setActiveView('subjects');
     }
-  }, [examId, examSubjects, contentSource, selectedSubject, activeView]);
-
-  const isMineMode = contentSource === 'mine';
-  const isAdminUser = user?.role === 'admin';
-  /** Admin can manage Official Syllabus; anyone can manage My Notes */
-  const canManageContent = isMineMode || (contentSource === 'global' && isAdminUser);
+  }, [examId, contentSource, selectedSubject, activeView, subjectsRaw]);
 
   return {
     activeView,
