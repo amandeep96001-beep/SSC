@@ -343,6 +343,7 @@ export function markdownToHtml(markdown) {
   let tableRows = [];
   let asciiBuf = [];
   let treeBuf = [];  // Buffer for tree-structure lines
+  let bqBuf = [];    // Buffer for blockquotes
 
   const closeList = () => {
     if (inList) {
@@ -384,9 +385,36 @@ export function markdownToHtml(markdown) {
     parts.push(tree || `<pre class="notes-diagram notes-diagram--ascii"><code>${escapeHtml(block)}</code></pre>`);
   };
 
+  const flushBq = () => {
+    if (!bqBuf.length) return;
+    const block = bqBuf.join('\n');
+    bqBuf = [];
+    
+    const alertMatch = block.match(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i);
+    if (alertMatch) {
+      const type = alertMatch[1].charAt(0).toUpperCase() + alertMatch[1].slice(1).toLowerCase();
+      const body = block.replace(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i, '').trim();
+      const formattedBody = body.split('\n').map(line => inlineMarkdown(line)).join('<br>');
+      parts.push(`<div class="notes-callout notes-callout--${type.toLowerCase()}"><strong>${escapeHtml(type)}</strong> ${formattedBody}</div>`);
+    } else {
+      const formattedBlock = block.split('\n').map(line => inlineMarkdown(line)).join('<br>');
+      parts.push(`<blockquote>${formattedBlock}</blockquote>`);
+    }
+  };
+
   for (const rawLine of lines) {
     const line = rawLine.trimEnd();
     const trimmed = line.trim();
+
+    if (trimmed.startsWith('>')) {
+      closeList();
+      closeTable();
+      flushAscii();
+      bqBuf.push(trimmed.replace(/^>\s?/, ''));
+      continue;
+    } else if (bqBuf.length) {
+      flushBq();
+    }
 
     // --- Tree-structure detection (├──, └──, │) ---
     const isTreeLine = TREE_LINE_RE.test(line) || /^[ \t]*│/.test(line);
@@ -549,6 +577,9 @@ export function markdownToHtml(markdown) {
   if (asciiBuf.length) {
     while (asciiBuf.length && !asciiBuf[asciiBuf.length - 1].trim()) asciiBuf.pop();
     flushAscii();
+  }
+  if (bqBuf.length) {
+    flushBq();
   }
   closeList();
   closeTable();
