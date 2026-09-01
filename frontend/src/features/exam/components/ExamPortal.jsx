@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, LayoutGrid } from 'lucide-react';
@@ -28,6 +28,7 @@ export function ExamPortal({
   cancelTest
 }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const touchStartRef = useRef({ x: 0, y: 0 });
   const activeQ = testQuestions[currentQuestionIdx];
   const qCount = testQuestions?.length || 0;
 
@@ -40,6 +41,30 @@ export function ExamPortal({
   const goToQuestion = (i) => {
     jumpToQuestion(i);
     setPaletteOpen(false);
+  };
+
+  const handleTouchStart = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) {
+      return;
+    }
+
+    if (dx > 0 && currentQuestionIdx > 0) {
+      goToQuestion(currentQuestionIdx - 1);
+    } else if (dx < 0 && currentQuestionIdx < qCount - 1) {
+      goToQuestion(currentQuestionIdx + 1);
+    }
   };
 
   return (
@@ -68,7 +93,11 @@ export function ExamPortal({
             </button>
           </div>
           
-          <div className="question-area">
+          <div
+            className="question-area"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="direction" id="q-direction">
               Direction: Choose the correct option.
             </div>
@@ -109,7 +138,7 @@ export function ExamPortal({
           </div>
 
           <div className="footer-buttons">
-            <div>
+            <div className="exam-control-group">
               <button type="button" className="btn btn-review" onClick={markForReview}>
                 <Flag size={15} strokeWidth={2} /> Mark for Review & Next
               </button>
@@ -117,9 +146,14 @@ export function ExamPortal({
                 <Eraser size={15} strokeWidth={2} /> Clear Response
               </button>
             </div>
-            <button type="button" className="btn btn-save" onClick={saveAndNext}>
-              <Save size={15} strokeWidth={2} /> Save & Next
-            </button>
+            <div className="exam-control-group exam-control-group--side">
+              <button type="button" className="btn btn-save" onClick={saveAndNext}>
+                <Save size={15} strokeWidth={2} /> Save & Next
+              </button>
+              <button type="button" className="btn btn-submit-section" onClick={submitExam}>
+                <Send size={15} strokeWidth={2} /> Submit
+              </button>
+            </div>
           </div>
         </div>
 

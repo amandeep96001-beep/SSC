@@ -36,6 +36,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const [sectionTimes, setSectionTimes] = useState({});
+  const touchStartRef = useRef({ x: 0, y: 0 });
 
   const sections = useMemo(
     () => sectionsFromQuestions(mockData?.questions) || exam.sections || [],
@@ -168,9 +169,39 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
     goToNextQuestion();
   };
 
+  const goToPreviousQuestion = () => {
+    if (globalIndex > 0) {
+      jumpToQuestion(globalIndex - 1);
+    }
+  };
+
   const goToNextQuestion = () => {
     if (globalIndex < mockData.questions.length - 1) {
       jumpToQuestion(globalIndex + 1);
+    }
+  };
+
+  const handleTouchStart = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event) => {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) {
+      return;
+    }
+
+    if (dx > 0) {
+      goToPreviousQuestion();
+    } else {
+      goToNextQuestion();
     }
   };
 
@@ -253,7 +284,11 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
             </button>
           </div>
           
-          <div className="question-area">
+          <div
+            className="question-area"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             {activeQ ? (
               <>
                 <div className="q-text" id="q-display-text">
@@ -288,18 +323,26 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
           </div>
 
           <div className="footer-buttons">
-            <button type="button" className="btn btn-clear" onClick={clearResponse}>
-              <Eraser size={15} strokeWidth={2} />
-              <span>Clear</span>
-            </button>
-            <button type="button" className="btn btn-review" onClick={markForReview}>
-              <Flag size={15} strokeWidth={2} />
-              <span>Mark</span>
-            </button>
-            <button type="button" className="btn btn-save" onClick={saveAndNext}>
-              <Save size={15} strokeWidth={2} />
-              <span>Next</span>
-            </button>
+            <div className="exam-control-group">
+              <button type="button" className="btn btn-clear" onClick={clearResponse}>
+                <Eraser size={15} strokeWidth={2} />
+                <span>Clear</span>
+              </button>
+              <button type="button" className="btn btn-review" onClick={markForReview}>
+                <Flag size={15} strokeWidth={2} />
+                <span>Mark</span>
+              </button>
+            </div>
+            <div className="exam-control-group exam-control-group--side">
+              <button type="button" className="btn btn-save" onClick={saveAndNext}>
+                <Save size={15} strokeWidth={2} />
+                <span>Next</span>
+              </button>
+              <button type="button" className="btn btn-submit-section" onClick={() => onSubmit(mockData, selectedAnswers, timer, sectionTimes)}>
+                <Send size={15} strokeWidth={2} />
+                <span>Submit</span>
+              </button>
+            </div>
           </div>
         </div>
 
