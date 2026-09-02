@@ -159,6 +159,14 @@ export function createApp() {
     });
   });
 
+  app.get('/keepalive', (req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptime: process.uptime(),
+      ts: new Date().toISOString(),
+    });
+  });
+
   app.use(notFound);
   app.use(errorHandler);
 

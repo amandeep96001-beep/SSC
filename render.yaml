@@ -7,6 +7,7 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
       - key: PORT
         value: 5000
@@ -22,3 +23,19 @@ services:
       # Optional: comma-separated extra origins (preview deployments, custom domains)
       - key: FRONTEND_URLS
         sync: false
+      # Public URL used by Render cron/pinger to keep the free instance awake.
+      - key: KEEPALIVE_URL
+        value: https://ssc-backend.onrender.com
+
+  # Ping the API every 5 minutes to prevent Render free-tier sleep.
+  - type: cron
+    name: ssc-backend-keepalive
+    runtime: node
+    schedule: "*/5 * * * *"
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: >
+      node -e "const url = (process.env.KEEPALIVE_URL || 'https://ssc-backend.onrender.com') + '/health'; fetch(url).then(async (res) => { if (!res.ok) { throw new Error('health-check failed: ' + res.status); } const data = await res.text(); console.log('keepalive ok', res.status, data.slice(0, 80)); }).catch((err) => { console.error(err); process.exit(1); });"
+    envVars:
+      - key: KEEPALIVE_URL
+        value: https://ssc-backend.onrender.com
