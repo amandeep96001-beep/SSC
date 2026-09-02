@@ -5,6 +5,8 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import apiRouter from './routes/index.js';
 import { getDBStatus } from './config/db.config.js';
 import { getEnvHealth } from './config/env.config.js';
@@ -114,8 +116,8 @@ export function createApp() {
     optionsSuccessStatus: 204,
   }));
 
-  app.use(express.json({ limit: '2mb' }));
-  app.use(express.urlencoded({ extended: false, limit: '32kb' }));
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '25mb' }));
   app.use(mongoSanitize);
   app.use(hpp());
   app.use(morgan(isProduction ? 'combined' : 'dev'));
@@ -133,6 +135,9 @@ export function createApp() {
   }
 
   app.use('/api', apiRouter);
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   app.get('/', (req, res) => {
     res.json({

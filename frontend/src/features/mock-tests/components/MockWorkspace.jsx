@@ -6,6 +6,7 @@ import {
   toCompactMcqs,
   buildBulkMockExample,
 } from '@/shared/utils/parseBulkQuestions';
+
 import {
   validateMockSectionLimits,
   formatSectionLimitsLabel,
@@ -155,6 +156,8 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
     const firstActive = sections.find((s) => Number(sectionLimits[s]) > 0) || sections[0] || '';
     setDefaultSection(firstActive);
   };
+
+
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -396,6 +399,8 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                       {` "section": "${sections[0] || '…'}"`}.
                     </p>
                   </div>
+
+
 
                   <label className="mock-field mock-field--questions">
                     <span>Questions (JSON)</span>

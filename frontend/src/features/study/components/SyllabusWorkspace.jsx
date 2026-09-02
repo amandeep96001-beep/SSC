@@ -918,7 +918,7 @@ export function SyllabusWorkspace({
                       }
                     }}>
                       <ClipboardList size={16} />
-                      Take Topic Test ({testQuestionCount} Q)
+                      Take Topic Test ({testQuestionCount || 25} Q)
                     </button>
 
                     <div className="notes-actions-divider">
@@ -1199,8 +1199,18 @@ export function SyllabusWorkspace({
                           max={999}
                           value={testQuestionCount}
                           onChange={(e) => {
-                            const v = parseInt(e.target.value, 10);
-                            if (!Number.isNaN(v) && v >= 1) setTestQuestionCount(v);
+                            const input = e.target.value;
+                            if (input === '') {
+                              setTestQuestionCount('');
+                            } else {
+                              const v = parseInt(input, 10);
+                              if (!Number.isNaN(v) && v >= 1) setTestQuestionCount(v);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              setTestQuestionCount(25);
+                            }
                           }}
                           onFocus={(e) => e.target.select()}
                           aria-label="Number of test questions"

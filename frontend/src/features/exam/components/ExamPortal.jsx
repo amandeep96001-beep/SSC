@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
-import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, LayoutGrid } from 'lucide-react';
+import { RefreshCw, Activity, X, XCircle, Flag, Eraser, Save, Send, Timer } from 'lucide-react';
 import { McqText } from '@/shared/components/ui/McqText';
 import '@/features/dashboard/Dashboard.css';
-import '@/features/study/study.css';
 import '@/features/exam/exam.css';
 
 export function ExamPortal({
@@ -35,7 +34,7 @@ export function ExamPortal({
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `Time Remaining: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const goToQuestion = (i) => {
@@ -68,27 +67,31 @@ export function ExamPortal({
   };
 
   return (
-    <div id="exam-portal" className="no-select">
+    <div id="exam-portal" className="no-select exam-portal--topic">
       <Helmet><title>{pageTitle('Topic Test')}</title></Helmet>
+      
+      {/* Top Navbar */}
       <div className="navbar">
-        <div>TOPIC TEST — {selectedSubject?.toUpperCase()}</div>
-        <div id="timer-box"><Timer size={16} strokeWidth={2} /> {formatTimer(timer)}</div>
+        <div className="exam-nav-title">
+          <span className="exam-nav-title__full">Topic Test — {selectedSubject?.toUpperCase()}</span>
+          <span className="exam-nav-title__meta">{qCount} Q · Topic Wise</span>
+        </div>
+        <div id="timer-box" className={timer < 300 ? 'timer-urgent' : ''} style={{ color: timer < 300 ? '#ef4444' : 'inherit' }}>
+          <Timer size={16} strokeWidth={2} />
+          <span className="timer-label-full">Time Left </span>
+          <strong>{formatTimer(timer)}</strong>
+        </div>
       </div>
 
       <div className="main-layout">
         <div className="left-panel">
           <div className="section-bar">
-            <span>
-              Q{currentQuestionIdx + 1}/{qCount} · {selectedSubject || 'Topic'}
-              {activeNotes?.name ? ` · ${activeNotes.name}` : ''}
-            </span>
+            <span>Q{currentQuestionIdx + 1}/{qCount} · {selectedSubject || 'Topic'}</span>
             <button
               type="button"
               className="exam-palette-toggle"
               onClick={() => setPaletteOpen(true)}
-              aria-expanded={paletteOpen}
             >
-              <LayoutGrid size={15} strokeWidth={2} />
               Palette
             </button>
           </div>
@@ -98,10 +101,6 @@ export function ExamPortal({
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="direction" id="q-direction">
-              Direction: Choose the correct option.
-            </div>
-
             {activeQ ? (
               <>
                 <div className="q-text" id="q-display-text">
@@ -114,16 +113,19 @@ export function ExamPortal({
                     const isActive = selectedAnswers[currentQuestionIdx] === idx;
                     return (
                       <label 
-                        key={idx} 
+                        key={`${currentQuestionIdx}-${idx}`} 
                         className={`opt-label ${isActive ? 'active' : ''}`}
                       >
                         <input
                           type="radio"
                           name={`opt-radio-${currentQuestionIdx}`}
-                          checked={isActive}
+                          value={idx}
+                          checked={Boolean(isActive)}
+                          autoComplete="off"
                           onChange={() => selectOptionValue(idx)}
                         />
-                        <McqText text={opt} />
+                        <span className="opt-letter">{String.fromCharCode(65 + idx)}</span>
+                        <McqText text={opt} className="opt-text" />
                       </label>
                     );
                   })}
@@ -139,19 +141,23 @@ export function ExamPortal({
 
           <div className="footer-buttons">
             <div className="exam-control-group">
-              <button type="button" className="btn btn-review" onClick={markForReview}>
-                <Flag size={15} strokeWidth={2} /> Mark for Review & Next
-              </button>
               <button type="button" className="btn btn-clear" onClick={clearResponse}>
-                <Eraser size={15} strokeWidth={2} /> Clear Response
+                <Eraser size={15} strokeWidth={2} />
+                <span>Clear</span>
+              </button>
+              <button type="button" className="btn btn-review" onClick={markForReview}>
+                <Flag size={15} strokeWidth={2} />
+                <span>Mark</span>
               </button>
             </div>
             <div className="exam-control-group exam-control-group--side">
               <button type="button" className="btn btn-save" onClick={saveAndNext}>
-                <Save size={15} strokeWidth={2} /> Save & Next
+                <Save size={15} strokeWidth={2} />
+                <span>Next</span>
               </button>
               <button type="button" className="btn btn-submit-section" onClick={submitExam}>
-                <Send size={15} strokeWidth={2} /> Submit
+                <Send size={15} strokeWidth={2} />
+                <span>Submit</span>
               </button>
             </div>
           </div>
@@ -160,26 +166,23 @@ export function ExamPortal({
         <div className={`right-panel${paletteOpen ? ' is-open' : ''}`}>
           <div className="exam-palette-sheet-head">
             <strong>Question palette</strong>
-            <button
-              type="button"
-              className="exam-palette-close"
-              onClick={() => setPaletteOpen(false)}
-              aria-label="Close palette"
-            >
+            <button type="button" className="exam-palette-close" onClick={() => setPaletteOpen(false)} aria-label="Close palette">
               <X size={18} />
             </button>
           </div>
-
           <div className="exam-palette-body">
             <div className="user-profile">
-              <div className="avatar">{user?.username?.slice(0, 2).toUpperCase() || 'US'}</div>
+              <div className="avatar">{user?.username ? user.username.slice(0, 2).toUpperCase() : 'US'}</div>
               <div>
-                <div className="exam-user-name">{user?.username || 'Student'}</div>
-                <div className="exam-user-meta">{qCount} Questions · {Math.round(timer / 60)} Mins</div>
+                <div className="exam-user-name">{user?.username || 'Guest User'}</div>
+                <div className="exam-user-meta">
+                  {qCount} Q · {Math.round(timer / 60)} min · Topic Wise
+                </div>
               </div>
             </div>
+            
             <div className="palette-header">
-              Question Palette
+              Questions Palette
             </div>
             
             <div className="palette-grid" id="palette-box">
@@ -191,9 +194,8 @@ export function ExamPortal({
                     key={i}
                     type="button"
                     id={`p-btn-${i}`}
-                    className={`palette-btn ${status}${isActive ? ' active-q' : ''}`}
+                    className={`palette-btn ${status} ${isActive ? 'active-q' : ''}`}
                     onClick={() => goToQuestion(i)}
-                    aria-current={isActive ? 'true' : undefined}
                   >
                     {i + 1}
                   </button>
@@ -212,7 +214,7 @@ export function ExamPortal({
                 <span className="dot dot-green"></span> Answered
               </div>
               <div className="legend-item">
-                <span className="dot dot-yellow"></span> Marked for Review
+                <span className="dot dot-yellow"></span> Marked
               </div>
             </div>
           </div>
@@ -223,14 +225,14 @@ export function ExamPortal({
               className="btn btn-submit-section" 
               onClick={submitExam}
             >
-              <Send size={15} strokeWidth={2} /> Submit Section
+              <Send size={15} strokeWidth={2} /> Submit
             </button>
             <button 
               type="button"
               className="btn btn-cancel-test" 
               onClick={() => setCancelConfirmOpen(true)}
             >
-              <X size={15} strokeWidth={2} /> Cancel Test
+              <X size={15} strokeWidth={2} /> Cancel
             </button>
           </div>
         </div>

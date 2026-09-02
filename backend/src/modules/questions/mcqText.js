@@ -22,16 +22,113 @@ export function stripCiteJunk(text) {
   return String(text ?? '').replace(CITE_RE, '').trim();
 }
 
+function normalizeLatexFragments(text) {
+  let result = String(text ?? '');
+  const replacements = [
+    [/\\frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}/g, '($1 / $2)'],
+    [/\\sqrt\s*\{([^{}]+)\}/g, '√($1)'],
+    [/\\left\s*\[/g, '['],
+    [/\\right\s*\]/g, ']'],
+    [/\\left\s*\(/g, '('],
+    [/\\right\s*\)/g, ')'],
+    [/\\left\s*\{/g, '{'],
+    [/\\right\s*\}/g, '}'],
+    [/\\cdot/g, '·'],
+    [/\\times/g, '×'],
+    [/\\div/g, '÷'],
+    [/\\pm/g, '±'],
+    [/\\approx/g, '≈'],
+    [/\\neq/g, '≠'],
+    [/\\leq/g, '≤'],
+    [/\\geq/g, '≥'],
+    [/\\theta/g, 'θ'],
+    [/\\alpha/g, 'α'],
+    [/\\beta/g, 'β'],
+    [/\\gamma/g, 'γ'],
+    [/\\delta/g, 'δ'],
+    [/\\pi/g, 'π'],
+    [/\\sum/g, 'Σ'],
+    [/\\sin/g, 'sin'],
+    [/\\cos/g, 'cos'],
+    [/\\tan/g, 'tan'],
+    [/\\log/g, 'log'],
+    [/\\text\s*\{([^{}]+)\}/g, '$1'],
+    [/\\\^\{?([0-9A-Za-z]+)\}?/g, '^$1'],
+    [/\\_\{?([0-9A-Za-z]+)\}?/g, '_$1'],
+    [/\\\s+/g, ' '],
+    [/\\\{/g, '{'],
+    [/\\\}/g, '}'],
+    [/\\\[/g, '['],
+    [/\\\]/g, ']']
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    result = result.replace(pattern, replacement);
+  }
+
+  return result;
+}
+
 /** Convert __phrase__ → <u>phrase</u> without touching ____ blanks. */
 export function markupUnderlines(text) {
   return String(text ?? '').replace(/(?<!_)__([^_\n](?:[\s\S]*?[^_\n])?)__(?!_)/g, '<u>$1</u>');
 }
 
+function convertLatexUnderlines(text) {
+  const commands = ['underline', 'overline'];
+  let output = String(text ?? '');
+
+  for (const command of commands) {
+    const pattern = new RegExp(`\\\\${command}\\s*\\{`, 'g');
+    let lastIndex = 0;
+    let rewritten = '';
+
+    while (true) {
+      const match = pattern.exec(output);
+      if (!match) {
+        rewritten += output.slice(lastIndex);
+        break;
+      }
+
+      const startBraceIndex = match.index + match[0].length - 1;
+      let depth = 0;
+      let endBraceIndex = -1;
+
+      for (let i = startBraceIndex; i < output.length; i++) {
+        if (output[i] === '{') depth += 1;
+        else if (output[i] === '}') {
+          depth -= 1;
+          if (depth === 0) {
+            endBraceIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (endBraceIndex === -1) {
+        rewritten += output.slice(lastIndex);
+        break;
+      }
+
+      rewritten += output.slice(lastIndex, match.index);
+      const inner = output.slice(startBraceIndex + 1, endBraceIndex);
+      rewritten += `__${inner.trim()}__`;
+      lastIndex = endBraceIndex + 1;
+    }
+
+    output = rewritten;
+  }
+
+  return output;
+}
+
 export function normalizeMcqField(raw) {
   if (raw == null) return '';
   let text = stripCiteJunk(raw);
+  text = normalizeLatexFragments(text);
+  text = convertLatexUnderlines(text);
   text = markupUnderlines(text);
-  text = text.replace(/_{2,}/g, '________');
+  text = text.replace(/(?<![A-Za-z0-9])_{2,}(?![A-Za-z0-9])/g, '________');
   return text.trim();
 }
 

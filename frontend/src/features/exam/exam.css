@@ -122,9 +122,22 @@
   border-radius: 0;
 }
 
+.mcq-rich .mcq-pdf-img,
+#exam-portal .q-text .mcq-pdf-img,
+#exam-portal .opt-text .mcq-pdf-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, rgba(128, 128, 128, 0.25));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
 #exam-portal .opt-label {
   display: flex;
   align-items: center;
+  gap: 12px;
   padding: 12px 18px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -134,6 +147,11 @@
   transition: background 0.2s;
   color: var(--text-primary);
   text-align: left;
+  margin-bottom: 10px;
+}
+
+#exam-portal .opt-label:last-child {
+  margin-bottom: 0;
 }
 
 #exam-portal .opt-label:hover {
@@ -757,4 +775,58 @@
   }
 }
 
+/* =============================================
+   KaTeX Math Rendering — Global MCQ Styles
+   ============================================= */
+
+/* Inline math: shrink slightly so it doesn't break line rhythm */
+.mcq-rich .katex,
+.q-text .katex,
+.opt-text .katex,
+.opt-label .katex,
+.battle-question-text .katex,
+.wrong-q-question .katex,
+.wrong-q-hint .katex {
+  font-size: 1em;
+  line-height: inherit;
+}
+
+/* Display (block) math: center and give breathing room */
+.mcq-rich .katex-display,
+.q-text .katex-display,
+.opt-text .katex-display {
+  display: block;
+  margin: 0.75em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+}
+
+/* Fallback: styled code chip when KaTeX can't parse */
+.mcq-math-fallback {
+  display: inline-block;
+  font-family: var(--font-mono, ui-monospace, 'SF Mono', Menlo, Consolas, monospace);
+  font-size: 0.88em;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+[data-theme="dark"] .mcq-math-fallback {
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  color: color-mix(in srgb, var(--color-primary) 80%, white);
+}
+
+/* Make KaTeX colours respect dark/light mode */
+:root[data-theme="dark"] .katex {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .katex {
+  color: var(--text-primary);
+}
 

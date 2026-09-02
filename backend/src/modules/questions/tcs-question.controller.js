@@ -259,3 +259,76 @@ export const bulkUploadTcsQuestions = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * User-facing add-question handler (requireAuth, no admin needed).
+ * Accepts the same formats as bulkUploadTcsQuestions but capped at 50 per call.
+ *
+ * Body: array of question objects  OR  { questions: [...] }
+ * Single question: send as [{ question, options, correctAnswer, subject, ... }]
+ */
+export const addQuestionsFromUser = async (req, res, next) => {
+  try {
+    const payload = req.body;
+    const list = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.questions)
+        ? payload.questions
+        : null;
+
+    if (!list || list.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Send a JSON array of question objects (or { "questions": [...] }).'
+      });
+    }
+
+    if (list.length > 50) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Max 50 questions per submission. Split into smaller batches.'
+      });
+    }
+
+    // Deduplicate against existing DB questions
+    const existing = await TCSQuestion.find({}, { question: 1 }).lean();
+    const seen = new Set(existing.map((q) => normalizeQuestionText(q.question)));
+
+    const toInsert = [];
+    let invalid = 0;
+    let duplicates = 0;
+
+    for (const raw of list) {
+      const item = normalizeItem(raw);
+      if (!item) { invalid++; continue; }
+      const key = normalizeQuestionText(item.question);
+      if (seen.has(key)) { duplicates++; continue; }
+      seen.add(key);
+      toInsert.push(item);
+    }
+
+    let inserted = 0;
+    if (toInsert.length > 0) {
+      const result = await TCSQuestion.insertMany(toInsert, { ordered: false });
+      inserted = result.length;
+    }
+
+    const stats = await TCSQuestionRepository.getCountBySubject();
+
+    res.status(inserted > 0 ? 201 : 200).json({
+      status: 'success',
+      message: inserted > 0
+        ? `Added ${inserted} question(s) to the drill bank. ${duplicates} duplicate(s), ${invalid} invalid skipped.`
+        : `Nothing new added. ${duplicates} duplicate(s), ${invalid} invalid skipped.`,
+      data: { inserted, duplicates, invalid, received: list.length, stats }
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(207).json({
+        status: 'partial_success',
+        message: 'Insert finished with some duplicates skipped.'
+      });
+    }
+    next(error);
+  }
+};

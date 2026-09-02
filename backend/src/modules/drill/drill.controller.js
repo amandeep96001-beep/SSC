@@ -1,12 +1,38 @@
+import mongoose from 'mongoose';
 import vocabRepository from '../study/vocab.repository.js';
 import TCSQuestionRepository from '../questions/tcs-question.repository.js';
+import DrillPerformance from './drill-performance.model.js';
 import { Vocab } from '../study/vocab.model.js';
 import { shuffle as shuffleArray } from '../../shared/utils/shuffle.js';
-import mongoose from 'mongoose';
+
+// Subject map for MCQ drill types
+const SUBJECT_MAP = {
+  'gk':            'GK',
+  'english-mcq':   'English',
+  'maths-mcq':     'Maths',
+  'reasoning-mcq': 'Reasoning',
+};
+
+/** Fire-and-forget: save a DrillPerformance record, never throws. */
+async function recordPerformance(userId, questionId, subject, correct) {
+  if (!userId || !questionId) return;
+  try {
+    await DrillPerformance.create({
+      userId:     new mongoose.Types.ObjectId(String(userId)),
+      questionId: new mongoose.Types.ObjectId(String(questionId)),
+      subject,
+      correct,
+      seenAt: new Date(),
+    });
+  } catch {
+    // Non-critical — silently ignore write errors
+  }
+}
 
 export const getNextDrill = async (req, res, next) => {
   try {
-    const type = req.query.type || 'table';
+    const type    = req.query.type || 'table';
+    const userId  = req.user?._id ?? null;
 
     let drillData = {};
 
@@ -92,13 +118,13 @@ export const getNextDrill = async (req, res, next) => {
         } else {
           const hasSynonyms = wordData.synonyms && wordData.synonyms.length > 0;
           const hasAntonyms = wordData.antonyms && wordData.antonyms.length > 0;
-          
+
           const types = ['meaning'];
           if (hasSynonyms) types.push('synonym');
           if (hasAntonyms) types.push('antonym');
-          
+
           const qType = types[Math.floor(Math.random() * types.length)];
-          
+
           if (qType === 'synonym') {
             question = `What is the SYNONYM of "${wordData.word}"?`;
             correctAnswer = wordData.synonyms[Math.floor(Math.random() * wordData.synonyms.length)];
@@ -126,14 +152,13 @@ export const getNextDrill = async (req, res, next) => {
           }
         }
 
-        // Filter out correct answer from wrongPool just in case
         wrongPool = wrongPool.filter(w => w !== correctAnswer && w != null);
         const shuffledWrong = shuffleArray(wrongPool).slice(0, 3);
-        
+
         while (shuffledWrong.length < 3) {
           shuffledWrong.push(`None of these ${shuffledWrong.length + 1}`);
         }
-        
+
         const optionsList = shuffleArray([correctAnswer, ...shuffledWrong]);
 
         drillData = {
@@ -152,27 +177,31 @@ export const getNextDrill = async (req, res, next) => {
         break;
       }
 
-
       case 'gk':
       case 'english-mcq':
       case 'maths-mcq':
       case 'reasoning-mcq': {
-        let subject = 'GK';
-        if (type === 'english-mcq') subject = 'English';
-        else if (type === 'maths-mcq') subject = 'Maths';
-        else if (type === 'reasoning-mcq') subject = 'Reasoning';
+        const subject = SUBJECT_MAP[type];
 
-        const tcsQ = await TCSQuestionRepository.getRandomBySubject(subject);
+        // ── WEIGHTED SELECTION ──────────────────────────────────────────────
+        const tcsQ = await TCSQuestionRepository.getWeightedQuestion(subject, userId);
+
         if (!tcsQ) {
-          return res.status(404).json({ status: 'error', message: `No ${subject} questions found in database.` });
+          return res.status(404).json({
+            status: 'error',
+            message: `No ${subject} questions found in database.`
+          });
         }
+
         drillData = {
           type,
+          _id: tcsQ._id?.toString() || null,  // expose for perf recording on verify
           question: tcsQ.question,
           options: tcsQ.options,
           correctAnswer: tcsQ.options[tcsQ.correctAnswer],
           explanation: tcsQ.explanation,
           category: tcsQ.category,
+          subject,
           year: tcsQ.year,
           isImportant: tcsQ.isImportant || false
         };
@@ -194,7 +223,8 @@ export const getNextDrill = async (req, res, next) => {
 
 export const verifyDrill = async (req, res, next) => {
   try {
-    const { type, question, userAnswer, correctAnswer } = req.body;
+    const { type, question, userAnswer, correctAnswer, questionId } = req.body;
+    const userId = req.user?._id ?? null;
 
     if (userAnswer === undefined || correctAnswer === undefined) {
       return res.status(400).json({
@@ -203,10 +233,17 @@ export const verifyDrill = async (req, res, next) => {
       });
     }
 
-    const cleanUser = userAnswer.toString().trim().toLowerCase().replace('%', '');
+    const cleanUser    = userAnswer.toString().trim().toLowerCase().replace('%', '');
     const cleanCorrect = correctAnswer.toString().trim().toLowerCase().replace('%', '');
 
     const isCorrect = cleanUser === cleanCorrect;
+
+    // ── RECORD PERFORMANCE (for MCQ types only) ────────────────────────────
+    const subject = SUBJECT_MAP[type];
+    if (subject && questionId && userId) {
+      // Non-blocking fire-and-forget
+      recordPerformance(userId, questionId, subject, isCorrect);
+    }
 
     res.json({
       status: 'success',
@@ -259,10 +296,10 @@ export const getRelatedQuestions = async (req, res, next) => {
 
       const formatted = words.map(w => {
         const isIdiom = w.category === 'Idioms & Phrases';
-        const questionText = isIdiom 
+        const questionText = isIdiom
           ? `What is the meaning of the idiom: "${w.word}"?`
           : `What is the meaning of "${w.word}"?`;
-        
+
         return {
           _id: w._id ? w._id.toString() : '',
           question: questionText,
@@ -275,11 +312,10 @@ export const getRelatedQuestions = async (req, res, next) => {
       return res.json({ status: 'success', data: formatted });
     }
 
-    // Map drill type to TCS subject
     const subjectMap = {
-      'gk': 'GK',
-      'english-mcq': 'English',
-      'maths-mcq': 'Maths',
+      'gk':            'GK',
+      'english-mcq':   'English',
+      'maths-mcq':     'Maths',
       'reasoning-mcq': 'Reasoning'
     };
     const subject = subjectMap[type] || 'GK';
@@ -292,7 +328,6 @@ export const getRelatedQuestions = async (req, res, next) => {
       limit: 10
     });
 
-    // Format: resolve correctAnswer index to actual text
     const formatted = questions.map(q => ({
       _id: q._id ? q._id.toString() : '',
       question: q.question,

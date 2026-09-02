@@ -76,8 +76,10 @@ export function useDrills(isAuthenticated = false) {
       type: currentDrill.type,
       question: currentDrill.question,
       userAnswer: finalAnswer,
-      correctAnswer: currentDrill.correctAnswer
+      correctAnswer: currentDrill.correctAnswer,
+      questionId: currentDrill._id || null,   // needed for smart drill algorithm
     };
+
 
     const result = await verifyDrill(payload);
     if (result.success && result.data.data) {

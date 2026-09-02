@@ -5,12 +5,14 @@ import {
   CheckCircle, XCircle, RefreshCw, Brain, FileText,
   Calculator, Cpu, AlertTriangle, Trash2, Sparkles,
   ChevronDown, ChevronUp, Loader2, RotateCcw, Send, ListChecks, ArrowRight,
-  SkipForward, Target
+  SkipForward, Target, PlusCircle
 } from 'lucide-react';
 import { StatCard } from '@/shared/components/ui/StatCard';
 import { McqText } from '@/shared/components/ui/McqText';
+import { AddQuestionsPanel } from './AddQuestionsPanel';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
+import '@/features/drills/drills.css';
 
 function vocabWordFromWrong(wq) {
   if (wq?.word) return wq.word;
@@ -547,6 +549,24 @@ export function DrillWorkspace({
                 <span className="wrong-tab-pill">{wrongQuestions.length}</span>
               )}
             </button>
+
+            {/* Add Questions tab */}
+            <button
+              type="button"
+              className={`drill-tab drill-tab--addq ${activeTab === 'addq' ? 'active' : ''}`}
+              onClick={(e) => {
+                setActiveTab('addq');
+                const scroller = e.currentTarget.closest('.drill-tabs');
+                if (scroller) {
+                  const tab = e.currentTarget;
+                  const left = tab.offsetLeft - (scroller.clientWidth - tab.offsetWidth) / 2;
+                  scroller.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+                }
+              }}
+            >
+              <PlusCircle size={14} />
+              <span>Add Questions</span>
+            </button>
           </div>
         </div>
       </div>
@@ -790,7 +810,15 @@ export function DrillWorkspace({
             )}
           </div>
         )}
+
+        {/* ═══ TAB: ADD QUESTIONS ══════════════════════════════════════════ */}
+        {activeTab === 'addq' && (
+          <div className="wrong-log-section">
+            <AddQuestionsPanel />
+          </div>
+        )}
       </div>
+
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useExam } from '@/shared/context/useExam';
 import { EXAM_LIST, getExamProfile } from '@/shared/examProfiles';
 import { apiService } from '@/shared/services/apiService';
 import { parseBulkQuestions, BULK_SAMPLE } from '@/shared/utils/parseBulkQuestions';
+
 import {
   getEffectiveLimits,
   saveStoredLimitsForExam,
@@ -53,7 +54,7 @@ export function AdminWorkspace() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
 
-  const [uploadMode, setUploadMode] = useState('one'); // one | bulk
+  const [uploadMode, setUploadMode] = useState('one'); // one | bulk | pdf
   const [tcsSubject, setTcsSubject] = useState('GK');
   const [customBankSubject, setCustomBankSubject] = useState('');
   const [extraBankSubjects, setExtraBankSubjects] = useState([]);
@@ -383,6 +384,19 @@ export function AdminWorkspace() {
     setTcsMsg('Sample loaded. Review, then add to the queue.');
   };
 
+  const handlePdfImport = (items, { errors = [], fileName = '' } = {}) => {
+    setTcsErr('');
+    if (!items?.length) {
+      setTcsErr('No valid questions extracted from PDF.');
+      return;
+    }
+    setQueue((prev) => [...prev, ...items]);
+    const skipNote = errors.length ? ` (${errors.length} skipped — often image-based options)` : '';
+    setTcsMsg(
+      `${items.length} question${items.length === 1 ? '' : 's'} from ${fileName || 'PDF'} added to queue${skipNote}. Review & upload when ready.`
+    );
+  };
+
   const uploadQueue = async () => {
     setTcsMsg('');
     setTcsErr('');
@@ -510,6 +524,7 @@ export function AdminWorkspace() {
           >
             Bulk import
           </button>
+
         </div>
 
         <div className="admin-q-meta">

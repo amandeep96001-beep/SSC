@@ -9,6 +9,7 @@ import competitionRoutes from '../modules/competition/competition.routes.js';
 import examConfigRoutes from '../modules/exam-config/exam-config.routes.js';
 import tcsQuestionRoutes from '../modules/questions/tcs-question.routes.js';
 import reminderRoutes from '../modules/reminders/reminder.routes.js';
+
 import { requireAuth } from '../shared/middleware/auth.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
 import { getEnvHealth } from '../config/env.config.js';
@@ -39,5 +40,6 @@ router.use('/competition', competitionRoutes);
 router.use('/exam-config', examConfigRoutes);
 router.use('/questions', tcsQuestionRoutes);
 router.use('/reminders', reminderRoutes);
+
 
 export default router;

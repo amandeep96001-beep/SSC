@@ -26,6 +26,7 @@ import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
 import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT } from '@/shared/utils/parseBulkQuestions';
+
 import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
 import { fetchNotifications, markNotificationsReadApi } from '@/features/reminders/remindersStorage';
 import '@/features/home/home.css';
@@ -715,6 +716,28 @@ export function Dashboard() {
     return compact;
   };
 
+  const mergePdfMcqsIntoJson = (items, currentJson, setJson, setSuccess, setError) => {
+    setError('');
+    const { items: compact, errors: compactErrors } = toCompactMcqs(items);
+    if (compact.length === 0) {
+      setError(compactErrors[0] || 'No valid MCQs extracted from PDF.');
+      return;
+    }
+    let existing = [];
+    if (currentJson.trim()) {
+      try {
+        const parsed = JSON.parse(currentJson.trim());
+        existing = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        const { items: fromText } = parseBulkQuestions(currentJson);
+        const { items: c } = toCompactMcqs(fromText);
+        existing = c;
+      }
+    }
+    setJson(JSON.stringify([...existing, ...compact], null, 2));
+    setSuccess(`${compact.length} MCQ${compact.length === 1 ? '' : 's'} added from PDF. Save when ready.`);
+  };
+
   const handleCreateSubjectSubmit = async (e) => {
     e.preventDefault();
     setSubjectFormError('');
@@ -1134,6 +1157,7 @@ Tip: 12.5% = 1/8
                   <code>a</code> (0–3 or &quot;A&quot;–&quot;D&quot;), optional <code>e</code>.
                 </p>
                 <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE_SHORT}</pre>
+
                 <textarea
                   className="mcq-bulk-textarea"
                   rows="8"
@@ -1226,6 +1250,7 @@ Tip: 12.5% = 1/8
                   New questions are appended to this topic. Paste a JSON array:
                 </p>
                 <pre className="mcq-bulk-example">{BULK_MCQ_EXAMPLE_SHORT}</pre>
+
                 <textarea 
                   className="mcq-bulk-textarea"
                   rows="8" 

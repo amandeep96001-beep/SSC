@@ -7,6 +7,7 @@ import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
 import { apiService } from '@/shared/services/apiService';
 import { useExam } from '@/shared/context/useExam';
+import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 
 function sectionsFromQuestions(questions) {
   const order = [];
@@ -71,17 +72,22 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
         if (cancelled) return;
 
         if (testData?.questions) {
-          setMockData(testData);
+          // Normalize answers (convert letter-based answers to numeric indices)
+          const normalizedData = {
+            ...testData,
+            questions: normalizeQuestions(testData.questions)
+          };
+          setMockData(normalizedData);
           setTimer((exam.mockMinutes || 60) * 60);
 
-          const secs = sectionsFromQuestions(testData.questions);
+          const secs = sectionsFromQuestions(normalizedData.questions);
           const times = Object.fromEntries(secs.map((s) => [s, 0]));
           setSectionTimes(times);
 
-          if (testData.questions.length > 0) {
+          if (normalizedData.questions.length > 0) {
             setQuestionStatuses({ 0: 'not-answered' });
-            if (testData.questions[0].section) {
-              setCurrentSection(testData.questions[0].section);
+            if (normalizedData.questions[0].section) {
+              setCurrentSection(normalizedData.questions[0].section);
             } else if (secs[0]) {
               setCurrentSection(secs[0]);
             }
@@ -301,13 +307,15 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }) {
                     const isActive = selectedAnswers[globalIndex] === idx;
                     return (
                       <label 
-                        key={idx} 
+                        key={`${globalIndex}-${idx}`} 
                         className={`opt-label ${isActive ? 'active' : ''}`}
                       >
                         <input
                           type="radio"
                           name={`opt-radio-${globalIndex}`}
-                          checked={isActive}
+                          value={idx}
+                          checked={Boolean(isActive)}
+                          autoComplete="off"
                           onChange={() => selectOptionValue(idx)}
                         />
                         <span className="opt-letter">{String.fromCharCode(65 + idx)}</span>

@@ -5,6 +5,7 @@ import { getListFromResponse } from '@/shared/utils/apiResponse';
 import { useExam } from '@/shared/context/useExam';
 import { showAppToast } from '@/shared/utils/appToast';
 import { disableGsiAutoSelect } from '@/shared/utils/gsi';
+import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
 
@@ -508,7 +509,9 @@ export function useStudy() {
 
   const startTest = useCallback(async (count) => {
     if (!selectedTopicId) return { success: false };
-    const result = await getTestApi.execute(selectedTopicId, count);
+    // Default to 25 if count is empty or invalid
+    const validCount = count && Number(count) > 0 ? count : 25;
+    const result = await getTestApi.execute(selectedTopicId, validCount);
     if (result.success && result.data.data) {
       const questions = result.data.data;
       // Filter out the auto-seeded placeholder question
@@ -518,8 +521,10 @@ export function useStudy() {
       if (realQuestions.length === 0) {
         return { success: false, noQuestions: true };
       }
-      const qLen = realQuestions.length;
-      setTestQuestions(realQuestions);
+      // Normalize answers (convert letter-based answers to numeric indices)
+      const normalizedQuestions = normalizeQuestions(realQuestions);
+      const qLen = normalizedQuestions.length;
+      setTestQuestions(normalizedQuestions);
       setCurrentQuestionIdx(0);
       setSelectedAnswers(Array(qLen).fill(null));
 

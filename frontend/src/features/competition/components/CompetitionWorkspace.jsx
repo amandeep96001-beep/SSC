@@ -6,6 +6,7 @@ import {
 import { apiService } from '@/shared/services/apiService';
 import { McqText } from '@/shared/components/ui/McqText';
 import { showAppToast } from '@/shared/utils/appToast';
+import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 import '@/features/exam/exam.css';
 
 const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'];
@@ -154,8 +155,10 @@ export function CompetitionWorkspace({ user, setActiveView }) {
     try {
       const res = await apiService.get(`/competition/questions?subject=${selectedSubject}&limit=${QUESTION_LIMIT}`);
       if (res.status === 'success' && res.data.length > 0) {
-        const initialAnswers = new Array(res.data.length).fill(undefined);
-        setQuestions(res.data);
+        // Normalize answers (convert letter-based answers to numeric indices)
+        const normalizedQs = normalizeQuestions(res.data);
+        const initialAnswers = new Array(normalizedQs.length).fill(undefined);
+        setQuestions(normalizedQs);
         setUserAnswers(initialAnswers);
         userAnswersRef.current = initialAnswers;
         setCurrentIdx(0);
