@@ -1,4 +1,4 @@
-/** Default exam → subjects (admin can override in DB). Existing syllabus is SSC-only; other exams start empty. */
+/** Default exam → subjects (admin can override in DB). These are safe fallbacks for SSC while admin-managed data is still allowed to take precedence. */
 export const EXAM_DEFAULTS = {
   ssc: {
     name: 'SSC',
@@ -8,6 +8,8 @@ export const EXAM_DEFAULTS = {
       'English Comprehension',
       'General Awareness',
       'Reasoning',
+      'GK- Economics',
+      'Indian Economy',
       'GK - Biology',
       'GK - Physics',
       'GK - Chemistry',

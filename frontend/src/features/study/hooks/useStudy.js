@@ -9,6 +9,15 @@ import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
 
+function normalizeSubjectKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function normalizeSubjects(list) {
   return (list || []).map((item) => {
     if (typeof item === 'string') return { name: item, isOwned: false };
@@ -24,15 +33,15 @@ function filterByExamSubjects(list, examSubjects, { isMine = false, showAll = fa
   // exam-mapped ones stay first (in exam order), extras append after.
   if (isMine || showAll || !(examSubjects || []).length) {
     if (!(examSubjects || []).length) return list;
-    const allowed = (examSubjects || []).map((s) => String(s).toLowerCase());
-    const byName = new Map(list.map((s) => [s.name.toLowerCase(), s]));
+    const allowed = (examSubjects || []).map((s) => normalizeSubjectKey(s));
+    const byName = new Map(list.map((s) => [normalizeSubjectKey(s.name), s]));
     const ordered = allowed.map((key) => byName.get(key)).filter(Boolean);
-    const rest = list.filter((s) => !allowed.includes(s.name.toLowerCase()));
+    const rest = list.filter((s) => !allowed.includes(normalizeSubjectKey(s.name)));
     return [...ordered, ...rest];
   }
 
-  const allowed = (examSubjects || []).map((s) => String(s).toLowerCase());
-  const byName = new Map(list.map((s) => [s.name.toLowerCase(), s]));
+  const allowed = (examSubjects || []).map((s) => normalizeSubjectKey(s));
+  const byName = new Map(list.map((s) => [normalizeSubjectKey(s.name), s]));
   return allowed.map((key) => byName.get(key)).filter(Boolean);
 }
 

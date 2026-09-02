@@ -24,6 +24,8 @@ export const EXAM_PROFILES = {
       'English Comprehension',
       'General Awareness',
       'Reasoning',
+      'GK- Economics',
+      'Indian Economy',
       'GK - Biology',
       'GK - Physics',
       'GK - Chemistry',

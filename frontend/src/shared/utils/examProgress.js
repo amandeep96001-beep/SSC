@@ -6,7 +6,12 @@
 const DEFAULT_LEGACY_EXAM = 'ssc';
 
 function norm(s) {
-  return String(s || '').trim().toLowerCase();
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -31,7 +36,7 @@ export function subjectOnExam(subjectName, examSubjects) {
   if (!list.length) return false;
   if (!subjectName) return true; // unknown subject — keep if examId matched
   const key = norm(subjectName);
-  return list.some((s) => norm(s) === key);
+  return list.some((s) => norm(s) === key || norm(s).includes(key) || key.includes(norm(s)));
 }
 
 /**
