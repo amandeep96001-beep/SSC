@@ -3,16 +3,9 @@
  * Progress / mock history must only show for the active exam.
  */
 
-const DEFAULT_LEGACY_EXAM = 'ssc';
+import { normalizeSubjectKey } from '@/shared/utils/subjectNames';
 
-function norm(s) {
-  return String(s || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+const DEFAULT_LEGACY_EXAM = 'ssc';
 
 /**
  * Does a progress/mock row belong to this exam?
@@ -27,16 +20,15 @@ export function belongsToExam(row, examId) {
 }
 
 /**
- * Subject must be on this exam's official list when subjectName is known.
- * If exam has no subjects mapped, nothing matches (avoids leaking SSC data
- * into empty exams like Banking/UPSC before admin configures them).
+ * Subject must be on this exam's list when configured.
+ * Empty list = show all progress for this exam (dynamic / not yet configured).
  */
 export function subjectOnExam(subjectName, examSubjects) {
   const list = examSubjects || [];
-  if (!list.length) return false;
-  if (!subjectName) return true; // unknown subject — keep if examId matched
-  const key = norm(subjectName);
-  return list.some((s) => norm(s) === key || norm(s).includes(key) || key.includes(norm(s)));
+  if (!list.length) return true;
+  if (!subjectName) return true;
+  const key = normalizeSubjectKey(subjectName);
+  return list.some((s) => normalizeSubjectKey(s) === key);
 }
 
 /**
@@ -47,9 +39,6 @@ export function filterProgressForExam(progress, { examId, examSubjects } = {}) {
   return list.filter((p) => {
     if (!belongsToExam(p, examId)) return false;
     if (p.subjectName && !subjectOnExam(p.subjectName, examSubjects)) return false;
-    // Legacy without subjectName: only show when this exam has subjects
-    // (still SSC-only via belongsToExam). If subjects empty → hide.
-    if (!p.subjectName && !(examSubjects || []).length) return false;
     return true;
   });
 }

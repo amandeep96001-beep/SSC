@@ -7,6 +7,7 @@ import TopicDto from './topic.dto.js';
 import VocabDto from './vocab.dto.js';
 import { shuffle } from '../../shared/utils/shuffle.js';
 import { filterNewTopicQuestions } from './questionDedupe.js';
+import { appendSubjectToExamConfigs } from '../exam-config/exam-config.sync.js';
 
 function parseSource(req) {
   const source = String(req.query.source || 'global').toLowerCase();
@@ -83,6 +84,7 @@ export const addSubject = async (req, res, next) => {
       }
 
       const created = await subjectRepository.create({ name, ownerId: null });
+      await appendSubjectToExamConfigs(created.name);
       return res.status(201).json({
         status: 'success',
         data: { name: created.name, isOwned: false, ownerId: null }
@@ -156,12 +158,12 @@ export const getTopics = async (req, res, next) => {
   try {
     const { subjectName } = req.params;
     const ownerId = ownerScope(req);
-    const subject = await subjectRepository.findByName(subjectName, true, ownerId);
+    const subject = await subjectRepository.resolveByName(subjectName, ownerId);
     if (!subject) {
       return res.json({ status: 'success', data: [], meta: { source: parseSource(req) } });
     }
 
-    const topics = await topicRepository.findBySubjectName(subjectName, ownerId);
+    const topics = await topicRepository.findBySubjectName(subject.name, ownerId);
 
     const mappedTopics = topics.map(t => ({
       id: t.id,
@@ -280,7 +282,7 @@ export const addTopic = async (req, res, next) => {
         });
       }
 
-      const subject = await subjectRepository.findByName(subjectName, true, null);
+      const subject = await subjectRepository.resolveByName(subjectName, null);
       if (!subject) {
         return res.status(404).json({
           status: 'error',
@@ -288,15 +290,16 @@ export const addTopic = async (req, res, next) => {
         });
       }
 
-      const existingTopics = await topicRepository.findBySubjectName(subjectName, null);
-      const rawId = slugifyId(`${subjectName}-${dto.name}`);
+      const resolvedName = subject.name;
+      const existingTopics = await topicRepository.findBySubjectName(resolvedName, null);
+      const rawId = slugifyId(`${resolvedName}-${dto.name}`);
       const finalId = existingTopics.some((t) => t.id === rawId)
         ? `${rawId}-${Date.now()}`
         : rawId;
 
       const newTopic = {
         id: finalId,
-        subjectName,
+        subjectName: resolvedName,
         name: dto.name,
         syllabus: dto.syllabus || 'Official syllabus topic.',
         notes: dto.notes,
@@ -341,7 +344,7 @@ export const addTopic = async (req, res, next) => {
     }
 
     // Personal topics only under the user's own subjects
-    const subject = await subjectRepository.findByName(subjectName, true, userId);
+    const subject = await subjectRepository.resolveByName(subjectName, userId);
     if (!subject) {
       return res.status(404).json({
         status: 'error',
@@ -349,15 +352,16 @@ export const addTopic = async (req, res, next) => {
       });
     }
 
-    const existingTopics = await topicRepository.findBySubjectName(subjectName, userId);
-    const rawId = `u-${userId.slice(-6)}-${subjectName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const resolvedName = subject.name;
+    const existingTopics = await topicRepository.findBySubjectName(resolvedName, userId);
+    const rawId = `u-${userId.slice(-6)}-${resolvedName}-${dto.name}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const finalId = existingTopics.some((t) => t.id === rawId)
       ? `${rawId}-${Date.now()}`
       : rawId;
 
     const newTopic = {
       id: finalId,
-      subjectName,
+      subjectName: resolvedName,
       name: dto.name,
       syllabus: dto.syllabus || 'Custom added user revision topic.',
       notes: dto.notes,

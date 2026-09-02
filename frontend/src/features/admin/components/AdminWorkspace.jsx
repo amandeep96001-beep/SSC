@@ -13,7 +13,7 @@ import {
   formatSectionLimitsLabel,
   mergeLimitsWithSections,
 } from '@/shared/utils/mockSectionLimits';
-import { showAppToast } from '@/shared/utils/appToast';
+import { namesMatch } from '@/shared/utils/subjectNames';
 
 const DEFAULT_BANK_SUBJECTS = ['GK', 'English', 'Maths', 'Reasoning'];
 const OPTION_LABELS = ['A', 'B', 'C', 'D'];
@@ -728,8 +728,8 @@ export function AdminWorkspace() {
       <section className="admin-panel">
         <h2>{selected?.fullName || examId}</h2>
         <p className="admin-panel__hint">
-          Students who pick <strong>{selected?.name || examId}</strong> see only these subjects on
-          What to study and Official Syllabus.
+          Order &amp; highlight subjects for <strong>{selected?.name || examId}</strong>. All official
+          subjects from the database still appear in Syllabus — new subjects show automatically.
         </p>
 
         <div className="admin-subject-chips">
@@ -770,7 +770,7 @@ export function AdminWorkspace() {
             <p>Quick add from official syllabus (shared notes &amp; topics):</p>
             <div className="admin-suggest__list">
               {allSubjects.map((name) => {
-                const on = subjects.some((s) => s.toLowerCase() === name.toLowerCase());
+                const on = subjects.some((s) => namesMatch(s, name));
                 return (
                   <button
                     key={name}

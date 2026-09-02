@@ -18,6 +18,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://ssc-3-3rlh.onrender.com/api/:path*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

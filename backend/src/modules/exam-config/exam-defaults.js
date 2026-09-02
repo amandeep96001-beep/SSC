@@ -3,20 +3,7 @@ export const EXAM_DEFAULTS = {
   ssc: {
     name: 'SSC',
     fullName: 'SSC CGL / CHSL / MTS',
-    subjects: [
-      'Quantitative Aptitude',
-      'English Comprehension',
-      'General Awareness',
-      'Reasoning',
-      'GK- Economics',
-      'Indian Economy',
-      'GK - Biology',
-      'GK - Physics',
-      'GK - Chemistry',
-      'GK - Polity',
-      'GK - History',
-      'GK - Geography',
-    ],
+    subjects: [],
   },
   banking: {
     name: 'Banking',

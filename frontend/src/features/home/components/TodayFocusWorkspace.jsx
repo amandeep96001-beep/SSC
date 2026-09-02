@@ -28,6 +28,7 @@ export function TodayFocusWorkspace({
   setActiveView,
   skipToSubjects,
   selectSubject,
+  catalogSubjectNames = [],
   wrongQuestions = [],
   onReviewWrongVocab,
   onRemoveWrongVocab,
@@ -47,6 +48,8 @@ export function TodayFocusWorkspace({
   } = useExam();
 
   const [draft, setDraft] = useState('');
+
+  const displaySubjects = examSubjects.length > 0 ? examSubjects : catalogSubjectNames;
 
   const examProgress = useMemo(
     () => filterProgressForExam(user?.progress || [], { examId, examSubjects }),
@@ -219,7 +222,7 @@ export function TodayFocusWorkspace({
           </div>
           {strong.length === 0 ? (
             <p className="study-empty">
-              {examSubjects.length === 0
+              {displaySubjects.length === 0
                 ? `No subjects mapped for ${exam.name} yet — ask admin to add them.`
                 : `Complete ${exam.name} topic tests to build your strong list.`}
             </p>
@@ -243,7 +246,7 @@ export function TodayFocusWorkspace({
           </div>
           {remaining.length === 0 ? (
             <p className="study-empty">
-              {examSubjects.length === 0
+              {displaySubjects.length === 0
                 ? `Map subjects for ${exam.name} to track weak topics.`
                 : `No weak ${exam.name} topics from topic tests yet.`}
             </p>
@@ -270,10 +273,10 @@ export function TodayFocusWorkspace({
           <p>Configured for your target exam. Open a subject to view syllabus and topics.</p>
         </div>
         <div className="study-subjects">
-          {examSubjects.length === 0 && (
-            <p className="study-empty">No subjects configured yet. Ask your admin to map subjects for this exam.</p>
+          {displaySubjects.length === 0 && (
+            <p className="study-empty">No subjects yet. Add subjects in Syllabus (admin) or map them in Exam subjects.</p>
           )}
-          {examSubjects.map((name) => (
+          {displaySubjects.map((name) => (
             <button
               key={name}
               type="button"

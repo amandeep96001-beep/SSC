@@ -6,17 +6,11 @@ import { useExam } from '@/shared/context/useExam';
 import { showAppToast } from '@/shared/utils/appToast';
 import { disableGsiAutoSelect } from '@/shared/utils/gsi';
 import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
+import { namesMatch, sortSubjectsForExam } from '@/shared/utils/subjectNames';
+import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
+import { parseAppPath } from '@/app/paths';
 
 const CONTENT_SOURCE_KEY = 'ssc_content_source';
-
-function normalizeSubjectKey(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function normalizeSubjects(list) {
   return (list || []).map((item) => {
@@ -28,26 +22,8 @@ function normalizeSubjects(list) {
   });
 }
 
-function filterByExamSubjects(list, examSubjects, { isMine = false, showAll = false } = {}) {
-  // My Notes: always full list. Official: show every catalog subject;
-  // exam-mapped ones stay first (in exam order), extras append after.
-  if (isMine || showAll || !(examSubjects || []).length) {
-    if (!(examSubjects || []).length) return list;
-    const allowed = (examSubjects || []).map((s) => normalizeSubjectKey(s));
-    const byName = new Map(list.map((s) => [normalizeSubjectKey(s.name), s]));
-    const ordered = allowed.map((key) => byName.get(key)).filter(Boolean);
-    const rest = list.filter((s) => !allowed.includes(normalizeSubjectKey(s.name)));
-    return [...ordered, ...rest];
-  }
-
-  const allowed = (examSubjects || []).map((s) => normalizeSubjectKey(s));
-  const byName = new Map(list.map((s) => [normalizeSubjectKey(s.name), s]));
-  return allowed.map((key) => byName.get(key)).filter(Boolean);
-}
-
 export function useStudy() {
-  const { exam, examId, examSubjects } = useExam();
-  const [activeView, setActiveView] = useState('home'); // home, drill, subjects, topics, notes, test, results, revision
+  const { exam, examId, examSubjects, refreshExamConfigs } = useExam();
   const [contentSource, setContentSourceState] = useState(() => {
     try {
       const stored = localStorage.getItem(CONTENT_SOURCE_KEY);
@@ -59,7 +35,24 @@ export function useStudy() {
   const [subjectsRaw, setSubjectsRaw] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
-  // User Authentication state
+  const [topicsList, setTopicsList] = useState([]);
+  const [selectedTopicId, setSelectedTopicId] = useState(null);
+  const [activeNotes, setActiveNotes] = useState(null);
+
+  const {
+    activeView,
+    goToView,
+    parsed,
+    contentSourceFromUrl,
+    location,
+  } = useAppNavigation({
+    source: contentSource,
+    subject: selectedSubject,
+    topicId: selectedTopicId,
+  });
+
+  /** Backward-compatible alias used across workspaces */
+  const setActiveView = goToView;
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('ssc_user');
@@ -96,11 +89,6 @@ export function useStudy() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Topic Notes view details
-  const [topicsList, setTopicsList] = useState([]);
-  const [selectedTopicId, setSelectedTopicId] = useState(null);
-  const [activeNotes, setActiveNotes] = useState(null);
-
   // TCS iON Mock Exam states
   const [testQuestions, setTestQuestions] = useState([]);
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
@@ -127,6 +115,8 @@ export function useStudy() {
   );
   const getTopicsApi = useApi(useCallback((subName, source) =>
     apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics?source=${encodeURIComponent(source || 'global')}`), []));
+  const fetchTopicsRef = useRef(getTopicsApi.execute);
+  fetchTopicsRef.current = getTopicsApi.execute;
   const getNotesApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/notes`), []));
   const getTestApi = useApi(useCallback((id, count) => {
     const url = count && count > 0
@@ -157,7 +147,8 @@ export function useStudy() {
   const fetchSubjects = useCallback(async (sourceOverride) => {
     const source = sourceOverride || contentSourceRef.current;
     const result = await fetchSubjectsApi(source);
-    setSubjectsRaw(normalizeSubjects(getListFromResponse(result)));
+    const list = getListFromResponse(result);
+    setSubjectsRaw(normalizeSubjects(list));
   }, [fetchSubjectsApi]);
 
   const isMineMode = contentSource === 'mine';
@@ -165,15 +156,10 @@ export function useStudy() {
   /** Admin can manage Official Syllabus; anyone can manage My Notes */
   const canManageContent = isMineMode || (contentSource === 'global' && isAdminUser);
 
-  const subjects = useMemo(
-    () =>
-      filterByExamSubjects(subjectsRaw, examSubjects, {
-        isMine: contentSource === 'mine',
-        // Official syllabus: show full catalog (exam subjects first, then the rest)
-        showAll: contentSource === 'global'
-      }),
-    [subjectsRaw, examSubjects, contentSource]
-  );
+  const subjects = useMemo(() => {
+    if (contentSource === 'mine') return subjectsRaw;
+    return sortSubjectsForExam(subjectsRaw, examSubjects, { isMine: false });
+  }, [subjectsRaw, examSubjects, contentSource]);
 
   const setContentSource = useCallback(async (source) => {
     const next = source === 'mine' ? 'mine' : 'global';
@@ -183,9 +169,9 @@ export function useStudy() {
     setTopicsList([]);
     setSelectedTopicId(null);
     setActiveNotes(null);
-    setActiveView('subjects');
+    goToView('subjects', { source: next });
     await fetchSubjects(next);
-  }, [fetchSubjects]);
+  }, [fetchSubjects, goToView]);
 
   const persistUser = (userData) => {
     const { token, ...profile } = userData;
@@ -289,29 +275,23 @@ export function useStudy() {
     setUser(null);
     localStorage.removeItem('ssc_user');
     localStorage.removeItem('ssc_token');
-    setActiveView('home');
-  }, []);
+    goToView('home');
+  }, [goToView]);
 
   const skipToSubjects = useCallback(() => {
     fetchSubjects();
-    setActiveView('subjects');
-  }, [fetchSubjects]);
+    goToView('subjects', { source: contentSourceRef.current });
+  }, [fetchSubjects, goToView]);
 
-  const selectSubject = useCallback(async (subName) => {
-    setSelectedSubject(subName);
-    const result = await getTopicsApi.execute(subName, contentSourceRef.current);
-    setTopicsList(getListFromResponse(result));
-    setActiveView('topics');
-  }, [getTopicsApi]);
+  const selectSubject = useCallback((subName) => {
+    goToView('topics', { subject: subName, source: contentSourceRef.current });
+  }, [goToView]);
 
-  // Tracks the abort controller for the latest in-flight notes request.
-  // If the user clicks a different topic before the previous fetch completes,
-  // we abort the old request so stale data never overwrites the new one.
   const notesFetchAbortRef = useRef(null);
   const [notesLoading, setNotesLoading] = useState(false);
+  const syncedRouteRef = useRef('');
 
-  const selectTopic = useCallback(async (topicId) => {
-    // Cancel any pending notes request immediately
+  const loadTopicNotes = useCallback(async (topicId) => {
     if (notesFetchAbortRef.current) {
       notesFetchAbortRef.current.abort();
     }
@@ -319,31 +299,38 @@ export function useStudy() {
     notesFetchAbortRef.current = controller;
 
     setSelectedTopicId(topicId);
-    setActiveNotes(null);        // clear stale notes right away
-    setActiveView('notes');      // show loading state immediately
+    setActiveNotes(null);
     setNotesLoading(true);
 
     try {
       const result = await apiService.get(`/study/topics/${topicId}/notes`, {
         signal: controller.signal,
       });
-      // Only update state if this request wasn't aborted by a newer click
-      if (!controller.signal.aborted) {
-        if (result?.data) {
-          setActiveNotes(result.data);
-        }
-        setNotesLoading(false);
+      if (controller.signal.aborted) return;
+      if (result?.data) {
+        setActiveNotes(result.data);
       }
     } catch (err) {
-      // Ignore abort errors (user navigated away) — surface real errors
-      if (err.name !== 'AbortError' && !err.message?.includes('aborted') && !err.message?.includes('timed out')) {
-        console.warn('[selectTopic] notes fetch failed:', err.message);
-      }
+      if (controller.signal.aborted) return;
+      console.warn('[loadTopicNotes] notes fetch failed:', err.message);
+    } finally {
       if (!controller.signal.aborted) {
         setNotesLoading(false);
+        notesFetchAbortRef.current = null;
       }
     }
   }, []);
+
+  const loadTopicNotesRef = useRef(loadTopicNotes);
+  loadTopicNotesRef.current = loadTopicNotes;
+
+  const selectTopic = useCallback((topicId, subjectName = null) => {
+    goToView('notes', {
+      subject: subjectName || selectedSubject,
+      topicId,
+      source: contentSourceRef.current,
+    });
+  }, [goToView, selectedSubject]);
 
   const submitExam = useCallback(() => {
     if (timerRef.current) {
@@ -421,8 +408,8 @@ export function useStudy() {
       });
     }
 
-    setActiveView('results');
-  }, [testQuestions, selectedAnswers, user, selectedTopicId, selectedSubject, examId, updateProgressApi, exam]);
+    goToView('results');
+  }, [testQuestions, selectedAnswers, user, selectedTopicId, selectedSubject, examId, updateProgressApi, exam, goToView]);
 
   const submitMockExam = useCallback(async (mockData, answers, remainingTimer = 0, sectionTimes = null) => {
     const totalSeconds = (exam?.mockMinutes || 60) * 60;
@@ -513,8 +500,8 @@ export function useStudy() {
       });
     }
 
-    setActiveView('results');
-  }, [user, updateMockProgressApi, examId, exam]);
+    goToView('results');
+  }, [user, updateMockProgressApi, examId, exam, goToView]);
 
   const startTest = useCallback(async (count) => {
     if (!selectedTopicId) return { success: false };
@@ -548,11 +535,15 @@ export function useStudy() {
       setTimer(seconds);
       timerValueRef.current = seconds;
       startTimeRef.current = Date.now();
-      setActiveView('test');
+      goToView('test', {
+        subject: selectedSubject,
+        topicId: selectedTopicId,
+        source: contentSourceRef.current,
+      });
       return { success: true, count: qLen };
     }
     return { success: false };
-  }, [selectedTopicId, getTestApi]);
+  }, [selectedTopicId, selectedSubject, getTestApi, goToView]);
 
   const cancelTest = useCallback(() => {
     if (timerRef.current) {
@@ -564,8 +555,12 @@ export function useStudy() {
     setQuestionStatuses([]);
     setTimer(900);
     setTestSummary(null);
-    setActiveView('notes');
-  }, []);
+    goToView('notes', {
+      subject: selectedSubject,
+      topicId: selectedTopicId,
+      source: contentSourceRef.current,
+    });
+  }, [selectedSubject, selectedTopicId, goToView]);
 
   const jumpToQuestion = useCallback((idx) => {
     setCurrentQuestionIdx(idx);
@@ -667,9 +662,9 @@ export function useStudy() {
 
   const refreshTopics = useCallback(async () => {
     if (!selectedSubject) return;
-    const topicsResult = await getTopicsApi.execute(selectedSubject, contentSourceRef.current);
+    const topicsResult = await fetchTopicsRef.current(selectedSubject, contentSourceRef.current);
     setTopicsList(getListFromResponse(topicsResult));
-  }, [selectedSubject, getTopicsApi]);
+  }, [selectedSubject]);
 
   const addCustomTopic = useCallback(async (topicData) => {
     if (!selectedSubject) return { success: false, message: 'No active subject selected.' };
@@ -703,6 +698,7 @@ export function useStudy() {
     if (result.success && result.data?.data) {
       if (body.scope === 'global') {
         await fetchSubjects('global');
+        await refreshExamConfigs();
       } else if (contentSourceRef.current !== 'mine') {
         await setContentSource('mine');
       } else {
@@ -711,7 +707,7 @@ export function useStudy() {
       return { success: true, data: result.data.data };
     }
     return { success: false, message: addSubjectApi.error || 'Failed to create subject.' };
-  }, [addSubjectApi, setContentSource, fetchSubjects, user?.role]);
+  }, [addSubjectApi, setContentSource, fetchSubjects, user?.role, refreshExamConfigs]);
 
   const deleteCustomSubject = useCallback(async (subjectName) => {
     const isAdminUser = user?.role === 'admin';
@@ -725,12 +721,12 @@ export function useStudy() {
       if (selectedSubject === subjectName) {
         setSelectedSubject(null);
         setTopicsList([]);
-        setActiveView('subjects');
+        goToView('subjects', { source });
       }
       return { success: true };
     }
     return { success: false, message: deleteSubjectApi.error || 'Failed to delete subject.' };
-  }, [deleteSubjectApi, fetchSubjects, selectedSubject, user?.role]);
+  }, [deleteSubjectApi, fetchSubjects, selectedSubject, user?.role, goToView]);
 
   const updateCustomTopic = useCallback(async (topicId, topicData) => {
     const result = await updateTopicApi.execute({
@@ -776,7 +772,7 @@ export function useStudy() {
   useEffect(() => {
     if (contentSource !== 'global' || !selectedSubject) return;
     const stillInCatalog = subjectsRaw.some(
-      (s) => String(s.name).toLowerCase() === String(selectedSubject).toLowerCase()
+      (s) => namesMatch(s.name, selectedSubject)
     );
     if (stillInCatalog) return;
     setSelectedSubject(null);
@@ -784,13 +780,83 @@ export function useStudy() {
     setSelectedTopicId(null);
     setActiveNotes(null);
     if (activeView === 'topics' || activeView === 'notes') {
-      setActiveView('subjects');
+      goToView('subjects', { source: contentSource });
     }
-  }, [examId, contentSource, selectedSubject, activeView, subjectsRaw]);
+  }, [examId, contentSource, selectedSubject, activeView, subjectsRaw, goToView]);
+
+  // Sync ?source= from URL on study routes
+  useEffect(() => {
+    if (!location.pathname.startsWith('/study')) return;
+    if (!contentSourceFromUrl || contentSourceFromUrl === contentSource) return;
+    syncedRouteRef.current = '';
+    setContentSourceState(contentSourceFromUrl);
+    localStorage.setItem(CONTENT_SOURCE_KEY, contentSourceFromUrl);
+    fetchSubjects(contentSourceFromUrl);
+  }, [location.pathname, contentSourceFromUrl, contentSource, fetchSubjects]);
+
+  // Load study data from URL — single source of truth (no duplicate fetch loops)
+  useEffect(() => {
+    const userKey = user?.id ?? user?.username;
+    if (!userKey) return undefined;
+
+    const routeKey = `${location.pathname}${location.search}`;
+    if (syncedRouteRef.current === routeKey) return undefined;
+    syncedRouteRef.current = routeKey;
+
+    const { view, subjectSlug, topicId } = parseAppPath(location.pathname);
+    let cancelled = false;
+
+    if (view === 'subjects') {
+      setSelectedSubject(null);
+      setTopicsList([]);
+      setSelectedTopicId(null);
+      setActiveNotes(null);
+      setNotesLoading(false);
+      return undefined;
+    }
+
+    (async () => {
+      try {
+        if (subjectSlug && (view === 'topics' || view === 'notes' || view === 'test')) {
+          setSelectedSubject(subjectSlug);
+          const result = await fetchTopicsRef.current(subjectSlug, contentSourceRef.current);
+          if (!cancelled) setTopicsList(getListFromResponse(result));
+        }
+
+        if (view === 'topics') {
+          setSelectedTopicId(null);
+          setActiveNotes(null);
+          setNotesLoading(false);
+        }
+
+        if (topicId && view === 'notes') {
+          await loadTopicNotesRef.current(topicId);
+        }
+
+        if (topicId && view === 'test') {
+          setSelectedTopicId(topicId);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('[study route sync]', err.message || err);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      syncedRouteRef.current = '';
+      if (notesFetchAbortRef.current) {
+        notesFetchAbortRef.current.abort();
+        notesFetchAbortRef.current = null;
+      }
+    };
+  }, [location.pathname, location.search, user?.id, user?.username]);
 
   return {
     activeView,
     setActiveView,
+    parsed,
     contentSource,
     setContentSource,
     isMineMode,
@@ -808,7 +874,9 @@ export function useStudy() {
     timer,
     testSummary,
     user,
-    loading: subjectsLoading || getTopicsApi.loading || getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
+    subjectsLoading,
+    topicsLoading: getTopicsApi.loading,
+    loading: getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
     notesLoading,
     error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
     skipToSubjects,

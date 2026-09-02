@@ -1,4 +1,5 @@
 import Subject from './subject.model.js';
+import { normalizeSubjectKey } from './subject-names.js';
 
 const globalOwnerFilter = {
   $or: [{ ownerId: null }, { ownerId: { $exists: false } }]
@@ -29,6 +30,17 @@ class SubjectRepository {
       : { name, ...globalOwnerFilter };
     const query = Subject.findOne(filter);
     return lean ? await query.lean() : await query;
+  }
+
+  /** Exact name first, then normalized match (spacing / hyphen tolerant). */
+  async resolveByName(name, ownerId = null) {
+    const exact = await this.findByName(name, true, ownerId);
+    if (exact) return exact;
+
+    const filter = ownerId ? { ownerId } : globalOwnerFilter;
+    const candidates = await Subject.find(filter).select('name ownerId').lean();
+    const want = normalizeSubjectKey(name);
+    return candidates.find((s) => normalizeSubjectKey(s.name) === want) || null;
   }
 
   async create(data) {

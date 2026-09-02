@@ -103,6 +103,7 @@ export function Dashboard() {
   const {
     activeView,
     setActiveView,
+    parsed,
     contentSource,
     setContentSource,
     isMineMode,
@@ -120,6 +121,8 @@ export function Dashboard() {
     testSummary,
     user,
     loading: studyLoading,
+    subjectsLoading,
+    topicsLoading,
     notesLoading,
     error: studyError,
     skipToSubjects,
@@ -214,7 +217,7 @@ export function Dashboard() {
   // Start mock test
   const startMockExam = (testId) => {
     setActiveMockTestId(testId);
-    setActiveView('mock_exam_active');
+    setActiveView('mock_exam_active', { mockId: testId });
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -257,6 +260,7 @@ export function Dashboard() {
     isMobileSidebarOpen,
     cancelConfirmOpen,
     user,
+    selectedSubject,
   });
 
   navRef.current = {
@@ -264,7 +268,17 @@ export function Dashboard() {
     isMobileSidebarOpen,
     cancelConfirmOpen,
     user,
+    selectedSubject,
   };
+
+  // Restore mock exam from URL on reload
+  useEffect(() => {
+    if (parsed.mockId) {
+      setActiveMockTestId(parsed.mockId);
+    } else if (activeView !== 'mock_exam_active') {
+      setActiveMockTestId(null);
+    }
+  }, [parsed.mockId, activeView]);
 
   // Track in-app section history
   useEffect(() => {
@@ -389,10 +403,10 @@ export function Dashboard() {
 
   // Register in-app back behavior with the global trap (never leaves the page)
   useEffect(() => {
-    const goToView = (view) => {
+    const goToView = (view, options = {}) => {
       if (!VALID_VIEWS.has(view)) return false;
       skipStackRef.current = true;
-      setActiveView(view);
+      setActiveView(view, options);
       if (workspaceRef.current) {
         workspaceRef.current.style.opacity = '1';
       }
@@ -405,6 +419,7 @@ export function Dashboard() {
         isMobileSidebarOpen: sidebarOpen,
         cancelConfirmOpen: cancelOpen,
         user: loggedIn,
+        selectedSubject: currentSubject,
       } = navRef.current;
 
       if (!loggedIn) return false;
@@ -429,7 +444,7 @@ export function Dashboard() {
       }
 
       if (currentView === 'notes') {
-        return goToView('topics');
+        return goToView('topics', { subject: currentSubject });
       }
 
       if (currentView === 'topics') {
@@ -611,7 +626,7 @@ export function Dashboard() {
     }
   };
 
-  const globalLoading = drillLoading || studyLoading;
+  const globalLoading = drillLoading || subjectsLoading;
   const globalError = studyError;
 
   useEffect(() => {
@@ -862,6 +877,7 @@ export function Dashboard() {
         testSummary={testSummary}
         testQuestions={testQuestions}
         selectedAnswers={selectedAnswers}
+        selectedSubject={selectedSubject}
         startTest={startTest}
         setActiveView={setActiveView}
       />
@@ -905,6 +921,7 @@ export function Dashboard() {
               setActiveView={setActiveView}
               skipToSubjects={skipToSubjects}
               selectSubject={selectSubject}
+              catalogSubjectNames={subjects.map((s) => (typeof s === 'string' ? s : s.name))}
               wrongQuestions={wrongQuestions}
               onReviewWrongVocab={() => {
                 setOpenWrongLogOnce(true);
@@ -954,6 +971,7 @@ export function Dashboard() {
               selectSubject={selectSubject}
               selectedSubject={selectedSubject}
               topicsList={topicsList}
+              topicsLoading={topicsLoading}
               selectTopic={selectTopic}
               user={user}
               setModalOpen={setModalOpen}

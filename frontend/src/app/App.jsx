@@ -1,7 +1,12 @@
+import { BrowserRouter } from 'react-router-dom';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 
 function App() {
-  return <Dashboard />;
+  return (
+    <BrowserRouter>
+      <Dashboard />
+    </BrowserRouter>
+  );
 }
 
 export default App;

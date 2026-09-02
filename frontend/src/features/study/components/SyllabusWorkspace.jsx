@@ -68,6 +68,7 @@ export function SyllabusWorkspace({
   selectSubject,
   selectedSubject,
   topicsList,
+  topicsLoading = false,
   selectTopic,
   user,
   setModalOpen,
@@ -621,7 +622,7 @@ export function SyllabusWorkspace({
                   const visual = getSubjectVisual(name);
                   return (
                     <div
-                      key={name}
+                      key={`${index}-${name}`}
                       role="listitem"
                       className={`subject-selection-card subject-selection-card--${visual.tone}`}
                       onClick={() => selectSubject(name)}
@@ -708,7 +709,11 @@ export function SyllabusWorkspace({
           </header>
           <div className="syllabus-page-body">
             <div className="topics-list-container">
-            {topicsList.length > 0 ? (
+            {topicsLoading && topicsList.length === 0 ? (
+              <div className="app-loader-overlay" style={{ position: 'relative', top: 40 }} aria-busy="true" aria-label="Loading topics">
+                <div className="app-loader-spinner" />
+              </div>
+            ) : topicsList.length > 0 ? (
               topicsList.map((topic) => {
                 // Look up topic accuracy indicators for THIS exam only
                 const progressRecord = progressForTopic(user.progress, topic.id, examScope);
@@ -810,7 +815,7 @@ export function SyllabusWorkspace({
                 <button
                   type="button"
                   className="notes-tool-icon notes-tool-icon--ghost"
-                  onClick={() => setActiveView('topics')}
+                  onClick={() => setActiveView('topics', { subject: selectedSubject })}
                   title="Back to topics"
                   aria-label="Back to topics"
                 >
@@ -878,7 +883,7 @@ export function SyllabusWorkspace({
                 <button
                   type="button"
                   className="notes-tool-icon notes-tool-icon--ghost"
-                  onClick={() => { setIsEditingNotes(false); setActiveView('topics'); setShowActionsMenu(false); }}
+                  onClick={() => { setIsEditingNotes(false); setActiveView('topics', { subject: selectedSubject }); setShowActionsMenu(false); }}
                   title="Back to topics"
                   aria-label="Back to topics"
                 >

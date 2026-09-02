@@ -10,6 +10,7 @@ export function ResultsPortal({
   testSummary,
   testQuestions,
   selectedAnswers,
+  selectedSubject,
   startTest,
   setActiveView
 }) {
@@ -124,7 +125,7 @@ export function ResultsPortal({
             <button className="btn btn-save" onClick={startTest}>
               <RotateCcw size={16} strokeWidth={2} /> Retake Topic Test
             </button>
-            <button className="btn btn-clear btn-outline" onClick={() => setActiveView('topics')}>
+            <button className="btn btn-clear btn-outline" onClick={() => setActiveView('topics', { subject: selectedSubject })}>
               <ArrowLeft size={16} strokeWidth={2} /> Back to Topics
             </button>
             <button className="btn btn-clear btn-outline" onClick={() => setActiveView('drill')}>
