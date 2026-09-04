@@ -9,12 +9,13 @@ dns.setDefaultResultOrder('ipv4first');
 
 const CONNECT_OPTS = {
   maxPoolSize: 10,
-  // Idle Atlas M0 and cross-region Render→Mumbai handshakes often exceed 15s.
   serverSelectionTimeoutMS: 30000,
   connectTimeoutMS: 30000,
   socketTimeoutMS: 45000,
   family: 4,
   autoSelectFamily: false,
+  // Atlas DB users live in the admin database, not the app db in the URI path.
+  authSource: 'admin',
 };
 
 const READY = {
@@ -31,6 +32,7 @@ let postSetupDone = false;
 let lastConnectError = null;
 let lastConnectAt = null;
 let connecting = false;
+let initialConnectSucceeded = false;
 
 function normalizeMongoUri(raw) {
   let uri = String(raw || '').trim();
@@ -43,6 +45,16 @@ function normalizeMongoUri(raw) {
   return uri;
 }
 
+function withAtlasParams(raw) {
+  const uri = normalizeMongoUri(raw);
+  const extras = [];
+  if (!/[?&]authSource=/i.test(uri)) extras.push('authSource=admin');
+  if (!/[?&]retryWrites=/i.test(uri)) extras.push('retryWrites=true');
+  if (!/[?&]w=/i.test(uri)) extras.push('w=majority');
+  if (extras.length === 0) return uri;
+  return uri.includes('?') ? `${uri}&${extras.join('&')}` : `${uri}?${extras.join('&')}`;
+}
+
 function inspectMongoUri(raw) {
   const uri = normalizeMongoUri(raw);
   if (!uri) {
@@ -52,6 +64,7 @@ function inspectMongoUri(raw) {
   const looksLocal = /:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)[:/]/i.test(uri);
   const hasPlaceholder = /<[^>]+>|YOUR_|changeme/i.test(uri);
   const isSrv = /^mongodb\+srv:/i.test(uri);
+  const hasAuthSource = /[?&]authSource=/i.test(uri);
 
   let hostname = null;
   try {
@@ -64,6 +77,7 @@ function inspectMongoUri(raw) {
       looksLocal,
       hasPlaceholder,
       isSrv,
+      hasAuthSource,
     };
   }
 
@@ -73,6 +87,7 @@ function inspectMongoUri(raw) {
     looksLocal,
     hasPlaceholder,
     isSrv,
+    hasAuthSource,
     host: hostname,
   };
 }
@@ -85,6 +100,7 @@ function recordFailure(err) {
 function recordSuccess() {
   lastConnectError = null;
   lastConnectAt = new Date().toISOString();
+  initialConnectSucceeded = true;
 }
 
 function bindConnectionEvents() {
@@ -101,8 +117,13 @@ function bindConnectionEvents() {
   });
   mongoose.connection.on('disconnected', () => {
     if (connecting) return;
-    console.warn('⚠️ MongoDB disconnected — will retry');
-    scheduleRetry();
+    console.warn('⚠️ MongoDB disconnected');
+    // After a successful handshake, the driver reconnects itself.
+    // Re-running mongoose.connect() here races that and can retry with a
+    // redacted URI → "bad auth : authentication failed".
+    if (!initialConnectSucceeded) {
+      scheduleRetry();
+    }
   });
   mongoose.connection.on('error', (err) => {
     recordFailure(err);
@@ -113,7 +134,6 @@ function bindConnectionEvents() {
 async function runPostConnectSetup() {
   if (postSetupDone) return;
   try {
-    // Drop legacy unique-on-name index so users can create personal subjects
     try {
       await Subject.collection.dropIndex('name_1');
       console.log('🧹 Dropped legacy Subject.name unique index');
@@ -132,12 +152,14 @@ async function runPostConnectSetup() {
 function scheduleRetry() {
   if (retryTimer) return;
   if (mongoose.connection.readyState === READY.connected) return;
+  if (initialConnectSucceeded) return;
 
   retryTimer = setTimeout(async () => {
     retryTimer = null;
     if (
       mongoose.connection.readyState === READY.connected ||
-      mongoose.connection.readyState === READY.connecting
+      mongoose.connection.readyState === READY.connecting ||
+      initialConnectSucceeded
     ) {
       return;
     }
@@ -161,7 +183,7 @@ async function resetClient() {
 }
 
 async function attemptConnect() {
-  const uri = normalizeMongoUri(process.env.MONGODB_URI);
+  const uri = withAtlasParams(process.env.MONGODB_URI);
   if (!uri) {
     throw new Error('MONGODB_URI is not set');
   }
@@ -179,26 +201,20 @@ async function attemptConnect() {
     throw new Error('MONGODB_URI is not a valid Mongo connection string (remove wrapping quotes).');
   }
 
+  if (mongoose.connection.readyState === READY.connected) {
+    return;
+  }
+
   connecting = true;
   try {
-    // After a failed connect, mongoose.connect() reuses the dead client unless we close it.
     if (mongoose.connection.readyState !== READY.disconnected) {
-      await resetClient();
-    } else if (lastConnectError) {
       await resetClient();
     }
 
     console.log(
       `🔌 Mongo connecting → ${info.isSrv ? 'srv' : 'std'} ${info.host || '(unknown host)'}`,
     );
-    try {
-      await mongoose.connect(uri, CONNECT_OPTS);
-    } catch (ipv4Err) {
-      console.warn('⚠️ IPv4-forced connect failed, retrying unrestricted family:', ipv4Err.message);
-      await resetClient();
-      const { family: _family, autoSelectFamily: _auto, ...rest } = CONNECT_OPTS;
-      await mongoose.connect(uri, rest);
-    }
+    await mongoose.connect(uri, CONNECT_OPTS);
     retryDelayMs = 8000;
     recordSuccess();
     await runPostConnectSetup();
@@ -208,16 +224,16 @@ async function attemptConnect() {
 }
 
 export const connectDB = async () => {
-  const uri = normalizeMongoUri(process.env.MONGODB_URI);
+  const uri = withAtlasParams(process.env.MONGODB_URI);
 
-  if (!uri) {
+  if (!normalizeMongoUri(process.env.MONGODB_URI)) {
     console.error('❌ MONGODB_URI is not set in environment variables.');
     process.exit(1);
   }
 
   const info = inspectMongoUri(uri);
   console.log(
-    `🗄️  MONGODB_URI host=${info.host || 'unparseable'} srv=${info.isSrv} local=${info.looksLocal}`,
+    `🗄️  MONGODB_URI host=${info.host || 'unparseable'} srv=${info.isSrv} local=${info.looksLocal} authSource=${info.hasAuthSource}`,
   );
   if (isHostedRuntime() && info.looksLocal) {
     console.error('❌ On Render, MONGODB_URI must be the Atlas mongodb+srv:// string, not localhost.');
@@ -230,12 +246,16 @@ export const connectDB = async () => {
   } catch (err) {
     recordFailure(err);
     console.error('❌ MongoDB connection failed:', err.message);
-    console.error(
-      '   Atlas → Network Access → Add IP Address → Allow Access from Anywhere (0.0.0.0/0).',
-    );
-    console.error('   Confirm MONGODB_URI on Render matches Atlas (no quotes, real password).');
+    if (/bad auth|authentication failed/i.test(err.message || '')) {
+      console.error(
+        '   Atlas → Database Access: username/password in MONGODB_URI must match. Reset the user password and update Render.',
+      );
+    } else {
+      console.error(
+        '   Atlas → Network Access → Add IP Address → Allow Access from Anywhere (0.0.0.0/0).',
+      );
+    }
     scheduleRetry();
-    // Do not exit: keep serving /health and retry in the background.
   }
 };
 
