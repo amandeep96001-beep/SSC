@@ -35,8 +35,11 @@ function GoogleSignInButton({ clientId, disabled, onAuth, onError }) {
   const hostRef = useRef(null);
   const onAuthRef = useRef(onAuth);
   const onErrorRef = useRef(onError);
-  onAuthRef.current = onAuth;
-  onErrorRef.current = onError;
+
+  useEffect(() => {
+    onAuthRef.current = onAuth;
+    onErrorRef.current = onError;
+  }, [onAuth, onError]);
 
   const preferOfficial = typeof navigator !== 'undefined'
     && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
