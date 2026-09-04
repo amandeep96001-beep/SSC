@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { connectDB, getDBStatus } from './src/config/db.config.js';
-import { validateEnv } from './src/config/env.config.js';
+import { validateEnv, isHostedRuntime } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 
 // Local only — on Render, use dashboard env vars (never override with a stray .env)
@@ -43,7 +43,7 @@ async function start() {
       console.warn('⚠️ FRONTEND_URL not set — browsers from other origins will be blocked in strict CORS mode.');
     }
     const nonLocalOrigins = origins.filter((o) => !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(o));
-    if (process.env.NODE_ENV === 'production' && nonLocalOrigins.length === 0) {
+    if (isHostedRuntime() && nonLocalOrigins.length === 0) {
       console.warn(
         '⚠️ FRONTEND_URL is missing or only localhost — set it to your Vercel origin (e.g. https://myexamprep-theta.vercel.app) or browsers will get CORS errors.',
       );

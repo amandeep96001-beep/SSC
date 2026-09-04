@@ -8,7 +8,7 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import apiRouter from './routes/index.js';
-import { getDBStatus } from './config/db.config.js';
+import { getDBStatus, getDBDiagnostics } from './config/db.config.js';
 import { getEnvHealth } from './config/env.config.js';
 import { notFound, errorHandler } from './shared/middleware/error.middleware.js';
 import { mongoSanitize } from './shared/middleware/sanitize.middleware.js';
@@ -148,13 +148,15 @@ export function createApp() {
     });
   });
 
-  // Public health check (load balancers, frontend status dot)
+  // Liveness for Render: always 200 so a slow Atlas handshake does not fail the deploy.
+  // DB status lives in the JSON (`db` / `mongo.lastError`).
   app.get('/health', (req, res) => {
     const dbOk = getDBStatus();
-    res.status(dbOk ? 200 : 503).json({
+    res.status(200).json({
       status: dbOk ? 'ok' : 'degraded',
       uptime: process.uptime(),
       db: dbOk ? 'connected' : 'disconnected',
+      mongo: getDBDiagnostics(),
       env: getEnvHealth(),
     });
   });

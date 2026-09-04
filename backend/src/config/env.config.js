@@ -19,6 +19,13 @@ export function validateEnv() {
     console.error('❌ JWT_SECRET must be at least 32 characters in production.');
     process.exit(1);
   }
+
+  const nodeEnv = process.env.NODE_ENV?.trim();
+  if (nodeEnv !== 'production') {
+    console.warn(
+      `⚠️ NODE_ENV is "${nodeEnv || '(unset)'}". On Render set NODE_ENV=production.`,
+    );
+  }
 }
 
 export function getEnvHealth() {
