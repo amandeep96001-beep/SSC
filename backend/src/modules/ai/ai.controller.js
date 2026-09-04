@@ -1,24 +1,13 @@
 /**
  * ai.controller.js
  *
- * Two separate AI features:
- *
- * 1. explainConcept        — existing wrong-answer explainer (Pollinations GET → HuggingFace)
- *                            Used by DrillWorkspace. DO NOT MODIFY its behaviour.
- *
- * 2. explainSSCQuestion    — NEW: free-form SSC question explainer
- *                            Primary:  Pollinations AI (free, no key)
- *                            Fallback: Gemini REST API (key via GEMINI_API_KEY env var)
- *                            Flow: Pollinations → SUCCESS → return
- *                                           → FAILURE → Gemini → SUCCESS → return
- *                                                               → FAILURE → 503 error
+ * explainConcept — wrong-answer drill explainer (DrillWorkspace)
+ *   Primary:  Gemini REST API when GEMINI_API_KEY is set
+ *   Fallback: Pollinations (free, no key)
+ *   Last:     static local template
  */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SECTION 1 — Existing explainConcept (wrong-answer drill explainer)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const POLLINATIONS_URL = 'https://text.pollinations.ai/openai';
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash';
 
 function buildPrompt(question, correctAnswer, explanation) {
   return `You are an expert competitive-exam coach (SSC, Banking, Railways, UPSC Prelims, CAT, State PSC). A student got this question WRONG. Provide a crisp, highly structured explanation optimized for aspirants in easy-to-understand English.
@@ -27,21 +16,35 @@ Question: ${question}
 Correct Answer: ${correctAnswer}
 ${explanation ? `Official Explanation: ${explanation}` : ''}
 
-Use this EXACT structure with very short, punchy points:
+Use this EXACT structure. Finish ALL four sections completely — never stop mid-heading:
 **1. Core Concept:** (1 line naming the topic & formula/rule. For Maths — write the exact formula with variables. For GK — name the exact sub-topic and category.)
 **2. Why This Answer:** (In 1-2 bullet points, explain WHY the correct answer is correct. For Maths, show the formula applied with numbers. For GK/English, give the factual reasoning.)
 **3. Pro Tip:** (What silly mistake to avoid next time, or a memory trick/mnemonic to remember this forever.)
-**4. Expected in Exams — 10 Related Facts/Questions:** (This is the MOST IMPORTANT section. Provide EXACTLY 10 highly relevant one-liner facts, formulas, or mini-questions from this EXACT sub-topic that frequently appear in Indian competitive exams. Make each one independently useful so the student can learn the full topic just from this list.)
-  - For GK: If the question is about Himachal folk dance, list 10 other states and their famous folk dances. If it's about a river, list 10 rivers with origin and endpoint.
-  - For Maths: If it's about Profit & Loss, list 10 key formulas/shortcuts with examples. If it's about Trigonometry, list 10 important identities/values.
-  - For English: If it's about synonyms, list 10 high-frequency vocabulary words with meanings. If it's an idiom, list 10 most repeated idioms with meanings.
-  - For Reasoning: If it's about coding-decoding, list 10 common patterns. If it's about series, list 10 frequently tested number/letter series patterns.
+**4. Expected in Exams — 10 Related Facts/Questions:** (MOST IMPORTANT. Provide EXACTLY 10 highly relevant one-liner facts, formulas, or mini-questions from this EXACT sub-topic that frequently appear in Indian competitive exams.)
   Format each as: **1.** fact — detail
 
-Do not use long paragraphs. Use bullet points and bold text for readability. The "Expected in Exams" section should be detailed enough that a student can revise the entire sub-topic from it alone.`;
+Do not use long paragraphs. Use bullet points and bold text. Close every **bold** marker. Complete every section.`;
 }
 
-async function tryPollinations(prompt, retries = 3) {
+function extractGeminiText(json) {
+  const parts = json?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts) || parts.length === 0) return '';
+  // Prefer non-thought parts; fall back to any text
+  const visible = parts.filter((p) => p?.text && !p.thought).map((p) => p.text).join('');
+  if (visible.trim()) return visible.trim();
+  return parts.map((p) => p?.text).filter(Boolean).join('').trim();
+}
+
+function isUsableExplanation(text) {
+  if (!text || text.length < 80) return false;
+  // Reject truncated stubs that stop mid-heading (common Pollinations failure)
+  const openBold = (text.match(/\*\*/g) || []).length;
+  if (openBold % 2 === 1 && text.length < 400) return false;
+  if (/\*\*\s*2\.\s*Why\s*$/i.test(text.trim())) return false;
+  return true;
+}
+
+async function tryPollinations(prompt, retries = 2) {
   const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=openai`;
 
   for (let i = 0; i < retries; i++) {
@@ -55,19 +58,21 @@ async function tryPollinations(prompt, retries = 3) {
     });
 
     if (res.status === 429) {
-      console.warn(`[AI] Pollinations 429 (Queue full), retrying... (${i + 1}/${retries})`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.warn(`[AI] Pollinations 429, retrying... (${i + 1}/${retries})`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       continue;
     }
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Pollinations error: ${body}`);
+      throw new Error(`Pollinations error: ${res.status} ${body.slice(0, 120)}`);
     }
 
-    const text = await res.text();
-    if (!text) throw new Error('Empty response from Pollinations');
-    return text.trim();
+    const text = (await res.text()).trim();
+    if (!isUsableExplanation(text)) {
+      throw new Error('Pollinations returned empty/truncated explanation');
+    }
+    return text;
   }
 
   throw new Error('Pollinations rate limit (429) exceeded after retries.');
@@ -77,53 +82,41 @@ async function tryGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured.');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.6,
+        // Thinking models count thoughts against this budget — keep headroom + disable thinking
+        maxOutputTokens: 8192,
+        thinkingConfig: { thinkingBudget: 0 },
+      },
     }),
-    signal: AbortSignal.timeout(45000)
+    signal: AbortSignal.timeout(60000),
   });
 
-  if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = json?.error?.message || `HTTP ${res.status}`;
+    throw new Error(`Gemini error: ${msg}`);
+  }
 
-  const json = await res.json();
-  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty response from Gemini');
-  return text.trim();
+  const text = extractGeminiText(json);
+  const finish = json?.candidates?.[0]?.finishReason;
+  if (!text) {
+    throw new Error(`Empty response from Gemini (finishReason=${finish || 'unknown'})`);
+  }
+  if (!isUsableExplanation(text)) {
+    throw new Error(`Gemini returned truncated explanation (finishReason=${finish || 'unknown'})`);
+  }
+  return text;
 }
 
-export const explainConcept = async (req, res, next) => {
-  try {
-    const { question, correctAnswer, explanation } = req.body;
-    if (!question || !correctAnswer) {
-      return res.status(400).json({ status: 'error', message: 'question and correctAnswer are required.' });
-    }
-
-    const prompt = buildPrompt(question, correctAnswer, explanation);
-
-    let aiText = null;
-
-    try {
-      aiText = await tryPollinations(prompt);
-    } catch (err) {
-      console.warn('[AI] Pollinations failed, trying Gemini:', err.message);
-    }
-
-    if (!aiText) {
-      try {
-        aiText = await tryGemini(prompt);
-      } catch (err) {
-        console.error('[AI] Gemini also failed:', err.message);
-      }
-    }
-
-    if (!aiText) {
-      console.warn('[AI] All AI services failed. Using local static fallback.');
-      aiText = `**1. Core Concept:**
+function staticFallback(correctAnswer, explanation) {
+  return `**1. Core Concept:**
 SSC high-frequency topic.
 
 **2. Why This Answer:**
@@ -134,7 +127,7 @@ ${explanation ? `- ${explanation}` : '- Refer to your notes or standard SSC text
 Add this to your revision notes and practice 10+ similar questions. Many students skip revision of wrong answers and lose easy marks.
 
 **4. Expected in SSC — 10 Related Facts/Questions:**
-⚠️ AI services are temporarily unavailable, so we can't generate topic-specific facts right now. In the meantime:
+AI services are temporarily unavailable, so we can't generate topic-specific facts right now. In the meantime:
 - **1.** Revise the complete sub-topic around this question from your notes.
 - **2.** Search this topic in your TCS PYQ bank — at least 5-8 similar questions will be there.
 - **3.** Note down the correct answer and any formula/fact associated with it.
@@ -145,9 +138,45 @@ Add this to your revision notes and practice 10+ similar questions. Many student
 - **8.** Cross-reference with Lucent's/Arihant for additional facts.
 - **9.** Create mnemonics or memory tricks for tricky facts.
 - **10.** Discuss this topic with fellow aspirants for better retention.`;
+}
+
+export const explainConcept = async (req, res, next) => {
+  try {
+    const { question, correctAnswer, explanation } = req.body;
+    if (!question || !correctAnswer) {
+      return res.status(400).json({ status: 'error', message: 'question and correctAnswer are required.' });
     }
 
-    res.json({ status: 'success', data: { explanation: aiText } });
+    const prompt = buildPrompt(question, correctAnswer, explanation);
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
+    let aiText = null;
+    let provider = null;
+
+    // Prefer Gemini when configured — Pollinations often truncates mid-section
+    const chain = hasGemini
+      ? [
+          ['Gemini', tryGemini],
+          ['Pollinations', tryPollinations],
+        ]
+      : [['Pollinations', tryPollinations]];
+
+    for (const [name, fn] of chain) {
+      try {
+        aiText = await fn(prompt);
+        provider = name;
+        break;
+      } catch (err) {
+        console.warn(`[AI] ${name} failed:`, err.message);
+      }
+    }
+
+    if (!aiText) {
+      console.warn('[AI] All AI services failed. Using local static fallback.');
+      aiText = staticFallback(correctAnswer, explanation);
+      provider = 'static';
+    }
+
+    res.json({ status: 'success', data: { explanation: aiText, provider } });
   } catch (error) {
     next(error);
   }

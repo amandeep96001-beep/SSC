@@ -144,55 +144,83 @@ const defaultSeedVocab = [
 
 const LOCAL_URI = 'mongodb://127.0.0.1:27017/ssc_prep';
 
+function isSrvOrRemoteUri(uri) {
+  if (!uri) return false;
+  if (uri.startsWith('mongodb+srv://')) return true;
+  if (uri === LOCAL_URI) return false;
+  return !/mongodb:\/\/(127\.0\.0\.1|localhost)(:\d+)?\//i.test(uri);
+}
+
+function authHint(errMsg = '') {
+  const msg = String(errMsg);
+  if (/bad auth|authentication failed|auth failed/i.test(msg)) {
+    return [
+      'Atlas username/password in MONGODB_URI is wrong.',
+      'Fix: MongoDB Atlas → Database Access → Edit user → Reset password,',
+      'then paste the NEW connection string into Render → Environment → MONGODB_URI.',
+      'If the password has @ # % / : ? & characters, URL-encode them (e.g. @ → %40).',
+    ].join(' ');
+  }
+  if (/ENOTFOUND|querySrv|getaddrinfo/i.test(msg)) {
+    return 'Atlas hostname not found — cluster may be deleted/paused, or MONGODB_URI host is wrong.';
+  }
+  if (/IP|whitelist|not allowed|Network/i.test(msg)) {
+    return 'Atlas Network Access: allow 0.0.0.0/0 (or Render outbound IPs) so Render can connect.';
+  }
+  return 'Check MONGODB_URI on Render (Dashboard → Environment). Local MongoDB does not exist on Render.';
+}
+
 async function tryConnect(uri, label) {
   console.log(`🔄 Trying ${label}: ${uri.replace(/:([^:@]+)@/, ':****@')}`);
   await mongoose.connect(uri, {
     maxPoolSize: 10,
-    serverSelectionTimeoutMS: 8000,
+    serverSelectionTimeoutMS: 12000,
   });
 }
 
 export const connectDB = async () => {
   const primaryUri = process.env.MONGODB_URI?.trim();
-  const isAtlas = primaryUri && primaryUri !== LOCAL_URI;
+  const onRenderOrProd = Boolean(process.env.RENDER) || process.env.NODE_ENV === 'production';
+  const isRemote = isSrvOrRemoteUri(primaryUri);
 
-  // ── Try Primary (Atlas if set, otherwise local) ────────────────────────────
-  if (primaryUri) {
+  if (!primaryUri) {
+    console.error('❌ MONGODB_URI is not set.');
+    if (onRenderOrProd) {
+      console.error('   Set MONGODB_URI in Render → Environment to your Atlas connection string.');
+      process.exit(1);
+    }
     try {
-      await tryConnect(primaryUri, isAtlas ? 'Atlas' : 'Local MongoDB');
+      await tryConnect(LOCAL_URI, 'Local MongoDB (dev default)');
       isDbConnected = true;
-      console.log(`🔥 MongoDB connected (${isAtlas ? 'Atlas ☁️' : 'Local 🖥️'})`);
+      console.log('🔥 MongoDB connected (Local 🖥️)');
+    } catch (err) {
+      console.error('❌ Local MongoDB failed:', err.message);
+      console.warn('⚠️ Starting without database (dev mode).');
+      return;
+    }
+  } else {
+    try {
+      await tryConnect(primaryUri, isRemote ? 'Atlas' : 'Local MongoDB');
+      isDbConnected = true;
+      console.log(`🔥 MongoDB connected (${isRemote ? 'Atlas ☁️' : 'Local 🖥️'})`);
     } catch (primaryErr) {
-      console.warn(`⚠️ Primary connection failed: ${primaryErr.message}`);
+      console.error(`❌ MongoDB connection failed: ${primaryErr.message}`);
       isDbConnected = false;
+
+      // Never fall back to localhost on Render — there is no mongod there
+      if (onRenderOrProd || isRemote) {
+        console.error(`💡 ${authHint(primaryErr.message)}`);
+        if (onRenderOrProd) process.exit(1);
+        console.warn('⚠️ Starting without database (dev mode — auth & data routes return 503).');
+        return;
+      }
+
+      // Local URI failed in local-only setup
+      console.warn('⚠️ Starting without database (dev mode).');
+      return;
     }
   }
 
-  // ── Fallback to local MongoDB if Atlas failed ──────────────────────────────
-  if (!isDbConnected && isAtlas) {
-    console.log('↩️  Falling back to local MongoDB...');
-    try {
-      await mongoose.disconnect().catch(() => {}); // clear failed connection
-      await tryConnect(LOCAL_URI, 'Local MongoDB (fallback)');
-      isDbConnected = true;
-      console.log('🔥 MongoDB connected (Local fallback 🖥️)');
-    } catch (localErr) {
-      console.error('❌ Local MongoDB also failed:', localErr.message);
-      isDbConnected = false;
-      if (process.env.NODE_ENV === 'production') process.exit(1);
-      console.warn('⚠️ Starting without database (dev mode — auth & data routes return 503).');
-      return; // don't throw — let server start
-    }
-  }
-
-  // If no URI set at all and not connected
-  if (!isDbConnected && !primaryUri) {
-    console.error('❌ MONGODB_URI not set and local connection failed.');
-    if (process.env.NODE_ENV === 'production') process.exit(1);
-    return;
-  }
-
-  // ── Post-connection setup (indexes + seeding) ──────────────────────────────
   if (!isDbConnected) return;
 
   try {

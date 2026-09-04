@@ -20,17 +20,22 @@ function vocabWordFromWrong(wq) {
   return m ? m[1] : null;
 }
 
-// ── Markdown Formatter ────────────────────────────────────────────────────────
+// ── Markdown Formatter (theme-aware — works on light + dark) ─────────────────
 const formatAIText = (text) => {
   if (!text) return null;
   return text.split('\n').map((line, i) => {
-    if (!line.trim()) return <div key={i} style={{ height: '8px' }} />;
-    const parts = line.split(/(\*\*.*?\*\*)/g);
+    if (!line.trim()) return <div key={i} className="ai-line-gap" />;
+    // Close unclosed ** at EOL so truncated model output still renders boldly
+    let normalized = line;
+    const stars = (normalized.match(/\*\*/g) || []).length;
+    if (stars % 2 === 1) normalized += '**';
+    const parts = normalized.split(/(\*\*[^*]+?\*\*)/g);
+    const isHeading = /^\*\*\d+\./.test(normalized.trim()) || /^\d+\.\s+\*?[A-Z]/.test(normalized.trim());
     return (
-      <span key={i} style={{ display: 'block', marginBottom: '6px' }}>
+      <span key={i} className={`ai-line${isHeading ? ' ai-line--heading' : ''}`}>
         {parts.map((part, j) => {
-          if (part.startsWith('**') && part.endsWith('**')) {
-            return <strong key={j} style={{ color: '#f8fafc' }}>{part.slice(2, -2)}</strong>;
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            return <strong key={j}>{part.slice(2, -2)}</strong>;
           }
           return <span key={j}>{part}</span>;
         })}
@@ -418,18 +423,18 @@ function WrongQuestionCard({ wq, onRemove }) {
 
       {/* ── AI CONCEPT EXPLANATION PANEL ─────────────────────────────────── */}
       {aiOpen && (
-        <div className="ai-explanation-panel" style={{ marginTop: '10px' }}>
+        <div className="ai-explanation-panel">
           {aiLoading && (
             <div className="ai-loading-row">
               <Loader2 size={16} className="spin-inline" />
-              <span>Generating detailed concept via Pollinations AI...</span>
+              <span>Generating detailed concept explanation...</span>
             </div>
           )}
           {aiError && <p className="ai-error-text">{aiError}</p>}
           {aiText && !aiLoading && (
-            <div className="ai-response-text" style={{ lineHeight: '1.5', fontSize: '0.9rem', color: '#e2e8f0' }}>
-              <div className="ai-response-badge" style={{ marginBottom: '12px' }}><Sparkles size={12} /> AI — Full Concept Explanation</div>
-              <div>{formatAIText(aiText)}</div>
+            <div className="ai-response-text">
+              <div className="ai-response-badge"><Sparkles size={12} /> AI — Full Concept Explanation</div>
+              <div className="ai-response-body">{formatAIText(aiText)}</div>
             </div>
           )}
         </div>
