@@ -102,12 +102,12 @@ function resolveRole(username, adminCode, email) {
   return 'user';
 }
 
-async function createAndStoreOtp(email, purpose = 'email_verify') {
+async function createAndStoreOtp(email, purpose = 'email_verify', pendingData = null) {
   const code = generateOtpCode();
   const codeHash = hashOtpCode(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
   await OtpChallenge.deleteMany({ email, purpose });
-  await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0 });
+  await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0, pendingData });
   const mail = await sendOtpEmail(email, code, { purpose });
   return { code, mail };
 }
@@ -127,7 +127,7 @@ async function consumeOtpChallenge(email, code, purpose) {
     return { ok: false, status: 401, message: 'Incorrect OTP. Try again.' };
   }
   await OtpChallenge.deleteMany({ email, purpose });
-  return { ok: true };
+  return { ok: true, pendingData: challenge.pendingData };
 }
 
 export const register = async (req, res, next) => {
@@ -165,15 +165,15 @@ export const register = async (req, res, next) => {
 
     const hashed = await hashPassword(password);
     const role = resolveRole(username, adminCode, email);
-    await User.create({
+    
+    // Save user details temporarily until OTP verification
+    const pendingData = {
       username,
-      email,
       password: hashed,
-      role,
-      emailVerified: false,
-    });
+      role
+    };
 
-    const { mail } = await createAndStoreOtp(email, 'email_verify');
+    const { mail } = await createAndStoreOtp(email, 'email_verify', pendingData);
     const payload = {
       status: 'success',
       message: mail.sent
@@ -452,17 +452,28 @@ export const verifyOtp = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
+    
+    // If user doesn't exist, this was a registration verification. Create the user now.
     if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No account found for this email.',
+      if (!consumed.pendingData) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Registration data expired or invalid. Please register again.',
+        });
+      }
+      user = await User.create({
+        username: consumed.pendingData.username,
+        email,
+        password: consumed.pendingData.password,
+        role: consumed.pendingData.role,
+        emailVerified: true,
       });
+    } else {
+      user.emailVerified = true;
+      if (resolveRoleByEmail(email) === 'admin') user.role = 'admin';
+      await user.save();
     }
-
-    user.emailVerified = true;
-    if (resolveRoleByEmail(email) === 'admin') user.role = 'admin';
-    await user.save();
 
     res.json({
       status: 'success',

@@ -76,8 +76,8 @@ export function Sidebar({
       )}
       <aside ref={sidebarRef} className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
-        <div className="brand-mark" aria-hidden="true">
-          <GraduationCap className="brand-icon" size={22} />
+        <div className="brand-mark" aria-hidden="true" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
+          <img src="/logo.png" alt="ExamPrep Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }} />
         </div>
         <div className="brand-text">
           <h2>{APP_NAME}</h2>
@@ -197,7 +197,6 @@ export function Sidebar({
           {theme === 'dark' ? <Sun size={14} className="theme-toggle-icon" /> : <Moon size={14} className="theme-toggle-icon" />}
           <span>{theme === 'dark' ? 'Light Theme' : 'Dark Theme'}</span>
         </button>
-        <span className="version-label">{APP_NAME} v{APP_VERSION}</span>
       </div>
     </aside>
     </>

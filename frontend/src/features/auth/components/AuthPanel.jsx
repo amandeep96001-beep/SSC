@@ -91,7 +91,11 @@ function GoogleSignInButton({ clientId, disabled, onAuth, onError }) {
   }, [preferOfficial, clientId]);
 
   const handleClick = async () => {
-    if (!clientId || disabled || busy) return;
+    if (disabled || busy) return;
+    if (!clientId) {
+      toastAuthError('Google login configuration is missing or server is unreachable.');
+      return;
+    }
     setBusy(true);
     try {
       const payload = await signInWithGoogle(clientId);
@@ -121,7 +125,7 @@ function GoogleSignInButton({ clientId, disabled, onAuth, onError }) {
     <button
       type="button"
       className="auth-google-btn"
-      disabled={disabled || busy || !clientId}
+      disabled={disabled || busy}
       onClick={handleClick}
     >
       {busy ? (
@@ -171,8 +175,8 @@ export function AuthPanel({
   const { theme, toggleTheme } = useTheme();
   const otpValue = otpDigits.join('');
   const isOtpMode = mode === 'verify' || mode === 'reset';
-  const showAuthTabs = mode === 'login' || mode === 'register';
-  const showGoogle = showAuthTabs && Boolean(googleClientId);
+  const showAuthTabs = mode === 'login' || mode === 'register' || mode === 'register-step-2';
+  const showGoogle = mode === 'login' || mode === 'register';
 
   const resetAuthFields = (opts = {}) => {
     const { keepEmail = false } = opts;
@@ -326,15 +330,25 @@ export function AuthPanel({
     }
   };
 
-  const handleRegister = async (e) => {
+  const handleNextStep = (e) => {
     e.preventDefault();
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       toastAuthError('Please enter a valid email address.');
       return;
     }
+    setMode('register-step-2');
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    const trimmed = email.trim().toLowerCase();
     if (!password || password.length < 8) {
       toastAuthError('Password must be at least 8 characters and include letters and numbers.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      toastAuthError('Passwords do not match.');
       return;
     }
     setIsSubmitting(true);
@@ -535,17 +549,18 @@ export function AuthPanel({
 
         <div className="auth-card">
           <div className="auth-brand">
-            <div className={`auth-brand-icon ${isOtpMode ? 'auth-brand-icon--otp' : ''}`}>
+            <div className={`auth-brand-icon ${isOtpMode ? 'auth-brand-icon--otp' : ''}`} style={(!isOtpMode && mode !== 'forgot' && mode !== 'reset') ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {}}>
               {mode === 'forgot' || mode === 'reset'
                 ? <KeyRound size={28} />
                 : mode === 'verify'
                   ? <ShieldCheck size={28} />
-                  : <GraduationCap size={28} />}
+                  : <img src="/logo.png" alt="App Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '14px' }} />}
             </div>
             <p className="auth-brand-tagline">{APP_NAME}</p>
             <h1>
               {mode === 'login' && 'Welcome back'}
               {mode === 'register' && 'Create account'}
+              {mode === 'register-step-2' && 'Set a password'}
               {mode === 'verify' && 'Verify email'}
               {mode === 'forgot' && 'Reset password'}
               {mode === 'reset' && 'New password'}
@@ -553,6 +568,7 @@ export function AuthPanel({
             <p className="auth-brand-action">
               {mode === 'login' && 'Sign in to continue your prep.'}
               {mode === 'register' && 'Start your exam prep in a minute.'}
+              {mode === 'register-step-2' && 'Almost there, secure your account.'}
               {mode === 'verify' && 'Confirm your email address to continue.'}
               {mode === 'forgot' && 'Enter your email and we’ll send a reset code.'}
               {mode === 'reset' && `Enter the code sent to ${maskEmail(email)} and choose a new password.`}
@@ -573,8 +589,8 @@ export function AuthPanel({
               <button
                 type="button"
                 role="tab"
-                aria-selected={mode === 'register'}
-                className={mode === 'register' ? 'active' : ''}
+                aria-selected={mode === 'register' || mode === 'register-step-2'}
+                className={mode === 'register' || mode === 'register-step-2' ? 'active' : ''}
                 onClick={() => switchAuthMode('register')}
               >
                 <UserPlus size={15} /> Register
@@ -791,7 +807,7 @@ export function AuthPanel({
           </form>
         )}
         {mode === 'register' && (
-          <form onSubmit={handleRegister} className="auth-form" noValidate>
+          <form onSubmit={handleNextStep} className="auth-form" noValidate>
             <div className="form-group">
               <label htmlFor="reg-email">Email</label>
               <div className="input-with-icon">
@@ -808,8 +824,16 @@ export function AuthPanel({
                 />
               </div>
             </div>
+            <button type="submit" className="btn-auth-submit" disabled={isSubmitting}>
+              <span>Continue</span><ArrowRight size={18} />
+            </button>
+          </form>
+        )}
+
+        {mode === 'register-step-2' && (
+          <form onSubmit={handleRegister} className="auth-form" noValidate>
             <div className="form-group">
-              <label htmlFor="reg-pass">Password</label>
+              <label htmlFor="reg-pass">Create a password</label>
               <div className="input-with-icon">
                 <Lock size={16} className="field-icon" aria-hidden />
                 <input
@@ -831,6 +855,22 @@ export function AuthPanel({
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="reg-pass-confirm">Confirm Password</label>
+              <div className="input-with-icon">
+                <Lock size={16} className="field-icon" aria-hidden />
+                <input
+                  id="reg-pass-confirm"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  required
+                />
+              </div>
               <p className="field-hint">
                 Use letters and numbers. A verification code will be sent to confirm your email.
               </p>
@@ -842,6 +882,16 @@ export function AuthPanel({
                 <><span>Create account</span><ArrowRight size={18} /></>
               )}
             </button>
+            <div className="auth-otp-actions" style={{ marginTop: '16px', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className="auth-back-link"
+                disabled={isSubmitting}
+                onClick={() => setMode('register')}
+              >
+                <ArrowLeft size={14} /> Back
+              </button>
+            </div>
           </form>
         )}
 

@@ -18,6 +18,7 @@ const OtpSchema = new mongoose.Schema({
   codeHash: { type: String, required: true },
   expiresAt: { type: Date, required: true },
   attempts: { type: Number, default: 0 },
+  pendingData: { type: mongoose.Schema.Types.Mixed },
 });
 
 OtpSchema.index({ email: 1, purpose: 1 });

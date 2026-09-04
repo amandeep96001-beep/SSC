@@ -141,6 +141,7 @@
   border: 1px solid var(--border-subtle);
   background: var(--bg-elevated);
   color: var(--text-muted);
+  overflow: visible; /* Prevent shadow/hover clipping */
 }
 
 .reminders-empty h2 {
@@ -157,6 +158,10 @@
   color: var(--text-secondary);
   max-width: 26ch;
   line-height: 1.45;
+}
+
+.reminders-empty .btn-add {
+  margin-top: 12px;
 }
 
 .reminders-loading {
@@ -388,9 +393,11 @@
 
   .reminders-page-header .page-header__actions {
     margin-left: 0;
+    margin-top: 16px; /* Separate from header text on mobile */
   }
 
-  .reminders-page-header .btn-add {
+  .reminders-page-header .btn-add,
+  .reminders-empty .btn-add {
     width: 100%;
     justify-content: center;
   }

@@ -21,21 +21,19 @@
   animation: authWallpaperDrift 28s ease-in-out infinite alternate;
 }
 
+:root[data-theme='light'] .auth-page__wallpaper {
+  background: url('/wallpapers/auth-wallpaper-light.png') center / cover no-repeat;
+}
+
 .auth-page__veil {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(120deg, rgba(7, 11, 20, 0.78) 0%, rgba(10, 16, 30, 0.55) 45%, rgba(7, 11, 20, 0.72) 100%),
-    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(245, 199, 106, 0.12), transparent 55%),
-    radial-gradient(ellipse 55% 45% at 85% 80%, rgba(94, 234, 212, 0.1), transparent 50%);
+  background: rgba(0, 0, 0, 0.15); /* Soft dark overlay */
 }
 
 :root[data-theme='light'] .auth-page__veil {
-  background:
-    linear-gradient(120deg, rgba(232, 238, 248, 0.82) 0%, rgba(236, 242, 250, 0.7) 50%, rgba(226, 234, 246, 0.78) 100%),
-    radial-gradient(ellipse 70% 50% at 12% 18%, rgba(245, 158, 11, 0.12), transparent 52%),
-    radial-gradient(ellipse 55% 45% at 88% 82%, rgba(16, 185, 129, 0.1), transparent 48%);
+  background: rgba(255, 255, 255, 0.2); /* Soft light overlay */
 }
 
 @keyframes authWallpaperDrift {
@@ -49,7 +47,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 420px);
   width: min(980px, 100%);
-  min-height: min(640px, calc(100vh - 48px));
+  min-height: 540px;
   border-radius: 28px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -282,12 +280,19 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  padding: clamp(28px, 4vw, 44px) clamp(24px, 3.5vw, 40px);
+  padding: clamp(24px, 3vw, 40px) clamp(24px, 3.5vw, 40px);
   background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
   backdrop-filter: blur(18px);
   animation: authCardIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 240px; /* Keeps height consistent between steps without pushing bottom elements far away */
+  justify-content: flex-start;
 }
 
 :root[data-theme='light'] .auth-card {
@@ -366,9 +371,9 @@
 }
 
 .auth-mode-selector button {
-  flex: 1;
+  flex: 1 1 50% !important;
   background: transparent;
-  border: none;
+  border: none !important;
   padding: 11px 10px;
   font-size: 0.875rem;
   font-weight: 650;
