@@ -11,19 +11,15 @@ import tcsQuestionRoutes from '../modules/questions/tcs-question.routes.js';
 import reminderRoutes from '../modules/reminders/reminder.routes.js';
 
 import { requireAuth } from '../shared/middleware/auth.middleware.js';
-import { getDBStatus, getDBDiagnostics } from '../config/db.config.js';
-import { getEnvHealth } from '../config/env.config.js';
+import { getDBStatus } from '../config/db.config.js';
 
 const router = express.Router();
 
-// Public diagnostics (no auth)
 router.get('/health', (req, res) => {
   const dbOk = getDBStatus();
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? 'ok' : 'degraded',
     db: dbOk ? 'connected' : 'disconnected',
-    mongo: getDBDiagnostics(),
-    env: getEnvHealth(),
   });
 });
 
