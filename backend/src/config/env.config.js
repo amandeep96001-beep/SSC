@@ -1,7 +1,11 @@
 const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET'];
 
+export function isHostedRuntime() {
+  return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
+}
+
 export function validateEnv() {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = isHostedRuntime();
   if (!isProduction) return;
 
   const missing = REQUIRED_IN_PRODUCTION.filter((key) => !process.env[key]?.trim());

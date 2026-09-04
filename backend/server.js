@@ -20,10 +20,9 @@ async function start() {
 
   try {
     await connectDB();
-  } catch {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('⚠️ Starting without database (local dev only).');
-    }
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err?.message || err);
+    console.warn('⚠️ Starting HTTP server; database retries will continue in the background.');
   }
 
   const app = createApp();
