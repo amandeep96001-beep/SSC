@@ -174,6 +174,23 @@ export function AuthPanel({
   const showAuthTabs = mode === 'login' || mode === 'register';
   const showGoogle = showAuthTabs && Boolean(googleClientId);
 
+  const resetAuthFields = (opts = {}) => {
+    const { keepEmail = false } = opts;
+    if (!keepEmail) setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setOtpDigits(Array(OTP_LEN).fill(''));
+    setDebugOtp('');
+    setResendIn(0);
+  };
+
+  const switchAuthMode = (nextMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    resetAuthFields();
+  };
+
   useEffect(() => {
     if (googleClientId) return undefined;
     let cancelled = false;
@@ -479,6 +496,8 @@ export function AuthPanel({
 
   return (
     <div className="auth-page">
+      <div className="auth-page__wallpaper" aria-hidden="true" />
+      <div className="auth-page__veil" aria-hidden="true" />
       <Helmet>
         <title>{pageTitle(pageHeading)}</title>
       </Helmet>
@@ -487,47 +506,81 @@ export function AuthPanel({
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </button>
 
-      <div className="auth-card">
-        <div className="auth-brand">
-          <div className={`auth-brand-icon ${isOtpMode ? 'auth-brand-icon--otp' : ''}`}>
-            {mode === 'forgot' || mode === 'reset'
-              ? <KeyRound size={28} />
-              : mode === 'verify'
-                ? <ShieldCheck size={28} />
-                : <GraduationCap size={28} />}
-          </div>
-          <h1>{APP_NAME}</h1>
-          <p className="auth-brand-action">
-            {mode === 'login' && 'Welcome back. Sign in to continue.'}
-            {mode === 'register' && 'Create your account to get started.'}
-            {mode === 'verify' && 'Confirm your email address to continue.'}
-            {mode === 'forgot' && 'Enter your email and we’ll send a reset code.'}
-            {mode === 'reset' && `Enter the code sent to ${maskEmail(email)} and choose a new password.`}
+      <div className="auth-shell">
+        <aside className="auth-showcase" aria-hidden="true">
+          <div className="auth-showcase__glow" />
+          <div className="auth-showcase__grid" />
+          <p className="auth-showcase__eyebrow">SSC · Banking · Railways · UPSC</p>
+          <h2 className="auth-showcase__title">
+            Prep that feels
+            <span> focused.</span>
+          </h2>
+          <p className="auth-showcase__copy">
+            Drills, mocks, notes, and battles — one calm workspace for every exam day.
           </p>
-        </div>
-
-        {showAuthTabs && (
-          <div className="auth-mode-selector" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'login'}
-              className={mode === 'login' ? 'active' : ''}
-              onClick={() => { setMode('login'); setDebugOtp(''); }}
-            >
-              <LogIn size={15} /> Sign in
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === 'register'}
-              className={mode === 'register' ? 'active' : ''}
-              onClick={() => { setMode('register'); setDebugOtp(''); }}
-            >
-              <UserPlus size={15} /> Register
-            </button>
+          <div className="auth-showcase__art">
+            <div className="auth-art-desk">
+              <div className="auth-art-lamp" />
+              <div className="auth-art-screen">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="auth-art-book" />
+              <div className="auth-art-chip auth-art-chip--a">+12 streak</div>
+              <div className="auth-art-chip auth-art-chip--b">Mock 84%</div>
+            </div>
           </div>
-        )}
+        </aside>
+
+        <div className="auth-card">
+          <div className="auth-brand">
+            <div className={`auth-brand-icon ${isOtpMode ? 'auth-brand-icon--otp' : ''}`}>
+              {mode === 'forgot' || mode === 'reset'
+                ? <KeyRound size={28} />
+                : mode === 'verify'
+                  ? <ShieldCheck size={28} />
+                  : <GraduationCap size={28} />}
+            </div>
+            <p className="auth-brand-tagline">{APP_NAME}</p>
+            <h1>
+              {mode === 'login' && 'Welcome back'}
+              {mode === 'register' && 'Create account'}
+              {mode === 'verify' && 'Verify email'}
+              {mode === 'forgot' && 'Reset password'}
+              {mode === 'reset' && 'New password'}
+            </h1>
+            <p className="auth-brand-action">
+              {mode === 'login' && 'Sign in to continue your prep.'}
+              {mode === 'register' && 'Start your exam prep in a minute.'}
+              {mode === 'verify' && 'Confirm your email address to continue.'}
+              {mode === 'forgot' && 'Enter your email and we’ll send a reset code.'}
+              {mode === 'reset' && `Enter the code sent to ${maskEmail(email)} and choose a new password.`}
+            </p>
+          </div>
+
+          {showAuthTabs && (
+            <div className="auth-mode-selector" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'login'}
+                className={mode === 'login' ? 'active' : ''}
+                onClick={() => switchAuthMode('login')}
+              >
+                <LogIn size={15} /> Sign in
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === 'register'}
+                className={mode === 'register' ? 'active' : ''}
+                onClick={() => switchAuthMode('register')}
+              >
+                <UserPlus size={15} /> Register
+              </button>
+            </div>
+          )}
 
         {mode === 'login' && (
           <form onSubmit={handleLogin} className="auth-form" noValidate>
@@ -556,10 +609,7 @@ export function AuthPanel({
                   disabled={isSubmitting}
                   onClick={() => {
                     setMode('forgot');
-                    setPassword('');
-                    setConfirmPassword('');
-                    setDebugOtp('');
-                    setShowPassword(false);
+                    resetAuthFields({ keepEmail: true });
                   }}
                 >
                   Forgot password?
@@ -626,7 +676,7 @@ export function AuthPanel({
               type="button"
               className="auth-back-link auth-back-link--block"
               disabled={isSubmitting}
-              onClick={() => setMode('login')}
+              onClick={() => switchAuthMode('login')}
             >
               <ArrowLeft size={14} /> Back to sign in
             </button>
@@ -725,12 +775,7 @@ export function AuthPanel({
                 type="button"
                 className="auth-back-link"
                 disabled={isSubmitting}
-                onClick={() => {
-                  setMode('login');
-                  setOtpDigits(Array(OTP_LEN).fill(''));
-                  setConfirmPassword('');
-                  setDebugOtp('');
-                }}
+                onClick={() => switchAuthMode('login')}
               >
                 <ArrowLeft size={14} /> Back to sign in
               </button>
@@ -858,11 +903,7 @@ export function AuthPanel({
                 type="button"
                 className="auth-back-link"
                 disabled={isSubmitting}
-                onClick={() => {
-                  setMode('login');
-                  setOtpDigits(Array(OTP_LEN).fill(''));
-                  setDebugOtp('');
-                }}
+                onClick={() => switchAuthMode('login')}
               >
                 <ArrowLeft size={14} /> Back to sign in
               </button>
@@ -889,6 +930,7 @@ export function AuthPanel({
             />
           </>
         )}
+        </div>
       </div>
     </div>
   );
