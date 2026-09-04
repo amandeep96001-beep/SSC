@@ -8,10 +8,10 @@ import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
 import { preloadGsi, mountGoogleButton, signInWithGoogle } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
+import { apiService } from '@/shared/services/apiService';
 import '../auth.css';
 
 const OTP_LEN = 6;
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
 
 /** Never surface raw API / stack messages in the UI. */
 function toastAuthError(fallback = 'Something went wrong. Please try again.') {
@@ -29,7 +29,7 @@ function GoogleMark({ className }) {
   );
 }
 
-function GoogleSignInButton({ disabled, onAuth, onError }) {
+function GoogleSignInButton({ clientId, disabled, onAuth, onError }) {
   const [busy, setBusy] = useState(false);
   const [useOfficialBtn, setUseOfficialBtn] = useState(false);
   const hostRef = useRef(null);
@@ -48,12 +48,11 @@ function GoogleSignInButton({ disabled, onAuth, onError }) {
 
   // Official Google button on mobile — popups are unreliable there
   useEffect(() => {
-    if (!preferOfficial || !GOOGLE_CLIENT_ID) return undefined;
+    if (!preferOfficial || !clientId) return undefined;
     let cleanup = () => {};
     let cancelled = false;
 
     const tryMount = async () => {
-      // wait one frame so hostRef is in DOM when we switch to official layout
       setUseOfficialBtn(true);
       await new Promise((r) => requestAnimationFrame(r));
       if (cancelled || !hostRef.current) {
@@ -61,7 +60,7 @@ function GoogleSignInButton({ disabled, onAuth, onError }) {
         return;
       }
       try {
-        cleanup = await mountGoogleButton(hostRef.current, GOOGLE_CLIENT_ID, {
+        cleanup = await mountGoogleButton(hostRef.current, clientId, {
           width: hostRef.current?.clientWidth || 320,
           onCredential: async (credential) => {
             setBusy(true);
@@ -86,13 +85,13 @@ function GoogleSignInButton({ disabled, onAuth, onError }) {
       cancelled = true;
       cleanup?.();
     };
-  }, [preferOfficial]);
+  }, [preferOfficial, clientId]);
 
   const handleClick = async () => {
-    if (!GOOGLE_CLIENT_ID || disabled || busy) return;
+    if (!clientId || disabled || busy) return;
     setBusy(true);
     try {
-      const payload = await signInWithGoogle(GOOGLE_CLIENT_ID);
+      const payload = await signInWithGoogle(clientId);
       await onAuth?.(payload);
     } catch (err) {
       if (!err?.cancelled) onError?.();
@@ -119,7 +118,7 @@ function GoogleSignInButton({ disabled, onAuth, onError }) {
     <button
       type="button"
       className="auth-google-btn"
-      disabled={disabled || busy || !GOOGLE_CLIENT_ID}
+      disabled={disabled || busy || !clientId}
       onClick={handleClick}
     >
       {busy ? (
@@ -162,12 +161,30 @@ export function AuthPanel({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [debugOtp, setDebugOtp] = useState('');
   const [resendIn, setResendIn] = useState(0);
+  const [googleClientId, setGoogleClientId] = useState(
+    () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
+  );
   const otpRefs = useRef([]);
   const { theme, toggleTheme } = useTheme();
   const otpValue = otpDigits.join('');
   const isOtpMode = mode === 'verify' || mode === 'reset';
   const showAuthTabs = mode === 'login' || mode === 'register';
-  const showGoogle = showAuthTabs && GOOGLE_CLIENT_ID;
+  const showGoogle = showAuthTabs && Boolean(googleClientId);
+
+  useEffect(() => {
+    if (googleClientId) return undefined;
+    let cancelled = false;
+    apiService
+      .get('/auth/google-config')
+      .then((res) => {
+        const id = res?.clientId?.trim();
+        if (!cancelled && id) setGoogleClientId(id);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId]);
 
   useEffect(() => {
     if (resendIn <= 0) return undefined;
@@ -850,6 +867,7 @@ export function AuthPanel({
           <>
             <div className="auth-divider"><span>or</span></div>
             <GoogleSignInButton
+              clientId={googleClientId}
               disabled={isSubmitting}
               onAuth={handleGoogleAuth}
               onError={handleGoogleError}
