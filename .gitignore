@@ -10,3 +10,7 @@ backend/uploads/
 .gemini/
 apps/
 packages/
+
+# local env backups (may contain secrets)
+.env.bak*
+backend/.env.bak*

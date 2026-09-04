@@ -142,18 +142,60 @@ const defaultSeedVocab = [
   }
 ];
 
-export const connectDB = async () => {
-  try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ssc_prep';
-    console.log(`🔄 Connecting to Database at: ${mongoUri.replace(/:([^:@]+)@/, ':****@')}`);
-    
-    await mongoose.connect(mongoUri, {
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000,
-    });
-    isDbConnected = true;
-    console.log('🔥 MongoDB connected successfully!');
+const LOCAL_URI = 'mongodb://127.0.0.1:27017/ssc_prep';
 
+async function tryConnect(uri, label) {
+  console.log(`🔄 Trying ${label}: ${uri.replace(/:([^:@]+)@/, ':****@')}`);
+  await mongoose.connect(uri, {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 8000,
+  });
+}
+
+export const connectDB = async () => {
+  const primaryUri = process.env.MONGODB_URI?.trim();
+  const isAtlas = primaryUri && primaryUri !== LOCAL_URI;
+
+  // ── Try Primary (Atlas if set, otherwise local) ────────────────────────────
+  if (primaryUri) {
+    try {
+      await tryConnect(primaryUri, isAtlas ? 'Atlas' : 'Local MongoDB');
+      isDbConnected = true;
+      console.log(`🔥 MongoDB connected (${isAtlas ? 'Atlas ☁️' : 'Local 🖥️'})`);
+    } catch (primaryErr) {
+      console.warn(`⚠️ Primary connection failed: ${primaryErr.message}`);
+      isDbConnected = false;
+    }
+  }
+
+  // ── Fallback to local MongoDB if Atlas failed ──────────────────────────────
+  if (!isDbConnected && isAtlas) {
+    console.log('↩️  Falling back to local MongoDB...');
+    try {
+      await mongoose.disconnect().catch(() => {}); // clear failed connection
+      await tryConnect(LOCAL_URI, 'Local MongoDB (fallback)');
+      isDbConnected = true;
+      console.log('🔥 MongoDB connected (Local fallback 🖥️)');
+    } catch (localErr) {
+      console.error('❌ Local MongoDB also failed:', localErr.message);
+      isDbConnected = false;
+      if (process.env.NODE_ENV === 'production') process.exit(1);
+      console.warn('⚠️ Starting without database (dev mode — auth & data routes return 503).');
+      return; // don't throw — let server start
+    }
+  }
+
+  // If no URI set at all and not connected
+  if (!isDbConnected && !primaryUri) {
+    console.error('❌ MONGODB_URI not set and local connection failed.');
+    if (process.env.NODE_ENV === 'production') process.exit(1);
+    return;
+  }
+
+  // ── Post-connection setup (indexes + seeding) ──────────────────────────────
+  if (!isDbConnected) return;
+
+  try {
     // Drop legacy unique-on-name index so users can create personal subjects
     try {
       await Subject.collection.dropIndex('name_1');
@@ -167,17 +209,13 @@ export const connectDB = async () => {
 
     const vocabCount = await Vocab.countDocuments();
     if (vocabCount === 0) {
-      console.log('🌱 Seeding default vocabulary items into MongoDB Atlas...');
+      console.log('🌱 Seeding default vocabulary items...');
       await Vocab.insertMany(defaultSeedVocab);
       console.log('✅ Successfully seeded vocabulary items!');
     }
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    isDbConnected = false;
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
-    }
-    throw error;
+    console.warn('⚠️ Post-connection setup warning:', error.message);
+    // Non-fatal — server continues
   }
 };
 

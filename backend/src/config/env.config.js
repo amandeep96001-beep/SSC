@@ -30,5 +30,6 @@ export function getEnvHealth() {
     // true only when FRONTEND_URL looks like a real deployed origin (not localhost)
     hasDeployedFrontendUrl: Boolean(frontendUrl) && !isLocalFrontend,
     hasGoogleClientId: Boolean(process.env.GOOGLE_CLIENT_ID?.trim()),
+    hasGeminiKey: Boolean(process.env.GEMINI_API_KEY?.trim()),
   };
 }
