@@ -1,12 +1,16 @@
 function resolveApiBase() {
+  // On Vercel, always use same-origin /api so vercel.json rewrite controls the
+  // Render host. A baked-in VITE_API_URL (e.g. an old *.onrender.com) goes stale
+  // when the Render service URL changes and bypasses the rewrite.
+  if (typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')) {
+    return '/api';
+  }
+
   const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
   if (fromEnv) {
     return fromEnv.endsWith('/api') ? fromEnv : `${fromEnv.replace(/\/+$/, '')}/api`;
   }
-  // Same-origin /api (Vercel rewrite → Render) when no VITE_API_URL is baked in
-  if (typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')) {
-    return '/api';
-  }
+
   // Phone / LAN access: hit API on same host, not phone-localhost
   if (typeof window !== 'undefined') {
     const { hostname, protocol } = window.location;
