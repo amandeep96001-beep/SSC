@@ -15,15 +15,31 @@ import { getDBStatus } from '../config/db.config.js';
 
 const router = express.Router();
 
+function googleClientId() {
+  return process.env.GOOGLE_CLIENT_ID?.trim() || '';
+}
+
 router.get('/health', (req, res) => {
   const dbOk = getDBStatus();
+  const clientId = googleClientId();
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? 'ok' : 'degraded',
     db: dbOk ? 'connected' : 'disconnected',
+    googleClientId: clientId || null,
   });
 });
 
-// Public: register & login only (see auth.routes.js)
+/** Public — GIS client IDs are not secret. Registered here so it never hits requireAuth. */
+router.get('/auth/google-config', (_req, res) => {
+  const clientId = googleClientId();
+  res.json({
+    status: 'ok',
+    enabled: Boolean(clientId),
+    clientId: clientId || null,
+  });
+});
+
+// Public auth routes (login, register, OTP, Google)
 router.use('/auth', authRoutes);
 
 // Everything below requires a valid JWT

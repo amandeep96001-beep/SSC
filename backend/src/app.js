@@ -150,10 +150,12 @@ export function createApp() {
   // Liveness for Render — always 200; DB status is in the body.
   app.get('/health', (req, res) => {
     const dbOk = getDBStatus();
+    const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
     res.status(200).json({
       status: dbOk ? 'ok' : 'degraded',
       uptime: process.uptime(),
       db: dbOk ? 'connected' : 'disconnected',
+      googleClientId,
     });
   });
 

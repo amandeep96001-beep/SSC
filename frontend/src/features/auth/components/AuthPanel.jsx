@@ -174,13 +174,25 @@ export function AuthPanel({
   useEffect(() => {
     if (googleClientId) return undefined;
     let cancelled = false;
-    apiService
-      .get('/auth/google-config')
-      .then((res) => {
-        const id = res?.clientId?.trim();
-        if (!cancelled && id) setGoogleClientId(id);
-      })
-      .catch(() => {});
+
+    const applyId = (id) => {
+      const value = String(id || '').trim();
+      if (!cancelled && value) setGoogleClientId(value);
+    };
+
+    // Prefer dedicated config; fall back to /health (always public).
+    Promise.allSettled([
+      apiService.get('/auth/google-config'),
+      apiService.get('/health'),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status !== 'fulfilled') continue;
+        const data = result.value;
+        applyId(data?.clientId || data?.googleClientId);
+        if (cancelled) return;
+      }
+    });
+
     return () => {
       cancelled = true;
     };
