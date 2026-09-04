@@ -14,8 +14,6 @@ const CONNECT_OPTS = {
   socketTimeoutMS: 45000,
   family: 4,
   autoSelectFamily: false,
-  // Atlas DB users live in the admin database, not the app db in the URI path.
-  authSource: 'admin',
 };
 
 const READY = {
@@ -46,9 +44,10 @@ function normalizeMongoUri(raw) {
 }
 
 function withAtlasParams(raw) {
+  // Do not force authSource — Atlas users may authenticate against the
+  // path db (/ssc_prep). Forcing authSource=admin caused "bad auth" here.
   const uri = normalizeMongoUri(raw);
   const extras = [];
-  if (!/[?&]authSource=/i.test(uri)) extras.push('authSource=admin');
   if (!/[?&]retryWrites=/i.test(uri)) extras.push('retryWrites=true');
   if (!/[?&]w=/i.test(uri)) extras.push('w=majority');
   if (extras.length === 0) return uri;
