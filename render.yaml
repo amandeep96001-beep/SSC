@@ -25,7 +25,7 @@ services:
         sync: false
       # Public URL used by Render cron/pinger to keep the free instance awake.
       - key: KEEPALIVE_URL
-        value: https://ssc-backend.onrender.com
+        value: https://ssc-0p96.onrender.com
 
   # Ping the API every 5 minutes to prevent Render free-tier sleep.
   - type: cron
@@ -35,7 +35,7 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: >
-      node -e "const url = (process.env.KEEPALIVE_URL || 'https://ssc-backend.onrender.com') + '/health'; fetch(url).then(async (res) => { if (!res.ok) { throw new Error('health-check failed: ' + res.status); } const data = await res.text(); console.log('keepalive ok', res.status, data.slice(0, 80)); }).catch((err) => { console.error(err); process.exit(1); });"
+      node -e "const url = (process.env.KEEPALIVE_URL || 'https://ssc-0p96.onrender.com') + '/health'; fetch(url).then(async (res) => { if (!res.ok) { throw new Error('health-check failed: ' + res.status); } const data = await res.text(); console.log('keepalive ok', res.status, data.slice(0, 80)); }).catch((err) => { console.error(err); process.exit(1); });"
     envVars:
       - key: KEEPALIVE_URL
-        value: https://ssc-backend.onrender.com
+        value: https://ssc-0p96.onrender.com
