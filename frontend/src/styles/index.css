@@ -5,6 +5,7 @@
 @import './sidebar-user.css';
 @import './mobile-layout.css';
 @import './mobile-sleek.css';
+@import './design-overhaul.css';
 
 /*
   CSS map
@@ -303,13 +304,24 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(128, 128, 160, 0.25); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(128, 128, 160, 0.4); }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb { background: rgba(128, 128, 160, 0.25); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+::-webkit-scrollbar-button { display: none !important; width: 0 !important; height: 0 !important; }
+::-webkit-scrollbar-corner { background: transparent !important; }
 
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+:root[data-theme="light"] * {
+  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+}
 
 button,
 input,
@@ -402,38 +414,15 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Steady interactions: kill lift / press-in motion app-wide */
-button:hover:not(:disabled):not(.notes-fab),
-button:active:not(:disabled):not(.notes-fab),
-button:focus-visible:not(:disabled):not(.notes-fab),
-.subject-selection-card:hover,
-.subject-selection-card:active,
-.topic-outline-card:hover,
-.topic-outline-card:active,
-.mock-glass-card:hover,
-.mock-glass-card:active,
+/* Only suppress transform on nav items and purely layout elements */
+.nav-item:hover,
+.nav-item:active,
 .vocab-term-card:hover,
 .vocab-term-card:active,
-.stat-card-premium:hover,
-.stat-box:hover,
 .drill-interactive-card:hover,
 .drill-config-card:hover,
 .perf-log-card:hover,
-.nav-item:hover,
-.nav-item:active,
-.competition-start-btn:hover,
-.competition-start-btn:active,
-.battle-again-btn:hover,
-.battle-again-btn:active,
-.battle-option-btn:hover,
-.battle-option-btn:active,
-.btn-premium-mock:hover,
-.btn-premium-mock:active,
-.btn-drill-next:hover,
-.btn-drill-next:active,
-.btn-related-questions:hover,
-.btn-ai-explain:hover,
-.btn-retry-attempt:hover,
+.stat-box:hover,
 .auth-theme-toggle:hover,
 .auth-theme-toggle:active,
 .btn-theme-toggle:hover,

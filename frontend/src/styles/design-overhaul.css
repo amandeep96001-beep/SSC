@@ -1,0 +1,1306 @@
+/* ============================================================
+   DESIGN OVERHAUL — Modern Premium UI v2
+   Improves: buttons, sidebar, cards, inputs, nav items
+   ============================================================ */
+
+/* ============================================================
+   PINTEREST GLASSMORPHIC THEME OVERRIDES (Global Architecture)
+   ============================================================ */
+
+:root,
+:root[data-theme="dark"] {
+  /* Dynamic Mesh Gradient Background for Dark Mode */
+  --bg-main: #060913;
+  --mesh-bg: 
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(167, 139, 250, 0.15), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(45, 212, 191, 0.1), transparent 50%),
+    #060913;
+
+  /* Glassmorphic Surfaces */
+  --sidebar-bg: rgba(18, 22, 38, 0.6) !important;
+  --bg-surface: rgba(22, 28, 45, 0.65) !important;
+  --bg-elevated: rgba(28, 34, 55, 0.7) !important;
+  --bg-card: rgba(22, 28, 45, 0.6) !important;
+  --bg-input: rgba(15, 20, 35, 0.5) !important;
+  --glass-blur: blur(28px) saturate(180%) !important;
+  
+  /* Borders and Shadows for Glass */
+  --sidebar-border: rgba(255, 255, 255, 0.08) !important;
+  --border-color: rgba(255, 255, 255, 0.1) !important;
+  --border-subtle: rgba(255, 255, 255, 0.05) !important;
+  --shadow-float: 0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  --card-hover-shadow: 0 24px 56px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+  /* Geometry */
+  --radius-xl: 32px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --btn-radius: 16px;
+  --nav-item-radius: 16px;
+
+  /* Button Shadows */
+  --btn-shadow-primary: 0 8px 24px rgba(139, 147, 248, 0.35);
+  --btn-shadow-primary-hover: 0 12px 32px rgba(139, 147, 248, 0.5);
+  --btn-shadow-danger: 0 8px 24px rgba(252, 165, 165, 0.3);
+  --btn-shadow-success: 0 8px 24px rgba(94, 234, 212, 0.3);
+  --sidebar-active-gradient: linear-gradient(135deg, rgba(139, 147, 248, 0.25) 0%, rgba(99, 102, 241, 0.15) 100%);
+}
+
+:root[data-theme="light"] {
+  /* Dynamic Mesh Gradient Background for Light Mode */
+  --bg-main: #f4f6fc;
+  --mesh-bg: 
+    radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.12), transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.12), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(251, 146, 160, 0.1), transparent 50%),
+    #f4f6fc;
+
+  /* Glassmorphic Surfaces */
+  --sidebar-bg: rgba(255, 255, 255, 0.75) !important;
+  --bg-surface: rgba(255, 255, 255, 0.75) !important;
+  --bg-elevated: rgba(255, 255, 255, 0.85) !important;
+  --bg-card: rgba(255, 255, 255, 0.7) !important;
+  --bg-input: rgba(255, 255, 255, 0.6) !important;
+  --glass-blur: blur(28px) saturate(180%) !important;
+
+  /* Borders and Shadows for Glass */
+  --sidebar-border: rgba(255, 255, 255, 0.8) !important;
+  --border-color: rgba(255, 255, 255, 0.6) !important;
+  --border-subtle: rgba(255, 255, 255, 0.4) !important;
+  --shadow-float: 0 24px 48px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1) !important;
+  --shadow-card: 0 12px 32px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+  --card-hover-shadow: 0 24px 56px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 1);
+
+  /* Button Shadows */
+  --btn-shadow-primary: 0 8px 24px rgba(99, 102, 241, 0.25);
+  --btn-shadow-primary-hover: 0 12px 32px rgba(99, 102, 241, 0.4);
+  --btn-shadow-danger: 0 8px 24px rgba(239, 68, 68, 0.2);
+  --btn-shadow-success: 0 8px 24px rgba(16, 185, 129, 0.2);
+  --sidebar-active-gradient: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.08) 100%);
+}
+
+/* ============================================================
+   GLOBAL MESH BACKGROUND & GLASS APP SHELL
+   ============================================================ */
+
+body, html {
+  background: var(--bg-main) !important;
+}
+
+.lms-container,
+.auth-page {
+  background: var(--mesh-bg) !important;
+  background-attachment: fixed !important;
+}
+
+/* Enhanced Glass Sidebar */
+.lms-sidebar {
+  background: var(--sidebar-bg) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--sidebar-border) !important;
+  box-shadow: var(--shadow-float) !important;
+}
+
+/* Enhanced Glass Workspace Card */
+.workspace-card-enclosure {
+  background: var(--bg-surface) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-radius: var(--radius-xl) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-float) !important;
+}
+
+/* Enhanced Glass Stat Boxes & Cards */
+.stat-box,
+.topic-outline-card,
+.vocab-term-card,
+.mock-glass-card {
+  background: var(--bg-card) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+.stat-box:hover,
+.topic-outline-card:hover,
+.mock-glass-card:hover {
+  box-shadow: var(--card-hover-shadow) !important;
+}
+
+/* ============================================================
+   GLOBAL BUTTON SYSTEM
+   ============================================================ */
+
+/* Base button reset + defaults */
+button {
+  border-radius: var(--btn-radius);
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+/* Primary action buttons */
+.btn-auth-submit,
+.btn-drill-next,
+.btn-premium-mock,
+.btn-save-topic,
+.btn-create-topic,
+.btn-add {
+  border-radius: var(--btn-radius) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  position: relative;
+  overflow: hidden;
+  transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.15s ease !important;
+}
+
+.btn-auth-submit,
+.btn-drill-next {
+  background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 72%, #4338ca) 100%) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+}
+
+.btn-auth-submit:hover:not(:disabled),
+.btn-drill-next:hover:not(:disabled),
+.btn-premium-mock:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  box-shadow: var(--btn-shadow-primary-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-auth-submit:active:not(:disabled),
+.btn-drill-next:active:not(:disabled),
+.btn-premium-mock:active:not(:disabled) {
+  transform: translateY(0) !important;
+  filter: brightness(0.97) !important;
+}
+
+/* Add / Create buttons */
+.btn-add {
+  padding: 9px 16px !important;
+  font-size: 0.85rem !important;
+  gap: 7px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px var(--color-primary-glow) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-add:hover:not(:disabled) {
+  background: var(--color-primary-hover) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Cancel / secondary buttons */
+.btn-cancel {
+  border-radius: 12px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  border: 1.5px solid var(--border-color) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-cancel:hover {
+  background: var(--bg-surface-hover) !important;
+  border-color: var(--text-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Danger buttons */
+.btn-confirm-flex,
+.btn-cancel-test {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-confirm-flex:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  box-shadow: var(--btn-shadow-danger) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Close modal button */
+.btn-close-modal {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--bg-surface-hover) !important;
+  border: 1px solid var(--border-subtle) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-close-modal:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: var(--color-danger) !important;
+}
+
+/* Submit section button in exam */
+.btn-submit-section {
+  border-radius: 12px !important;
+  padding: 14px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  background: var(--gradient-primary) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-submit-section:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Copy log button */
+.btn-copy-log {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-copy-log:hover {
+  background: var(--color-primary-muted) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+/* Wrong log clear button */
+.btn-clear-wrong-log {
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+/* Vocab add buttons */
+.btn-add-vocab:not(.btn-add-vocab--secondary) {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 18px var(--color-primary-glow) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-add-vocab:not(.btn-add-vocab--secondary):hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* AI Explain button */
+.btn-ai-explain {
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, var(--color-primary-muted), color-mix(in srgb, var(--color-primary-muted) 70%, var(--card-tint-lavender))) !important;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-ai-explain:hover:not(:disabled) {
+  background: var(--color-primary-muted) !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 4px 12px var(--color-primary-glow) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Related questions button */
+.btn-related-questions {
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-related-questions:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+}
+
+/* ============================================================
+   SIDEBAR ENHANCEMENTS
+   ============================================================ */
+
+/* Brand mark — bigger gradient glow */
+.brand-mark {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(145deg, var(--color-primary-muted), color-mix(in srgb, var(--color-primary) 8%, transparent)) !important;
+  border: 1.5px solid color-mix(in srgb, var(--color-primary) 28%, transparent) !important;
+  box-shadow: 0 6px 20px var(--color-primary-glow), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+}
+
+/* Nav items — modern pill style */
+.lms-sidebar .nav-item {
+  border-radius: var(--nav-item-radius) !important;
+  padding: 11px 14px !important;
+  font-weight: 500 !important;
+  font-size: 0.9rem !important;
+  border: 1px solid transparent !important;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease !important;
+  gap: 11px !important;
+}
+
+.lms-sidebar .nav-item:hover {
+  background: var(--sidebar-nav-hover) !important;
+  color: var(--sidebar-fg) !important;
+  border-color: rgba(255,255,255,0.04) !important;
+}
+
+/* Active nav item — gradient highlight */
+.lms-sidebar .nav-item.active {
+  background: var(--sidebar-active-gradient) !important;
+  color: var(--sidebar-nav-active-fg) !important;
+  border-color: color-mix(in srgb, var(--color-primary) 22%, transparent) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.18) !important;
+}
+
+:root[data-theme="light"] .lms-sidebar .nav-item.active {
+  background: var(--sidebar-active-gradient) !important;
+  color: var(--sidebar-nav-active-fg) !important;
+  border-color: rgba(99, 102, 241, 0.18) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.16) !important;
+}
+
+/* Nav icon with active highlight */
+.lms-sidebar .nav-item.active .nav-icon {
+  color: var(--color-primary) !important;
+}
+
+/* User profile card */
+.user-profile-card {
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  border: 1px solid var(--sidebar-border) !important;
+  background: var(--sidebar-surface) !important;
+  margin-bottom: 16px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+
+.user-profile-card .avatar-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, var(--color-primary), color-mix(in srgb, var(--color-primary) 70%, #4338ca)) !important;
+  box-shadow: 0 4px 12px var(--color-primary-glow) !important;
+}
+
+.username-label {
+  font-weight: 700 !important;
+  font-size: 0.88rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+.btn-logout {
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: var(--sidebar-fg-muted) !important;
+  gap: 4px !important;
+  padding: 3px 0 !important;
+  border-radius: 6px !important;
+  transition: color 0.18s ease !important;
+}
+
+.btn-logout:hover {
+  color: var(--color-danger) !important;
+}
+
+/* Theme toggle button */
+.btn-theme-toggle {
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  transition: all 0.18s ease !important;
+}
+
+/* ============================================================
+   WORKSPACE CARD & MAIN CONTENT
+   ============================================================ */
+
+.workspace-card-enclosure {
+  border-radius: 32px !important;
+  box-shadow: var(--shadow-float) !important;
+}
+
+/* Section headers */
+.section-header h1 {
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.04em !important;
+  background: linear-gradient(135deg, var(--text-heading) 0%, color-mix(in srgb, var(--text-heading) 75%, var(--color-primary)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================
+   DRILL TABS — modern pill tabs
+   ============================================================ */
+
+.drill-tabs {
+  background: var(--bg-surface-hover) !important;
+  border-radius: 18px !important;
+  padding: 6px !important;
+  gap: 4px !important;
+  border: 1px solid var(--border-subtle) !important;
+}
+
+.drill-tab {
+  border-radius: 14px !important;
+  padding: 8px 16px !important;
+  font-weight: 600 !important;
+  font-size: 0.84rem !important;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.drill-tab:hover:not(.active) {
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+.drill-tab.active {
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px var(--color-primary-glow) !important;
+}
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+
+.stat-card-premium {
+  border-radius: 20px !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease !important;
+}
+
+.stat-card-premium:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.stat-card-premium__icon {
+  border-radius: 14px !important;
+}
+
+/* ============================================================
+   MODAL IMPROVEMENTS
+   ============================================================ */
+
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+}
+
+.modal-content-card {
+  border-radius: 28px !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05) inset !important;
+  padding: 32px !important;
+}
+
+:root[data-theme="light"] .modal-content-card {
+  box-shadow: 0 24px 60px rgba(30, 50, 100, 0.18) !important;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-subtle) !important;
+  padding-bottom: 16px !important;
+  margin-bottom: 24px !important;
+}
+
+.modal-header h3 {
+  font-size: 1.3rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.03em !important;
+  color: var(--text-heading) !important;
+}
+
+/* Form inputs in modals */
+.modal-form .form-group input,
+.modal-form .form-group textarea {
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-size: 0.9rem !important;
+  border: 1.5px solid var(--border-color) !important;
+  background: var(--bg-input) !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.modal-form .form-group input:focus,
+.modal-form .form-group textarea:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 4px var(--color-primary-muted) !important;
+}
+
+.btn-save-topic {
+  border-radius: 12px !important;
+  padding: 11px 22px !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  background: var(--gradient-primary) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-save-topic:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ============================================================
+   INPUT FIELDS GLOBAL & ICON WRAPPERS
+   ============================================================ */
+
+/* Standalone input fields */
+input:not([type="radio"]):not([type="checkbox"]):not(.input-with-icon input),
+select,
+textarea {
+  border-radius: 14px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+input:not([type="radio"]):not([type="checkbox"]):not(.input-with-icon input):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-muted);
+}
+
+/* Icon-wrapped input fields (Auth, Search, etc.): single border on container */
+.input-with-icon,
+.auth-form .input-with-icon {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  background: var(--bg-input) !important;
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+}
+
+.input-with-icon:focus-within,
+.auth-form .input-with-icon:focus-within {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 4px var(--color-primary-muted) !important;
+}
+
+/* Strip all border, background, and shadow from the INNER input element inside icon wrapper */
+.input-with-icon input,
+.input-with-icon input:focus,
+.input-with-icon input:focus-visible,
+.auth-form .input-with-icon input,
+.auth-form .input-with-icon input:focus,
+.auth-form .input-with-icon input:focus-visible,
+.search-box input,
+.search-bar input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  padding: 12px 0 !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  color: var(--text-primary) !important;
+}
+
+/* ============================================================
+   SUBJECT / TOPIC CARDS
+   ============================================================ */
+
+.subject-selection-card {
+  border-radius: 20px !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease !important;
+}
+
+.subject-selection-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--card-hover-shadow) !important;
+}
+
+.topic-outline-card {
+  border-radius: 18px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.topic-outline-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ============================================================
+   MOCK GLASS CARDS
+   ============================================================ */
+
+.mock-glass-card {
+  border-radius: 24px !important;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+}
+
+.mock-glass-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: var(--card-hover-shadow) !important;
+}
+
+/* ============================================================
+   WRONG LOG IMPROVEMENTS
+   ============================================================ */
+
+.wrong-log-header {
+  border-radius: 18px !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+}
+
+.wrong-q-card {
+  border-radius: 18px !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.wrong-q-card:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+
+/* ============================================================
+   CHART CONTAINERS
+   ============================================================ */
+
+.chart-container {
+  border-radius: 24px !important;
+  transition: box-shadow 0.22s ease !important;
+}
+
+.chart-container:hover {
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ============================================================
+   MOCK SECTION PILLS
+   ============================================================ */
+
+.mock-section-pill {
+  border-radius: 14px !important;
+  padding: 10px 14px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+.mock-section-pill:hover:not(.is-active) {
+  background: var(--bg-surface-hover) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+.mock-section-pill.is-active {
+  box-shadow: var(--btn-shadow-primary) !important;
+}
+
+/* ============================================================
+   AUTH PAGE IMPROVEMENTS
+   ============================================================ */
+
+.auth-mode-selector {
+  border-radius: 16px !important;
+  padding: 5px !important;
+}
+
+.auth-mode-selector button {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+.auth-mode-selector button.active {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.1) !important;
+}
+
+.otp-box {
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  border: 2px solid var(--border-color) !important;
+  transition: all 0.18s ease !important;
+}
+
+.otp-box:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 4px var(--color-primary-muted) !important;
+  transform: scale(1.04) !important;
+}
+
+/* ============================================================
+   VERSION LABEL
+   ============================================================ */
+
+.version-label {
+  font-size: 0.68rem !important;
+  letter-spacing: 0.04em !important;
+  opacity: 0.55 !important;
+}
+
+/* ============================================================
+   FILTER PILLS / WRONG LOG FILTERS
+   ============================================================ */
+
+.wrong-log-filter {
+  border-radius: 999px !important;
+  padding: 6px 14px !important;
+  font-weight: 700 !important;
+  font-size: 0.78rem !important;
+  transition: all 0.18s ease !important;
+}
+
+.wrong-log-filter:hover:not(.active) {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: var(--color-primary-muted) !important;
+}
+
+.wrong-log-filter.active {
+  box-shadow: 0 3px 10px var(--color-primary-glow) !important;
+}
+
+/* ============================================================
+   CUSTOM FLOATING TOAST CARDS (THEMED FOR LIGHT & DARK MODE)
+   ============================================================ */
+
+.app-toast {
+  position: fixed !important;
+  left: 50% !important;
+  top: max(20px, env(safe-area-inset-top, 0px) + 12px) !important;
+  bottom: auto !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  width: min(420px, calc(100vw - 32px)) !important;
+  max-width: min(420px, calc(100vw - 32px)) !important;
+  padding: 14px 16px !important;
+  border-radius: 20px !important;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif) !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  pointer-events: auto !important;
+  transform: translateX(-50%) translateY(-24px) scale(0.95) !important;
+  opacity: 0 !important;
+  transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.26s ease !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.app-toast--in {
+  transform: translateX(-50%) translateY(0) scale(1) !important;
+  opacity: 1 !important;
+}
+
+.app-toast--out {
+  transform: translateX(-50%) translateY(-14px) scale(0.96) !important;
+  opacity: 0 !important;
+  transition: transform 0.22s ease, opacity 0.22s ease !important;
+}
+
+/* Icon Box Badge */
+.app-toast__icon-box {
+  flex-shrink: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.2s ease !important;
+}
+
+/* Content Area */
+.app-toast__content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.app-toast__title {
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.app-toast__msg {
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  word-break: break-word !important;
+  line-height: 1.4 !important;
+}
+
+/* Close Button */
+.app-toast__close {
+  flex-shrink: 0 !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 -4px 0 0 !important;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease !important;
+}
+
+.app-toast__close:hover {
+  transform: scale(1.08) !important;
+}
+
+/* =========================================
+   LIGHT MODE STYLING (Soft Frosted Cards)
+   ========================================= */
+:root[data-theme="light"] .app-toast {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.08),
+    0 4px 12px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root[data-theme="light"] .app-toast__title {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .app-toast__msg {
+  color: #64748b !important;
+}
+
+:root[data-theme="light"] .app-toast__close {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="light"] .app-toast__close:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #334155 !important;
+}
+
+:root[data-theme="light"] .app-toast__icon-box {
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Light Mode Variants Wash & Icon Colors */
+:root[data-theme="light"] .app-toast--info {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(14, 165, 233, 0.15), transparent 100%),
+    rgba(255, 255, 255, 0.94) !important;
+}
+:root[data-theme="light"] .app-toast--info .app-toast__icon-box {
+  color: #0284c7 !important;
+}
+
+:root[data-theme="light"] .app-toast--success {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(16, 185, 129, 0.16), transparent 100%),
+    rgba(255, 255, 255, 0.94) !important;
+}
+:root[data-theme="light"] .app-toast--success .app-toast__icon-box {
+  color: #059669 !important;
+}
+
+:root[data-theme="light"] .app-toast--warn {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(245, 158, 11, 0.16), transparent 100%),
+    rgba(255, 255, 255, 0.94) !important;
+}
+:root[data-theme="light"] .app-toast--warn .app-toast__icon-box {
+  color: #d97706 !important;
+}
+
+:root[data-theme="light"] .app-toast--error {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(244, 63, 94, 0.16), transparent 100%),
+    rgba(255, 255, 255, 0.94) !important;
+}
+:root[data-theme="light"] .app-toast--error .app-toast__icon-box {
+  color: #e11d48 !important;
+}
+
+:root[data-theme="light"] .app-toast--reminder {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(99, 102, 241, 0.16), transparent 100%),
+    rgba(255, 255, 255, 0.94) !important;
+}
+:root[data-theme="light"] .app-toast--reminder .app-toast__icon-box {
+  color: #4f46e5 !important;
+}
+
+/* =========================================
+   DARK MODE STYLING (Deep Glass Cards)
+   ========================================= */
+:root[data-theme="dark"] .app-toast,
+.app-toast {
+  background: rgba(18, 24, 38, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow:
+    0 24px 50px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset !important;
+}
+
+:root[data-theme="dark"] .app-toast__title,
+.app-toast__title {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .app-toast__msg,
+.app-toast__msg {
+  color: #94a3b8 !important;
+}
+
+:root[data-theme="dark"] .app-toast__close,
+.app-toast__close {
+  color: rgba(255, 255, 255, 0.35) !important;
+}
+
+:root[data-theme="dark"] .app-toast__close:hover,
+.app-toast__close:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .app-toast__icon-box,
+.app-toast__icon-box {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.06) inset !important;
+}
+
+/* Dark Mode Variants Wash & Icon Colors */
+.app-toast--info,
+:root[data-theme="dark"] .app-toast--info {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(56, 189, 248, 0.22), transparent 100%),
+    rgba(18, 24, 38, 0.92) !important;
+}
+.app-toast--info .app-toast__icon-box,
+:root[data-theme="dark"] .app-toast--info .app-toast__icon-box {
+  color: #38bdf8 !important;
+}
+
+.app-toast--success,
+:root[data-theme="dark"] .app-toast--success {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(52, 211, 153, 0.22), transparent 100%),
+    rgba(18, 24, 38, 0.92) !important;
+}
+.app-toast--success .app-toast__icon-box,
+:root[data-theme="dark"] .app-toast--success .app-toast__icon-box {
+  color: #34d399 !important;
+}
+
+.app-toast--warn,
+:root[data-theme="dark"] .app-toast--warn {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(251, 191, 36, 0.22), transparent 100%),
+    rgba(18, 24, 38, 0.92) !important;
+}
+.app-toast--warn .app-toast__icon-box,
+:root[data-theme="dark"] .app-toast--warn .app-toast__icon-box {
+  color: #fbbf24 !important;
+}
+
+.app-toast--error,
+:root[data-theme="dark"] .app-toast--error {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(251, 113, 133, 0.22), transparent 100%),
+    rgba(18, 24, 38, 0.92) !important;
+}
+.app-toast--error .app-toast__icon-box,
+:root[data-theme="dark"] .app-toast--error .app-toast__icon-box {
+  color: #fb7185 !important;
+}
+
+.app-toast--reminder,
+:root[data-theme="dark"] .app-toast--reminder {
+  background:
+    radial-gradient(circle 140px at 0% 50%, rgba(129, 140, 248, 0.22), transparent 100%),
+    rgba(18, 24, 38, 0.92) !important;
+}
+.app-toast--reminder .app-toast__icon-box,
+:root[data-theme="dark"] .app-toast--reminder .app-toast__icon-box {
+  color: #818cf8 !important;
+}
+
+/* ============================================================
+   MOBILE HAMBURGER BUTTON
+   ============================================================ */
+
+.btn-mobile-toggle {
+  border-radius: 14px !important;
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-mobile-toggle:hover {
+  background: var(--color-primary-muted) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+/* ============================================================
+   BACK BUTTON & MISC ACTION BUTTONS
+   ============================================================ */
+
+.btn-back {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-back:hover {
+  background: var(--color-primary-muted) !important;
+  color: var(--color-primary) !important;
+}
+
+/* ============================================================
+   RETRY ATTEMPT BUTTON
+   ============================================================ */
+
+.btn-retry-attempt {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+.btn-retry-attempt:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+}
+
+/* ============================================================
+   COMPETITION BUTTONS
+   ============================================================ */
+
+.competition-start-btn,
+.battle-again-btn {
+  border-radius: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em !important;
+  transition: all 0.2s ease !important;
+}
+
+.competition-start-btn:hover:not(:disabled),
+.battle-again-btn:hover:not(:disabled) {
+  filter: brightness(1.08) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--btn-shadow-primary) !important;
+}
+
+.battle-option-btn {
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  transition: all 0.18s ease !important;
+}
+
+/* ============================================================
+   PREMIUM MOCK INPUT
+   ============================================================ */
+
+.mock-premium-input {
+  border-radius: 14px !important;
+  border: 1.5px solid var(--border-color) !important;
+  padding: 14px 16px !important;
+}
+
+.mock-premium-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 4px var(--color-primary-muted) !important;
+}
+
+/* ============================================================
+   SIDEBAR FOOTER + SEPARATOR
+   ============================================================ */
+
+.sidebar-footer {
+  border-top: 1px solid var(--sidebar-border) !important;
+  padding-top: 14px !important;
+  gap: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* ============================================================
+   SIDEBAR & CONTENT SPACING (BREATHING ROOM)
+   ============================================================ */
+
+/* Give sidebar container breathing room from right edge */
+.lms-sidebar {
+  padding: 24px 14px 24px 20px !important;
+}
+
+/* Sidebar Nav item list spacing from scrollbar */
+.sidebar-nav {
+  padding-right: 10px !important;
+  gap: 6px !important;
+}
+
+/* Workspace content padding so cards don't touch scrollbars */
+.workspace-scrollable-content {
+  padding-right: 16px !important;
+  padding-left: 6px !important;
+}
+
+/* ============================================================
+   SCROLLBAR POLISH — Inset floating scrollbars app-wide
+   ============================================================ */
+
+/* Global WebKit scrollbars (Chrome, Safari, Edge, Electron) */
+::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 999px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+:root[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* Hide scrollbar arrow buttons */
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Firefox scrollbars */
+* {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+
+:root[data-theme="light"] * {
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent !important;
+}
+
+/* Sidebar Navigation specific scrollbar styling */
+.sidebar-nav::-webkit-scrollbar {
+  width: 7px !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 999px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+:root[data-theme="light"] .sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(99, 102, 241, 0.3) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* Workspace content scrollbar */
+.workspace-scrollable-content::-webkit-scrollbar {
+  width: 8px !important;
+}
+
+.workspace-scrollable-content::-webkit-scrollbar-thumb {
+  border-radius: 999px !important;
+  background-color: color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.workspace-scrollable-content::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-primary) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* ============================================================
+   BRAND TEXT GRADIENT
+   ============================================================ */
+
+.brand-text h2 {
+  background: linear-gradient(135deg, var(--sidebar-fg) 0%, color-mix(in srgb, var(--sidebar-fg) 80%, var(--color-primary)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.035em !important;
+}
+
+/* ============================================================
+   OVERRIDE: Prevent unwanted transform on ALL interactive elements
+   (keep the existing no-transform rules working)
+   ============================================================ */
+
+.subject-selection-card:hover,
+.topic-outline-card:hover,
+.mock-glass-card:hover,
+.stat-card-premium:hover {
+  /* Managed above with transform: translateY — allow these */
+}
+
+.competition-start-btn:hover,
+.battle-again-btn:hover,
+.battle-option-btn:hover,
+.btn-premium-mock:hover,
+.btn-drill-next:hover,
+.btn-related-questions:hover,
+.btn-ai-explain:hover,
+.btn-retry-attempt:hover {
+  /* Managed individually above */
+}

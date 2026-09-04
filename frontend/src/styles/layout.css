@@ -156,6 +156,16 @@
   width: 4px;
 }
 
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.sidebar-nav::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .sidebar-nav::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--sidebar-fg-muted, #94a3b8) 45%, transparent);
   border-radius: 999px;
