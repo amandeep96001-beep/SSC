@@ -109,7 +109,11 @@ async function createAndStoreOtp(email, purpose = 'email_verify', pendingData = 
   await OtpChallenge.deleteMany({ email, purpose });
   await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0, pendingData });
   const mail = await sendOtpEmail(email, code, { purpose });
-  return { code, mail };
+  const debugOtp =
+    process.env.SMTP_DEBUG === '1' && process.env.NODE_ENV !== 'production' && !mail.sent
+      ? code
+      : undefined;
+  return { code, mail, debugOtp };
 }
 
 async function consumeOtpChallenge(email, code, purpose) {
@@ -173,19 +177,19 @@ export const register = async (req, res, next) => {
       role
     };
 
-    const { mail } = await createAndStoreOtp(email, 'email_verify', pendingData);
-    const payload = {
+    const { mail, debugOtp } = await createAndStoreOtp(email, 'email_verify', pendingData);
+    res.status(201).json({
       status: 'success',
       message: mail.sent
         ? 'Account created. Enter the OTP sent to your email to verify.'
-        : 'Account created. Enter the OTP to verify your email.',
+        : 'Account created. We could not deliver email — use the code shown on screen (local debug) or check SMTP settings.',
       data: {
         needsVerification: true,
         email,
+        mailSent: Boolean(mail.sent),
+        ...(debugOtp ? { debugOtp } : {}),
       },
-    };
-    if (mail.debugOtp) payload.data.debugOtp = mail.debugOtp;
-    res.status(201).json(payload);
+    });
   } catch (error) {
     next(error);
   }
@@ -223,16 +227,17 @@ export const login = async (req, res, next) => {
 
     if (user.email && !user.emailVerified && !user.googleId) {
       const { mail } = await createAndStoreOtp(user.email, 'email_verify');
-      const payload = {
+      return res.json({
         status: 'success',
-        message: 'Verify your email with the OTP we sent, then sign in with your password.',
+        message: mail.sent
+          ? 'Verify your email with the OTP we sent, then sign in with your password.'
+          : 'Verify your email with the OTP sent to your inbox, then sign in with your password.',
         data: {
           needsVerification: true,
           email: user.email,
+          mailSent: Boolean(mail.sent),
         },
-      };
-      if (mail.debugOtp) payload.data.debugOtp = mail.debugOtp;
-      return res.json(payload);
+      });
     }
 
     if (isLegacyHash(user.password)) {
@@ -392,7 +397,7 @@ async function issueSession(user, res, statusCode = 200) {
   });
 }
 
-/** POST /auth/otp/request — resend verification code (not login) */
+/** POST /auth/otp/request — resend verification code (pending register or existing user) */
 export const requestOtp = async (req, res, next) => {
   try {
     const email = normalizeEmail(req.body.email);
@@ -401,14 +406,7 @@ export const requestOtp = async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).lean();
-    if (!user) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No account found for this email. Register first.',
-      });
-    }
-
-    if (user.emailVerified) {
+    if (user?.emailVerified) {
       return res.json({
         status: 'success',
         message: 'Email already verified. Sign in with your password.',
@@ -416,16 +414,31 @@ export const requestOtp = async (req, res, next) => {
       });
     }
 
-    const { mail } = await createAndStoreOtp(email, 'email_verify');
-    const payload = {
+    // Pending registration keeps user data on the OTP challenge until verify.
+    const pending = await OtpChallenge.findOne({ email, purpose: 'email_verify' })
+      .sort({ expiresAt: -1 })
+      .lean();
+    const pendingData = pending?.pendingData || null;
+
+    if (!user && !pendingData) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No account found for this email. Register first.',
+      });
+    }
+
+    const { mail, debugOtp } = await createAndStoreOtp(email, 'email_verify', pendingData);
+    res.json({
       status: 'success',
       message: mail.sent
         ? 'Verification OTP sent to your email.'
-        : 'Verification OTP generated (check server logs if email failed).',
-      data: { email },
-    };
-    if (mail.debugOtp) payload.data.debugOtp = mail.debugOtp;
-    res.json(payload);
+        : 'Could not deliver email. Use the on-screen code (local) or fix SMTP.',
+      data: {
+        email,
+        mailSent: Boolean(mail.sent),
+        ...(debugOtp ? { debugOtp } : {}),
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -509,8 +522,10 @@ export const forgotPassword = async (req, res, next) => {
     }
 
     const { mail } = await createAndStoreOtp(email, 'password_reset');
-    if (mail.debugOtp) generic.data.debugOtp = mail.debugOtp;
-    return res.json(generic);
+    return res.json({
+      ...generic,
+      data: { ...generic.data, mailSent: Boolean(mail.sent) },
+    });
   } catch (error) {
     next(error);
   }

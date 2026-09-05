@@ -1,4 +1,4 @@
-import { sendMail } from '../../modules/auth/mail.util.js';
+import { sendMail, logoImgHtml } from '../../modules/auth/mail.util.js';
 
 export async function sendReminderEmail({ email, title, message, time }) {
   if (!email) return { sent: false, reason: 'no_email' };
@@ -32,7 +32,9 @@ export async function sendReminderEmail({ email, title, message, time }) {
           <td style="padding:22px 28px 18px;background:#4f46e5;">
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width:40px;height:40px;border-radius:12px;background:#ffffff;text-align:center;vertical-align:middle;font-size:14px;font-weight:800;letter-spacing:-0.02em;color:#4f46e5;line-height:40px;">EP</td>
+                <td style="width:40px;height:40px;vertical-align:middle;background:#ffffff;border-radius:12px;overflow:hidden;">
+                  ${logoImgHtml({ size: 40, radius: 12 })}
+                </td>
                 <td style="padding-left:12px;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#ffffff;vertical-align:middle;">ExamPrep</td>
               </tr>
             </table>

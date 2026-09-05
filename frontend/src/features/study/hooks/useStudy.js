@@ -133,7 +133,7 @@ export function useStudy() {
   }, []));
 
   const loginApi = useApi(useCallback((body) => apiService.post('/auth/login', body), []));
-  const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body), []));
+  const registerApi = useApi(useCallback((body) => apiService.post('/auth/register', body, { timeout: 25000 }), []));
   const requestOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/request', body), []));
   const verifyOtpApi = useApi(useCallback((body) => apiService.post('/auth/otp/verify', body), []));
   const forgotPasswordApi = useApi(useCallback((body) => apiService.post('/auth/password/forgot', body), []));
@@ -187,7 +187,6 @@ export function useStudy() {
         success: false,
         needsVerification: true,
         email: res.data.data.email,
-        debugOtp: res.data.data.debugOtp,
         message: res.data.message,
       };
     }
@@ -205,7 +204,8 @@ export function useStudy() {
         success: true,
         needsVerification: true,
         email: res.data.data.email,
-        debugOtp: res.data.data.debugOtp,
+        mailSent: Boolean(res.data.data.mailSent),
+        debugOtp: res.data.data.debugOtp || '',
         message: res.data.message,
       };
     }
@@ -213,7 +213,7 @@ export function useStudy() {
       persistUser(res.data.data);
       return { success: true };
     }
-    return { success: false, message: registerApi.error || 'Registration failed.' };
+    return { success: false, message: registerApi.error || res.data?.message || 'Registration failed.' };
   }, [registerApi]);
 
   const requestOtp = useCallback(async (email) => {
@@ -222,8 +222,9 @@ export function useStudy() {
       return {
         success: true,
         message: res.data.message,
-        debugOtp: res.data.data?.debugOtp,
         alreadyVerified: res.data.data?.alreadyVerified,
+        mailSent: Boolean(res.data.data?.mailSent),
+        debugOtp: res.data.data?.debugOtp || '',
       };
     }
     return { success: false, message: requestOtpApi.error || 'Could not send OTP.' };
@@ -243,7 +244,6 @@ export function useStudy() {
       return {
         success: true,
         message: res.data?.message,
-        debugOtp: res.data?.data?.debugOtp,
         email: res.data?.data?.email || email,
       };
     }

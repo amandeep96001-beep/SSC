@@ -166,8 +166,9 @@ export function AuthPanel({
   const [showPassword, setShowPassword] = useState(false);
   const [otpDigits, setOtpDigits] = useState(() => Array(OTP_LEN).fill(''));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [debugOtp, setDebugOtp] = useState('');
   const [resendIn, setResendIn] = useState(0);
+  const [mailSent, setMailSent] = useState(true);
+  const [debugOtp, setDebugOtp] = useState('');
   const [googleClientId, setGoogleClientId] = useState(
     () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
   );
@@ -185,8 +186,9 @@ export function AuthPanel({
     setConfirmPassword('');
     setShowPassword(false);
     setOtpDigits(Array(OTP_LEN).fill(''));
-    setDebugOtp('');
     setResendIn(0);
+    setMailSent(true);
+    setDebugOtp('');
   };
 
   const switchAuthMode = (nextMode) => {
@@ -267,19 +269,13 @@ export function AuthPanel({
     }
   };
 
-  const goToVerify = (addr, maybeDebug) => {
+  const goToVerify = (addr, opts = {}) => {
     setEmail(addr);
     setMode('verify');
     setOtpDigits(Array(OTP_LEN).fill(''));
     setResendIn(30);
-    setDebugOtp(maybeDebug || '');
-    if (maybeDebug) {
-      showAppToast(`Verification code: ${maybeDebug}`, {
-        variant: 'info',
-        title: 'Email verification',
-        durationMs: 10000,
-      });
-    }
+    setMailSent(opts.mailSent !== false);
+    setDebugOtp(opts.debugOtp || '');
     requestAnimationFrame(() => focusOtp(0));
   };
 
@@ -315,7 +311,7 @@ export function AuthPanel({
     try {
       const res = await loginUser(email.trim(), password);
       if (res.needsVerification) {
-        goToVerify(res.email || email.trim(), res.debugOtp);
+        goToVerify(res.email || email.trim());
         showAppToast('Please verify your email to continue.', {
           variant: 'warn',
           title: 'Verification required',
@@ -344,7 +340,11 @@ export function AuthPanel({
     e.preventDefault();
     const trimmed = email.trim().toLowerCase();
     if (!password || password.length < 8) {
-      toastAuthError('Password must be at least 8 characters and include letters and numbers.');
+      toastAuthError('Password must be at least 8 characters.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      toastAuthError('Password must include at least one letter and one number.');
       return;
     }
     if (password !== confirmPassword) {
@@ -355,15 +355,26 @@ export function AuthPanel({
     try {
       const res = await registerUser(trimmed, password);
       if (res.needsVerification) {
-        goToVerify(res.email || trimmed, res.debugOtp);
-        showAppToast('A verification code has been sent to your email.', {
-          variant: 'success',
-          title: 'Check your inbox',
+        goToVerify(res.email || trimmed, {
+          mailSent: res.mailSent,
+          debugOtp: res.debugOtp,
         });
+        showAppToast(
+          res.mailSent
+            ? 'A verification code has been sent to your email.'
+            : (res.debugOtp
+              ? `Email delivery failed — use code ${res.debugOtp}`
+              : 'Email delivery failed. Check SMTP settings or spam folder.'),
+          {
+            variant: res.mailSent ? 'success' : 'warn',
+            title: res.mailSent ? 'Check your inbox' : 'OTP not emailed',
+            durationMs: res.mailSent ? 5000 : 12000,
+          },
+        );
         return;
       }
       if (!res.success) {
-        toastAuthError('Unable to create account. Please try again.');
+        toastAuthError(res.message || 'Unable to create account. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -387,7 +398,6 @@ export function AuthPanel({
         setMode('login');
         setPassword('');
         setOtpDigits(Array(OTP_LEN).fill(''));
-        setDebugOtp('');
       } else {
         toastAuthError('Incorrect verification code.');
         setOtpDigits(Array(OTP_LEN).fill(''));
@@ -407,17 +417,18 @@ export function AuthPanel({
         : await requestOtp(email);
       if (res.success) {
         setResendIn(30);
-        if (res.debugOtp) {
-          setDebugOtp(res.debugOtp);
-          showAppToast(`${mode === 'reset' ? 'Reset' : 'Verification'} code: ${res.debugOtp}`, {
-            variant: 'info',
-            durationMs: 10000,
-          });
-        } else {
-          showAppToast('A new code has been sent.', { variant: 'success' });
-        }
+        setMailSent(res.mailSent !== false);
+        setDebugOtp(res.debugOtp || '');
+        setOtpDigits(Array(OTP_LEN).fill(''));
+        showAppToast(
+          res.mailSent
+            ? 'A new code has been sent to your email.'
+            : (res.debugOtp ? `Use code ${res.debugOtp}` : 'Could not email the code. Try again.'),
+          { variant: res.mailSent ? 'success' : 'warn', durationMs: 10000 },
+        );
+        requestAnimationFrame(() => focusOtp(0));
       } else {
-        toastAuthError('Unable to resend code. Please try again.');
+        toastAuthError(res.message || 'Unable to resend code. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -447,14 +458,10 @@ export function AuthPanel({
       setConfirmPassword('');
       setOtpDigits(Array(OTP_LEN).fill(''));
       setResendIn(30);
-      setDebugOtp(res.debugOtp || '');
       showAppToast('If that email exists, a reset code was sent.', {
         variant: 'success',
         durationMs: 7000,
       });
-      if (res.debugOtp) {
-        showAppToast(`Reset code: ${res.debugOtp}`, { variant: 'info', durationMs: 10000 });
-      }
       requestAnimationFrame(() => focusOtp(0));
     } finally {
       setIsSubmitting(false);
@@ -493,7 +500,6 @@ export function AuthPanel({
       setPassword('');
       setConfirmPassword('');
       setOtpDigits(Array(OTP_LEN).fill(''));
-      setDebugOtp('');
       setShowPassword(false);
     } finally {
       setIsSubmitting(false);
@@ -704,7 +710,7 @@ export function AuthPanel({
             <div className="form-group">
               <label htmlFor="reset-otp-0">Reset code</label>
               <div
-                className="otp-row"
+                className="otp-boxes"
                 onPaste={(e) => {
                   e.preventDefault();
                   setOtpFromString(e.clipboardData.getData('text') || '');
@@ -730,9 +736,6 @@ export function AuthPanel({
                   />
                 ))}
               </div>
-              {debugOtp && (
-                <p className="auth-dev-otp">Dev code <kbd>{debugOtp}</kbd></p>
-              )}
             </div>
             <div className="form-group">
               <label htmlFor="reset-pass">New password</label>
@@ -896,16 +899,24 @@ export function AuthPanel({
         )}
 
         {mode === 'verify' && (
-          <form onSubmit={handleVerify} className="auth-form" noValidate>
-            <div className="auth-otp-banner">
-              <Mail size={16} aria-hidden />
+          <form onSubmit={handleVerify} className="auth-form auth-form--otp" noValidate>
+            <div className={`auth-otp-banner ${mailSent ? '' : 'auth-otp-banner--warn'}`}>
+              <Mail size={18} aria-hidden />
               <div>
-                <strong>Verification code sent</strong>
+                <strong>{mailSent ? 'Code sent to your email' : 'Email not delivered'}</strong>
                 <span>{maskEmail(email)}</span>
               </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="otp-0">Verification code</label>
+
+            {debugOtp && (
+              <div className="auth-otp-debug" role="status">
+                <span>Local debug code</span>
+                <kbd>{debugOtp}</kbd>
+              </div>
+            )}
+
+            <div className="form-group auth-otp-group">
+              <label htmlFor="otp-0">Enter 6-digit code</label>
               <div
                 className="otp-boxes"
                 onPaste={(e) => {
@@ -933,10 +944,13 @@ export function AuthPanel({
                   />
                 ))}
               </div>
-              {debugOtp && (
-                <p className="auth-dev-otp">Dev code <kbd>{debugOtp}</kbd></p>
-              )}
+              <p className="auth-hint">
+                {mailSent
+                  ? 'Check inbox and spam. Code expires in 10 minutes.'
+                  : 'Fix SMTP in backend/.env, or use the debug code above.'}
+              </p>
             </div>
+
             <button
               type="submit"
               className="btn-auth-submit"
@@ -945,7 +959,7 @@ export function AuthPanel({
               {isSubmitting ? (
                 <><Loader2 size={18} className="spin-icon" /><span>Verifying…</span></>
               ) : (
-                <><span>Verify email</span><ArrowRight size={18} /></>
+                <><span>Verify & continue</span><ArrowRight size={18} /></>
               )}
             </button>
             <div className="auth-otp-actions">

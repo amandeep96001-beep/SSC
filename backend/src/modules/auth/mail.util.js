@@ -1,4 +1,14 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
+import { isHostedRuntime } from '../../config/env.config.js';
+
+const LOGO_CID = 'examprep-logo';
+const LOGO_FILE = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../assets/logo.png',
+);
 
 function smtpConfigured() {
   return Boolean(
@@ -12,12 +22,19 @@ function smtpPass() {
   return String(process.env.SMTP_PASS || '').replace(/\s+/g, '');
 }
 
+/** Keep auth APIs from hanging when SMTP host is unreachable. */
+const SMTP_CONNECT_MS = 8_000;
+const SMTP_SOCKET_MS = 10_000;
+
 function createTransport() {
   const port = Number(process.env.SMTP_PORT || 587);
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
     secure: port === 465,
+    connectionTimeout: SMTP_CONNECT_MS,
+    greetingTimeout: SMTP_CONNECT_MS,
+    socketTimeout: SMTP_SOCKET_MS,
     auth: {
       user: process.env.SMTP_USER,
       pass: smtpPass(),
@@ -25,18 +42,40 @@ function createTransport() {
   });
 }
 
+function publicLogoUrl() {
+  const origin = String(process.env.FRONTEND_URL || 'https://myexamprep-theta.vercel.app')
+    .trim()
+    .replace(/\/+$/, '');
+  return `${origin}/logo.png`;
+}
+
+function logoImgHtml({ size = 44, radius = 12 } = {}) {
+  const src = fs.existsSync(LOGO_FILE) ? `cid:${LOGO_CID}` : publicLogoUrl();
+  return `<img src="${src}" width="${size}" height="${size}" alt="ExamPrep" style="display:block;width:${size}px;height:${size}px;border-radius:${radius}px;border:0;outline:none;" />`;
+}
+
+function logoAttachment() {
+  if (!fs.existsSync(LOGO_FILE)) return [];
+  return [{
+    filename: 'examprep-logo.png',
+    path: LOGO_FILE,
+    cid: LOGO_CID,
+    contentType: 'image/png',
+  }];
+}
+
 /**
  * Generic mail sender used by OTP + study reminders.
  * @returns {{ sent: boolean, reason?: string }}
  */
-export async function sendMail({ to, subject, text, html }) {
+export async function sendMail({ to, subject, text, html, attachments = [] }) {
   const from = String(process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local')
     .trim()
     .replace(/^["']+|["']+$/g, '');
   if (!to) return { sent: false, reason: 'no_recipient' };
 
   if (!smtpConfigured()) {
-    if (process.env.NODE_ENV === 'production') {
+    if (isHostedRuntime()) {
       throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
     }
     console.info(`[mail] SMTP not configured — would send to ${to}: ${subject}`);
@@ -46,14 +85,22 @@ export async function sendMail({ to, subject, text, html }) {
 
   try {
     const transporter = createTransport();
-    await transporter.sendMail({ from, to, subject, text, html });
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html,
+      attachments: [...logoAttachment(), ...attachments],
+    });
     return { sent: true };
   } catch (err) {
-    console.error('[mail] SMTP send failed:', err.message);
-    if (process.env.NODE_ENV === 'production') {
+    const reason = err?.message || String(err);
+    console.error('[mail] SMTP send failed:', reason);
+    if (isHostedRuntime()) {
       throw new Error('Unable to send email. Please try again shortly.');
     }
-    return { sent: false, reason: err.message };
+    return { sent: false, reason };
   }
 }
 
@@ -78,8 +125,10 @@ function buildOtpEmailHtml(code, { title, subtitle, lead }) {
             <td style="padding:28px 28px 8px;background:linear-gradient(165deg,#eef0ff 0%,#ffffff 55%);">
               <table role="presentation" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="width:44px;height:44px;border-radius:14px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.18);text-align:center;vertical-align:middle;font-size:20px;">📚</td>
-                  <td style="padding-left:12px;">
+                  <td style="width:44px;height:44px;vertical-align:middle;">
+                    ${logoImgHtml({ size: 44, radius: 12 })}
+                  </td>
+                  <td style="padding-left:12px;vertical-align:middle;">
                     <div style="font-size:18px;font-weight:800;color:#14182a;letter-spacing:-0.02em;">ExamPrep</div>
                     <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6366f1;">${subtitle}</div>
                   </td>
@@ -124,11 +173,12 @@ function buildOtpEmailHtml(code, { title, subtitle, lead }) {
 }
 
 /**
- * Send OTP email. In non-production without SMTP, logs OTP and returns debugOtp.
+ * Send OTP email. Never returns the code to callers (do not put OTP in API responses).
+ * Locally without SMTP: logs the code to the server console only.
  * @param {string} email
  * @param {string} code
  * @param {{ purpose?: 'email_verify' | 'password_reset' }} [options]
- * @returns {{ sent: boolean, debugOtp?: string }}
+ * @returns {{ sent: boolean }}
  */
 export async function sendOtpEmail(email, code, options = {}) {
   const purpose = options.purpose || 'email_verify';
@@ -152,40 +202,31 @@ export async function sendOtpEmail(email, code, options = {}) {
   const html = buildOtpEmailHtml(code, copy);
 
   if (!smtpConfigured()) {
-    if (process.env.NODE_ENV === 'production') {
+    if (isHostedRuntime()) {
       throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
     }
+    // Local only — never expose this code over HTTP
     console.info(`[auth:otp] SMTP not configured — OTP for ${email}: ${code}`);
-    return { sent: false, debugOtp: code };
+    return { sent: false };
   }
 
   try {
     const result = await sendMail({ to: email, subject, text: copy.text, html });
     if (result.sent) return { sent: true };
-    console.info(`[auth:otp] Code for ${email}: ${code}`);
-    if (String(process.env.SMTP_DEBUG || '').toLowerCase() === '1'
-      || String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true') {
-      return { sent: false, debugOtp: code };
+    console.error(`[auth:otp] Mail not sent for ${email}`);
+    if (!isHostedRuntime()) {
+      console.info(`[auth:otp] Local fallback code for ${email}: ${code}`);
+      return { sent: false };
     }
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Unable to send verification email. Please try again shortly.');
-    }
-    throw new Error(
-      'Unable to send verification email. Gmail SMTP login failed — create a new App Password and update SMTP_PASS.'
-    );
+    throw new Error('Unable to send verification email. Please try again shortly.');
   } catch (err) {
-    if (err.message?.includes('Unable to send') || err.message?.includes('SMTP')) throw err;
     console.error('[auth:otp] SMTP send failed:', err.message);
-    console.info(`[auth:otp] Code for ${email}: ${code}`);
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Unable to send verification email. Please try again shortly.');
+    if (!isHostedRuntime()) {
+      console.info(`[auth:otp] Local fallback code for ${email}: ${code}`);
+      return { sent: false };
     }
-    if (String(process.env.SMTP_DEBUG || '').toLowerCase() === '1'
-      || String(process.env.SMTP_DEBUG || '').toLowerCase() === 'true') {
-      return { sent: false, debugOtp: code };
-    }
-    throw new Error(
-      'Unable to send verification email. Gmail SMTP login failed — create a new App Password and update SMTP_PASS.'
-    );
+    throw new Error('Unable to send verification email. Please try again shortly.');
   }
 }
+
+export { logoImgHtml, LOGO_CID };
