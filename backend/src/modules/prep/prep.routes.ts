@@ -1,17 +1,16 @@
 import express from 'express';
 import { getStatus, getNotes, createNote, deleteNote } from './prep.controller.js';
+import { requireAdmin } from '../../shared/middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// Status route
 router.get('/status', getStatus);
 
-// Notes routes
 router.route('/notes')
   .get(getNotes)
-  .post(createNote);
+  .post(requireAdmin, createNote);
 
 router.route('/notes/:id')
-  .delete(deleteNote);
+  .delete(requireAdmin, deleteNote);
 
 export default router;

@@ -366,18 +366,9 @@ export function AuthPanel({
       if (!cancelled && value) setGoogleClientId(value);
     };
 
-    // Prefer dedicated config; fall back to /health (always public).
-    Promise.allSettled([
-      apiService.get('/auth/google-config'),
-      apiService.get('/health'),
-    ]).then((results) => {
-      for (const result of results) {
-        if (result.status !== 'fulfilled') continue;
-        const data = result.value;
-        applyId(data?.clientId || data?.googleClientId);
-        if (cancelled) return;
-      }
-    });
+    apiService.get('/auth/google-config').then((data) => {
+      applyId(data?.clientId);
+    }).catch(() => {});
 
     return () => {
       cancelled = true;
@@ -435,7 +426,7 @@ export function AuthPanel({
     setOtpDigits(Array(OTP_LEN).fill(''));
     setResendIn(30);
     setMailSent(opts.mailSent !== false);
-    setDebugOtp(opts.debugOtp || '');
+    setDebugOtp(import.meta.env.DEV ? (opts.debugOtp || '') : '');
     requestAnimationFrame(() => focusOtp(0));
   };
 
@@ -478,7 +469,7 @@ export function AuthPanel({
         showAppToast(
           res.mailSent
             ? 'Please verify your email to continue.'
-            : (res.debugOtp
+            : (import.meta.env.DEV && res.debugOtp
               ? `Email not delivered — use code ${res.debugOtp}`
               : 'Please verify your email. Delivery failed; check SMTP or spam.'),
           {
@@ -538,7 +529,7 @@ export function AuthPanel({
         showAppToast(
           res.mailSent
             ? 'A verification code has been sent to your email.'
-            : (res.debugOtp
+            : (import.meta.env.DEV && res.debugOtp
               ? `Email delivery failed — use code ${res.debugOtp}`
               : 'Email delivery failed. Check SMTP settings or spam folder.'),
           {
@@ -602,12 +593,12 @@ export function AuthPanel({
         setResendIn(30);
         const delivered = res.mailSent !== false;
         setMailSent(delivered);
-        setDebugOtp(res.debugOtp || '');
+        setDebugOtp(import.meta.env.DEV ? (res.debugOtp || '') : '');
         setOtpDigits(Array(OTP_LEN).fill(''));
         showAppToast(
           delivered
             ? 'A new code has been sent to your email.'
-            : (res.debugOtp ? `Use code ${res.debugOtp}` : 'Could not email the code. Try again.'),
+            : (import.meta.env.DEV && res.debugOtp ? `Use code ${res.debugOtp}` : 'Could not email the code. Try again.'),
           { variant: delivered ? 'success' : 'warn', durationMs: 10000 },
         );
         requestAnimationFrame(() => focusOtp(0));
@@ -1100,7 +1091,7 @@ export function AuthPanel({
               </div>
             </div>
 
-            {debugOtp && (
+            {import.meta.env.DEV && debugOtp && (
               <div className="auth-otp-debug" role="status">
                 <span>Local debug code</span>
                 <kbd>{debugOtp}</kbd>

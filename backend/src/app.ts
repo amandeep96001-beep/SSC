@@ -5,7 +5,6 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
 import morgan from 'morgan';
-import path from 'path';
 import apiRouter from './routes/index.js';
 import { getDBStatus } from './config/db.config.js';
 import { isHostedRuntime } from './config/env.config.js';
@@ -25,16 +24,22 @@ function getAllowedOrigins() {
     .map(normalizeOrigin)
     .filter(Boolean);
 
-  const bakedIn = [
-    // Known production frontend (Render FRONTEND_URL is sometimes left as localhost)
+  const productionFrontends = [
     'https://myexamprep-theta.vercel.app',
+  ];
+
+  const localFrontends = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:4173',
     'http://127.0.0.1:4173',
   ];
 
-  return [...new Set([...bakedIn, ...fromEnv])];
+  if (isHostedRuntime()) {
+    return [...new Set([...productionFrontends, ...fromEnv])];
+  }
+
+  return [...new Set([...localFrontends, ...fromEnv])];
 }
 
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
@@ -68,8 +73,9 @@ export function createApp() {
   app.use(helmet({
     contentSecurityPolicy: hosted ? undefined : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    // Allow Google OAuth popup to talk back to the opener window
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hidePoweredBy: true,
   }));
   app.use(compression());
 
@@ -97,7 +103,7 @@ export function createApp() {
       }
       return callback(null, false);
     },
-    credentials: true,
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     optionsSuccessStatus: 204,
@@ -124,8 +130,6 @@ export function createApp() {
 
   app.use('/api', apiRouter);
 
-  app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
-
   app.get('/', (req, res) => {
     res.json({
       status: 'ok',
@@ -137,12 +141,10 @@ export function createApp() {
   // Readiness — 503 when Mongo is down so Render does not route healthy traffic to a dead DB.
   app.get('/health', (req, res) => {
     const dbOk = getDBStatus();
-    const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
     res.status(dbOk ? 200 : 503).json({
       status: dbOk ? 'ok' : 'degraded',
       uptime: process.uptime(),
       db: dbOk ? 'connected' : 'disconnected',
-      googleClientId,
     });
   });
 

@@ -9,6 +9,8 @@ export interface IUser {
   password?: string;
   role: 'user' | 'admin';
   lastStudyAt?: Date;
+  /** Incremented on logout / password reset to invalidate outstanding JWTs. */
+  tokenVersion: number;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -59,6 +61,10 @@ const UserSchema = new Schema<IUser>({
     type: Date,
     required: false,
     index: true,
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0,
   },
 });
 

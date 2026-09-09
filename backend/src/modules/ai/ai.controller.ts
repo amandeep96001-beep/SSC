@@ -162,6 +162,9 @@ export const explainConcept: RequestHandler = async (req, res, next) => {
     if (!question || !correctAnswer) {
       return res.status(400).json({ status: 'error', message: 'question and correctAnswer are required.' });
     }
+    if (String(question).length > 4000 || String(correctAnswer).length > 500) {
+      return res.status(400).json({ status: 'error', message: 'Question payload is too large.' });
+    }
 
     const prompt = buildPrompt(question, correctAnswer, explanation);
     const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());

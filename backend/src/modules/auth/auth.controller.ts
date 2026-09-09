@@ -16,12 +16,12 @@ import {
   isValidEmail,
   upsertUserFromEmail,
   hashOtpCode,
+  otpHashesMatch,
   generateOtpCode,
   allocateUsername,
   resolveRoleByEmail,
 } from './authIdentity.util.js';
 import {
-  errorMessage,
   isRecord,
   type OtpPurpose,
   type ProgressStatus,
@@ -102,7 +102,8 @@ async function touchLastStudyAt(userId: string | undefined) {
 }
 
 function csvEscape(v: unknown): string {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }
@@ -171,7 +172,7 @@ async function consumeOtpChallenge(email: string, code: string, purpose: OtpPurp
     await OtpChallenge.deleteMany({ email, purpose });
     return { ok: false as const, status: 429, message: 'Too many incorrect attempts. Request a new code.' };
   }
-  if (challenge.codeHash !== hashOtpCode(code)) {
+  if (!otpHashesMatch(challenge.codeHash, hashOtpCode(code))) {
     challenge.attempts += 1;
     await challenge.save();
     return { ok: false as const, status: 401, message: 'Incorrect OTP. Try again.' };
@@ -292,10 +293,13 @@ export const login: RequestHandler = async (req, res, next) => {
       await user.save();
     }
 
-    // Keep admin in sync with ADMIN_EMAIL
-    if (user.email && resolveRoleByEmail(user.email) === 'admin' && user.role !== 'admin') {
-      user.role = 'admin';
-      await user.save();
+    // Keep role in sync with ADMIN_EMAIL (promote and demote).
+    if (process.env.ADMIN_EMAIL?.trim() && user.email) {
+      const expected = resolveRoleByEmail(user.email);
+      if (user.role !== expected) {
+        user.role = expected;
+        await user.save();
+      }
     }
 
     return issueSession(user, res);
@@ -420,7 +424,7 @@ export const getMe: RequestHandler = async (req, res, next) => {
           email: dbUser?.email || req.user!.email || null,
           displayName: dbUser?.displayName || null,
           emailVerified: Boolean(dbUser?.emailVerified),
-          role: req.user!.role || dbUser?.role || 'user',
+          role: dbUser?.role || req.user!.role || 'user',
           lastStudyAt: dbUser?.lastStudyAt || lastStudyAt,
         },
         progress,
@@ -443,6 +447,15 @@ async function issueSession(user: HydratedDocument<IUser>, res: Response, status
     data: publicUserPayload(user, progress, mockProgress, token),
   });
 }
+
+export const logout: RequestHandler = async (req, res, next) => {
+  try {
+    await User.updateOne({ _id: req.user!.id }, { $inc: { tokenVersion: 1 } });
+    res.json({ status: 'success', message: 'Signed out.' });
+  } catch (error) {
+    next(error);
+  }
+};
 
 /** POST /auth/otp/request — resend verification code (pending register or existing user) */
 export const requestOtp: RequestHandler = async (req, res, next) => {
@@ -468,9 +481,10 @@ export const requestOtp: RequestHandler = async (req, res, next) => {
     const pendingData = pending?.pendingData || null;
 
     if (!user && !pendingData) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'No account found for this email. Register first.',
+      return res.json({
+        status: 'success',
+        message: 'If an account exists for that email, a verification code has been sent.',
+        data: { email, mailSent: true },
       });
     }
 
@@ -527,7 +541,7 @@ export const verifyOtp: RequestHandler = async (req, res, next) => {
         username: String(pending.username || ''),
         email,
         password: typeof pending.password === 'string' ? pending.password : undefined,
-        role: pending.role === 'admin' ? 'admin' : 'user',
+        role: resolveRoleByEmail(email),
         emailVerified: true,
       });
     } else {
@@ -602,9 +616,9 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({
+      return res.status(401).json({
         status: 'error',
-        message: 'No account found for this email.',
+        message: 'Invalid or expired reset code.',
       });
     }
 
@@ -618,6 +632,7 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
 
     user.password = await hashPassword(password);
     user.emailVerified = true;
+    user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     if (resolveRoleByEmail(email) === 'admin') user.role = 'admin';
     await user.save();
 
@@ -658,10 +673,10 @@ export const loginWithGoogle: RequestHandler = async (req, res, next) => {
       profile = code
         ? await exchangeGoogleAuthCode(String(code))
         : await verifyGoogleIdToken(String(credential));
-    } catch (err) {
+    } catch {
       return res.status(401).json({
         status: 'error',
-        message: errorMessage(err) || 'Google sign-in failed.',
+        message: 'Google sign-in failed. Try again.',
       });
     }
 

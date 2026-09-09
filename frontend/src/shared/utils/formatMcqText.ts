@@ -188,7 +188,12 @@ function sanitizeImgTag(tag: string): string {
   const clsMatch = tag.match(/\bclass=["']([^"']+)["']/i);
   if (!srcMatch) return '';
   const src = srcMatch[1];
-  if (!/^(\/uploads\/|https?:\/\/|data:image\/)/i.test(src)) return '';
+  if (/^javascript:/i.test(src) || /^data:image\/svg/i.test(src)) return '';
+  if (src.startsWith('data:image/')) {
+    if (!/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(src)) return '';
+  } else if (!/^(\/uploads\/|https:\/\/)/i.test(src)) {
+    return '';
+  }
   const alt = altMatch ? altMatch[1].replace(/"/g, '&quot;') : 'Question image';
   const cls = clsMatch ? clsMatch[1] : 'mcq-pdf-img';
   return `<img src="${src}" alt="${alt}" class="${cls}" loading="lazy" />`;

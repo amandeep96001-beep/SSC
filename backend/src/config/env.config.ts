@@ -25,4 +25,8 @@ export function validateEnv(): void {
       '[env] FRONTEND_URL points at localhost on a hosted runtime — CORS/email links will break for real users.'
     );
   }
+
+  if (!process.env.ADMIN_EMAIL?.trim()) {
+    console.warn('[env] ADMIN_EMAIL is unset — no account will receive admin role.');
+  }
 }

@@ -16,7 +16,6 @@ class VocabDto {
     antonyms,
     options,
     category,
-    createdBy,
   }: {
     word?: unknown;
     pos?: unknown;
@@ -25,7 +24,6 @@ class VocabDto {
     antonyms?: unknown;
     options?: unknown;
     category?: unknown;
-    createdBy?: unknown;
   }) {
     this.word = word ? String(word).trim() : '';
     this.pos = pos ? String(pos).trim() : 'Noun';
@@ -34,7 +32,7 @@ class VocabDto {
     this.antonyms = this._parseArray(antonyms);
     this.options = this._parseArray(options);
     this.category = category;
-    this.createdBy = createdBy ? String(createdBy) : 'user';
+    this.createdBy = 'user';
   }
 
   _parseArray(input: unknown): string[] {

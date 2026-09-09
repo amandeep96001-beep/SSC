@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import vocabRepository from '../study/vocab.repository.js';
 import TCSQuestionRepository from '../questions/tcs-question.repository.js';
+import TCSQuestion from '../questions/tcs-question.model.js';
 import DrillPerformance from './drill-performance.model.js';
 import { Vocab } from '../study/vocab.model.js';
 import type { IVocab } from '../study/vocab.model.js';
@@ -241,31 +242,44 @@ export const getNextDrill: RequestHandler = async (req, res, next) => {
 
 export const verifyDrill: RequestHandler = async (req, res, next) => {
   try {
-    const { type, question, userAnswer, correctAnswer, questionId } = req.body;
-    const userId = (req.user as { _id?: unknown } | undefined)?._id ?? null;
+    const { type, userAnswer, correctAnswer, questionId } = req.body;
+    const userId = req.user?.id ?? null;
 
-    if (userAnswer === undefined || correctAnswer === undefined) {
+    if (userAnswer === undefined || (correctAnswer === undefined && !questionId)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Please provide userAnswer and correctAnswer variables.'
+        message: 'Please provide userAnswer and correctAnswer.',
+      });
+    }
+
+    let authoritativeCorrect = correctAnswer;
+    if (questionId && mongoose.isValidObjectId(String(questionId))) {
+      const stored = await TCSQuestion.findById(questionId).select('options correctAnswer').lean();
+      if (stored && Array.isArray(stored.options) && typeof stored.correctAnswer === 'number') {
+        authoritativeCorrect = stored.options[stored.correctAnswer] ?? stored.correctAnswer;
+      }
+    }
+
+    if (authoritativeCorrect === undefined) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide userAnswer and correctAnswer.',
       });
     }
 
     const cleanUser    = userAnswer.toString().trim().toLowerCase().replace('%', '');
-    const cleanCorrect = correctAnswer.toString().trim().toLowerCase().replace('%', '');
+    const cleanCorrect = authoritativeCorrect.toString().trim().toLowerCase().replace('%', '');
 
     const isCorrect = cleanUser === cleanCorrect;
 
-    // ── RECORD PERFORMANCE (for MCQ types only) ────────────────────────────
     const subject = SUBJECT_MAP[type];
     if (subject && questionId && userId) {
-      // Non-blocking fire-and-forget
       recordPerformance(userId, questionId, subject, isCorrect);
     }
 
     res.json({
       status: 'success',
-      data: { isCorrect, correctAnswer }
+      data: { isCorrect, correctAnswer: authoritativeCorrect }
     });
   } catch (error) {
     next(error);

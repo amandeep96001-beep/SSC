@@ -22,11 +22,9 @@ function googleClientId() {
 
 router.get('/health', (req, res) => {
   const dbOk = getDBStatus();
-  const clientId = googleClientId();
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? 'ok' : 'degraded',
     db: dbOk ? 'connected' : 'disconnected',
-    googleClientId: clientId || null,
   });
 });
 

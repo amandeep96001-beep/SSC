@@ -36,25 +36,31 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   }
 
   const safeMessages: Record<number, string> = {
-    400: error.message || 'Invalid request data.',
-    409: 'Username is already taken. Choose another.',
-    503: error.message?.includes('JWT_SECRET')
-      ? 'Server auth is not configured. Set JWT_SECRET on Render.'
-      : 'Database unavailable. Try again shortly.',
+    400: 'Invalid request data.',
+    404: 'Not found.',
+    409: 'That account could not be created. Try a different username or sign in.',
+    503: 'Service temporarily unavailable. Try again shortly.',
   };
+
+  const isProd = process.env.NODE_ENV === 'production';
+  const clientMessage = isProd
+    ? (safeMessages[statusCode]
+      || (statusCode >= 500 ? 'Internal server error' : (error.message || 'Request failed')))
+    : (safeMessages[statusCode] && statusCode >= 500
+      ? safeMessages[statusCode]
+      : (error.message || 'Internal Server Error'));
 
   res.status(statusCode).json({
     status: 'error',
-    message: safeMessages[statusCode]
-      || (statusCode === 500 && process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : (error.message || 'Internal Server Error')),
-    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack
+    message: statusCode === 400 && error.message && !isProd
+      ? error.message
+      : clientMessage,
+    stack: isProd ? undefined : error.stack
   });
 };
 
 export const notFound: RequestHandler = (req, res, next) => {
-  const error = new Error(`Not Found - ${req.originalUrl}`);
+  const error = new Error('Not found.');
   res.status(404);
   next(error);
 };

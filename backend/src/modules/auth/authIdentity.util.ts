@@ -99,8 +99,8 @@ export async function upsertUserFromEmail({
       user.emailVerified = true;
       dirty = true;
     }
-    if (role === 'admin' && user.role !== 'admin') {
-      user.role = 'admin';
+    if (process.env.ADMIN_EMAIL?.trim() && user.role !== role) {
+      user.role = role;
       dirty = true;
     }
     if (dirty) await user.save();
@@ -110,9 +110,15 @@ export async function upsertUserFromEmail({
 }
 
 export function hashOtpCode(code: string): string {
-  // Pepper with JWT_SECRET so a leaked OTP collection alone is not enough to forge codes.
-  const pepper = process.env.OTP_PEPPER || process.env.JWT_SECRET || '';
-  return crypto.createHash('sha256').update(`${pepper}:${code}`).digest('hex');
+  const pepper = process.env.OTP_PEPPER || process.env.JWT_SECRET || 'dev-otp-pepper';
+  return crypto.createHmac('sha256', pepper).update(String(code)).digest('hex');
+}
+
+export function otpHashesMatch(stored: string, computed: string): boolean {
+  const a = Buffer.from(String(stored));
+  const b = Buffer.from(String(computed));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 export function generateOtpCode(): string {

@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import {
   register,
   login,
+  logout,
   saveProgress,
   saveMockProgress,
   getMe,
@@ -61,6 +62,7 @@ router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, 
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);
 
 router.get('/me', requireAuth, getMe);
+router.post('/logout', requireAuth, logout);
 router.post('/progress', requireAuth, progressValidation, validateRequest, saveProgress);
 router.post('/mock-progress', requireAuth, mockProgressValidation, validateRequest, saveMockProgress);
 router.get('/mock-progress/export', requireAuth, exportMockProgressCsv);

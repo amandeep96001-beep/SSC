@@ -15,6 +15,8 @@ import {
   addVocabBulk
 } from './study.controller.js';
 
+import { requireAdmin } from '../../shared/middleware/auth.middleware.js';
+
 const router = express.Router();
 
 router.get('/subjects', getSubjects);
@@ -28,8 +30,8 @@ router.put('/topics/:topicId', updateTopic);
 router.delete('/topics/:topicId', deleteTopic);
 
 router.get('/vocab', getVocab);
-router.post('/vocab', addVocab);
-router.post('/vocab/bulk', addVocabBulk);
-router.put('/vocab/:vocabId', updateVocab);
+router.post('/vocab', requireAdmin, addVocab);
+router.post('/vocab/bulk', requireAdmin, addVocabBulk);
+router.put('/vocab/:vocabId', requireAdmin, updateVocab);
 
 export default router;

@@ -1,11 +1,17 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { explainConcept } from './ai.controller.js';
 
 const router = express.Router();
 
-// Existing: wrong-answer drill explainer (used by DrillWorkspace)
-router.post('/explain', explainConcept);
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { status: 'error', message: 'Too many AI requests. Try again in a few minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
-// New: free-form SSC question explainer with Pollinations → Gemini fallback
+router.post('/explain', aiLimiter, explainConcept);
 
 export default router;

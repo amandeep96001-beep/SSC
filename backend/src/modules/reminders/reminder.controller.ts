@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express';
+import mongoose from 'mongoose';
 import Reminder from './reminder.model.js';
 import type { ReminderRepeat } from './reminder.model.js';
 import AppNotification from './notification.model.js';
@@ -162,7 +163,9 @@ export const listNotifications: RequestHandler = async (req, res, next) => {
 
 export const markNotificationsRead: RequestHandler = async (req, res, next) => {
   try {
-    const ids = Array.isArray(req.body.ids) ? req.body.ids : null;
+    const ids = Array.isArray(req.body.ids)
+      ? req.body.ids.map(String).filter((id: string) => mongoose.isValidObjectId(id)).slice(0, 50)
+      : null;
     const filter: { userId: string; read: boolean; _id?: { $in: unknown[] } } = { userId: req.user!.id, read: false };
     if (ids?.length) filter._id = { $in: ids };
     const result = await AppNotification.updateMany(filter, { $set: { read: true } });

@@ -1,6 +1,11 @@
 import type { RequestHandler } from 'express';
 
-const PROHIBITED = /^\$|\./;
+const PROHIBITED_KEY = /^\$|\./;
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isDangerousKey(key: string): boolean {
+  return FORBIDDEN_KEYS.has(key) || PROHIBITED_KEY.test(key);
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -19,7 +24,7 @@ function sanitizeValue(value: unknown): unknown {
 function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
   const clean: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
-    if (PROHIBITED.test(key)) continue;
+    if (isDangerousKey(key)) continue;
     clean[key] = sanitizeValue(value);
   }
   return clean;
@@ -29,7 +34,7 @@ function sanitizeInPlace(obj: Record<string, unknown>): void {
   if (!isPlainObject(obj)) return;
 
   for (const key of Object.keys(obj)) {
-    if (PROHIBITED.test(key)) {
+    if (isDangerousKey(key)) {
       delete obj[key];
       continue;
     }

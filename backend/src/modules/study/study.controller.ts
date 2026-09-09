@@ -530,8 +530,10 @@ export const getVocab: RequestHandler = async (req, res, next) => {
       query.category = String(category);
     }
 
-    if (search) {
-      const searchRegex = new RegExp(String(search), 'i');
+    const searchRaw = String(search || '').trim().slice(0, 80);
+    if (searchRaw) {
+      const escaped = searchRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
       query.$or = [
         { word: searchRegex },
         { definition: searchRegex },
@@ -540,17 +542,19 @@ export const getVocab: RequestHandler = async (req, res, next) => {
       ];
     }
 
-    const skip = (parseInt(String(page), 10) - 1) * parseInt(String(limit), 10);
-    const result = await vocabRepository.findAll(query, skip, parseInt(String(limit), 10));
+    const pageN = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitN = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 30));
+    const skip = (pageN - 1) * limitN;
+    const result = await vocabRepository.findAll(query, skip, limitN);
 
     res.json({
       status: 'success',
       data: result.data,
       meta: {
         total: result.total,
-        page: parseInt(String(page), 10),
-        limit: parseInt(String(limit), 10),
-        totalPages: Math.ceil(result.total / parseInt(String(limit), 10))
+        page: pageN,
+        limit: limitN,
+        totalPages: Math.ceil(result.total / limitN)
       }
     });
   } catch (error) {
@@ -561,6 +565,7 @@ export const getVocab: RequestHandler = async (req, res, next) => {
 export const addVocab: RequestHandler = async (req, res, next) => {
   try {
     const dto = new VocabDto(req.body);
+    dto.createdBy = req.user?.username || 'user';
     const errors = dto.validate();
     if (errors.length > 0) {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
@@ -604,6 +609,9 @@ export const addVocabBulk: RequestHandler = async (req, res, next) => {
     const vocabArray = req.body;
     if (!Array.isArray(vocabArray)) {
       return res.status(400).json({ status: 'error', message: 'Expected a JSON array of vocabulary objects.' });
+    }
+    if (vocabArray.length > 200) {
+      return res.status(400).json({ status: 'error', message: 'Bulk import is limited to 200 words at a time.' });
     }
 
     const processedArray = vocabArray.map((item: unknown) => {

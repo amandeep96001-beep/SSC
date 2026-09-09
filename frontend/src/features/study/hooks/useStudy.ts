@@ -331,6 +331,7 @@ export function useStudy() {
 
   const logoutUser = useCallback(() => {
     disableGsiAutoSelect();
+    apiService.post('/auth/logout').catch(() => {});
     apiService.clearSession();
     setUser(null);
     goToView('home');

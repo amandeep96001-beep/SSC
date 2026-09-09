@@ -820,11 +820,19 @@ function stripThemeBreakingStyles(html: string): string {
     .replace(/\s*size\s*=\s*(["'])(?:(?!\1).)*?\1/gi, '');
 }
 
+function stripDangerousHtml(html: string): string {
+  return html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/?(?:iframe|object|embed|form|base|meta|link|svg|math|video|audio)\b[^>]*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s(?:href|src|xlink:href)\s*=\s*(['"])\s*javascript:[\s\S]*?\1/gi, '')
+    .replace(/\s(?:href|src|xlink:href)\s*=\s*javascript:[^\s>]+/gi, '');
+}
+
 function alreadyCleanNotes(html: unknown): boolean {
   if (!html) return false;
   const src = String(html);
   if (/style\s*=|_ngcontent|Google Sans|mso-|\$\\rightarrow\$/i.test(src)) return false;
-  // Clean enough if it already uses our diagram/table classes and has no junk attrs
   return /class="notes-(?:diagram|table)/.test(src) && !/data-path-to-node|_ngcontent/i.test(src);
 }
 
@@ -839,7 +847,7 @@ export function prepareNotesHtml(content: unknown): string {
 
   // Already app-clean: light pass only (still strip rogue styles)
   if (alreadyCleanNotes(raw)) {
-    return stripThemeBreakingStyles(tidyStructure(raw));
+    return stripDangerousHtml(stripThemeBreakingStyles(tidyStructure(raw)));
   }
 
   let html = isLikelyHtml(raw) ? normalizeImportedHtml(raw) : markdownToHtml(raw);
@@ -848,7 +856,7 @@ export function prepareNotesHtml(content: unknown): string {
   html = convertLooseAsciiParagraphs(html);
   html = wrapTables(html);
   html = tidyStructure(html);
-  return html;
+  return stripDangerousHtml(html);
 }
 
 /** Prefer clipboard HTML when present; always normalize. */
