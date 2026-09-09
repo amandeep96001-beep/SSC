@@ -33,6 +33,11 @@ class VocabDto {
     this.options = this._parseArray(options);
     this.category = category;
     this.createdBy = 'user';
+
+    if (String(this.category || '') === 'Idioms & Phrases' || /idiom/i.test(this.pos)) {
+      this.synonyms = [];
+      this.antonyms = [];
+    }
   }
 
   _parseArray(input: unknown): string[] {

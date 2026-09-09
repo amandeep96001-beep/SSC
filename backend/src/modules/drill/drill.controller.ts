@@ -6,7 +6,15 @@ import TCSQuestion from '../questions/tcs-question.model.js';
 import DrillPerformance from './drill-performance.model.js';
 import { Vocab } from '../study/vocab.model.js';
 import type { IVocab } from '../study/vocab.model.js';
-import { shuffle as shuffleArray } from '../../shared/utils/shuffle.js';
+import {
+  acceptedVocabAnswers,
+  answersMatch,
+  buildVocabMcq,
+  extractQuoted,
+  getRandomVocabMcq,
+  inferVocabPromptKind,
+  type VocabLean,
+} from '../study/vocab.mcq.js';
 
 // Subject map for MCQ drill types
 const SUBJECT_MAP: Record<string, string> = {
@@ -111,88 +119,14 @@ export const getNextDrill: RequestHandler = async (req, res, next) => {
       }
 
       case 'vocab': {
-        const wordData = await vocabRepository.getRandomWord();
-        const isIdiom = wordData.category === 'Idioms & Phrases';
-
-        let question: string;
-        let correctAnswer: string;
-        let wrongPool: string[];
-
-        if (isIdiom) {
-          question = `Select the most appropriate meaning of the idiom: "${wordData.word}"`;
-          correctAnswer = wordData.definition;
-          wrongPool = [...(wordData.options || [])];
-        } else if (wordData.category === 'One Word Substitution') {
-          question = `Choose the one word which can be substituted for: "${wordData.definition}"`;
-          correctAnswer = wordData.word;
-          wrongPool = [...(wordData.options || [])];
-        } else {
-          const hasSynonyms = wordData.synonyms && wordData.synonyms.length > 0;
-          const hasAntonyms = wordData.antonyms && wordData.antonyms.length > 0;
-
-          const types = ['meaning'];
-          if (hasSynonyms) types.push('synonym');
-          if (hasAntonyms) types.push('antonym');
-
-          const qType = types[Math.floor(Math.random() * types.length)];
-
-          if (qType === 'synonym') {
-            question = `Select the most appropriate SYNONYM of "${wordData.word}"`;
-            correctAnswer = wordData.synonyms![Math.floor(Math.random() * wordData.synonyms!.length)];
-            wrongPool = [
-              ...(wordData.antonyms || []),
-              ...(wordData.options || [])
-            ];
-            wrongPool = wrongPool.filter(w => !wordData.synonyms!.includes(w) && w !== correctAnswer);
-          } else if (qType === 'antonym') {
-            question = `Select the most appropriate ANTONYM of "${wordData.word}"`;
-            correctAnswer = wordData.antonyms![Math.floor(Math.random() * wordData.antonyms!.length)];
-            wrongPool = [
-              ...(wordData.synonyms || []),
-              ...(wordData.options || [])
-            ];
-            wrongPool = wrongPool.filter(w => !wordData.antonyms!.includes(w) && w !== correctAnswer);
-          } else {
-            question = `Select the most appropriate meaning of "${wordData.word}"`;
-            correctAnswer = wordData.definition || (wordData.synonyms || [])[0];
-            wrongPool = [
-              ...(wordData.options || []),
-              ...(wordData.antonyms || []),
-            ];
-            wrongPool = wrongPool.filter(w => !(wordData.synonyms || []).includes(w) && w !== wordData.definition && w !== correctAnswer);
-          }
+        const mcq = await getRandomVocabMcq();
+        if (!mcq) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'No vocabulary questions are available yet.',
+          });
         }
-
-        const correctKey = String(correctAnswer || '').trim().toLowerCase();
-        wrongPool = wrongPool
-          .map((w) => String(w || '').trim())
-          .filter((w) => w && w.toLowerCase() !== correctKey);
-        const shuffledWrong = shuffleArray([...new Set(wrongPool)]).slice(0, 3);
-
-        while (shuffledWrong.length < 3) {
-          const filler = ['To remain idle', 'A sudden misfortune', 'Without any delay', 'In complete agreement'][shuffledWrong.length];
-          if (filler && filler.toLowerCase() !== correctKey && !shuffledWrong.includes(filler)) {
-            shuffledWrong.push(filler);
-          } else {
-            break;
-          }
-        }
-
-        const optionsList = shuffleArray([correctAnswer, ...shuffledWrong]);
-
-        drillData = {
-          type,
-          question,
-          isIdiom,
-          word: wordData.word,
-          revealDefinition: wordData.definition,
-          revealSynonyms: wordData.synonyms,
-          revealAntonyms: wordData.antonyms,
-          pos: wordData.pos,
-          category: wordData.category,
-          options: optionsList,
-          correctAnswer
-        };
+        drillData = { type, ...mcq };
         break;
       }
 
@@ -240,9 +174,17 @@ export const getNextDrill: RequestHandler = async (req, res, next) => {
   }
 };
 
+function cleanDrillAnswer(value: unknown, type: string): string {
+  let text = String(value ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (type === 'fraction' || type === 'percentage') {
+    text = text.replace(/%/g, '');
+  }
+  return text;
+}
+
 export const verifyDrill: RequestHandler = async (req, res, next) => {
   try {
-    const { type, userAnswer, correctAnswer, questionId } = req.body;
+    const { type, userAnswer, correctAnswer, questionId, question } = req.body;
     const userId = req.user?.id ?? null;
 
     if (userAnswer === undefined || (correctAnswer === undefined && !questionId)) {
@@ -252,8 +194,39 @@ export const verifyDrill: RequestHandler = async (req, res, next) => {
       });
     }
 
+    if (type === 'vocab') {
+      let doc: IVocab | null = null;
+      if (questionId && mongoose.isValidObjectId(String(questionId))) {
+        doc = await Vocab.findById(questionId).lean();
+      }
+      if (!doc) {
+        const quoted = extractQuoted(String(question || ''));
+        if (quoted) {
+          doc = await Vocab.findOne({
+            word: new RegExp(`^${quoted.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+          }).lean();
+        }
+      }
+
+      const kind = inferVocabPromptKind(String(question || ''), doc?.category, doc?.pos);
+      const accepted = [
+        ...(doc ? acceptedVocabAnswers(doc, kind) : []),
+        correctAnswer,
+      ].filter(Boolean);
+
+      const isCorrect = accepted.some((answer) => answersMatch(answer, userAnswer));
+      const shownCorrect = accepted.find((answer) => answersMatch(answer, correctAnswer));
+      const authoritativeCorrect = shownCorrect || accepted[0] || correctAnswer;
+
+      return res.json({
+        status: 'success',
+        data: { isCorrect, correctAnswer: authoritativeCorrect }
+      });
+    }
+
     let authoritativeCorrect = correctAnswer;
-    if (questionId && mongoose.isValidObjectId(String(questionId))) {
+    const subject = SUBJECT_MAP[String(type)];
+    if (subject && questionId && mongoose.isValidObjectId(String(questionId))) {
       const stored = await TCSQuestion.findById(questionId).select('options correctAnswer').lean();
       if (stored && Array.isArray(stored.options) && typeof stored.correctAnswer === 'number') {
         authoritativeCorrect = stored.options[stored.correctAnswer] ?? stored.correctAnswer;
@@ -267,12 +240,9 @@ export const verifyDrill: RequestHandler = async (req, res, next) => {
       });
     }
 
-    const cleanUser    = userAnswer.toString().trim().toLowerCase().replace('%', '');
-    const cleanCorrect = authoritativeCorrect.toString().trim().toLowerCase().replace('%', '');
+    const isCorrect = cleanDrillAnswer(userAnswer, String(type))
+      === cleanDrillAnswer(authoritativeCorrect, String(type));
 
-    const isCorrect = cleanUser === cleanCorrect;
-
-    const subject = SUBJECT_MAP[type];
     if (subject && questionId && userId) {
       recordPerformance(userId, questionId, subject, isCorrect);
     }
@@ -300,8 +270,9 @@ export const getRelatedQuestions: RequestHandler = async (req, res, next) => {
     }
 
     if (type === 'vocab') {
-      const filter: Record<string, unknown> = {};
-      if (category) filter.category = String(category);
+      const filter: Record<string, unknown> = {
+        category: category ? String(category) : { $ne: 'Spelling Rules' },
+      };
 
       const andConditions: Record<string, unknown>[] = [];
       if (excludeQuestion) {
@@ -322,31 +293,26 @@ export const getRelatedQuestions: RequestHandler = async (req, res, next) => {
         filter.$and = andConditions;
       }
 
-      const words = await Vocab.aggregate<IVocab & { _id?: unknown }>([
+      const words = await Vocab.aggregate<VocabLean>([
         { $match: filter },
         { $sample: { size: 10 } }
       ]);
 
-      const formatted = words.map(w => {
-        const isIdiom = w.category === 'Idioms & Phrases';
-        const isOws = w.category === 'One Word Substitution';
-        const questionText = isIdiom
-          ? `Select the most appropriate meaning of the idiom: "${w.word}"`
-          : isOws
-            ? `Choose the one word which can be substituted for: "${w.definition}"`
-            : `Select the most appropriate meaning of "${w.word}"`;
-        const correctAnswer = isOws ? w.word : w.definition;
-
-        return {
-          _id: w._id ? w._id.toString() : '',
-          question: questionText,
-          correctAnswer,
-          explanation: isIdiom
-            ? `Meaning: ${w.definition}`
-            : `Synonyms: ${w.synonyms?.join(', ') || '—'} | Antonyms: ${w.antonyms?.join(', ') || '—'}`,
-          category: w.category
-        };
-      });
+      const formatted = [];
+      for (const word of words) {
+        const mcq = await buildVocabMcq(word);
+        if (!mcq) continue;
+        formatted.push({
+          _id: mcq._id,
+          question: mcq.question,
+          options: mcq.options,
+          correctAnswer: mcq.correctAnswer,
+          explanation: mcq.isIdiom
+            ? `Meaning: ${mcq.revealDefinition}`
+            : `Synonyms: ${mcq.revealSynonyms.join(', ') || '—'} | Antonyms: ${mcq.revealAntonyms.join(', ') || '—'}`,
+          category: mcq.category,
+        });
+      }
 
       return res.json({ status: 'success', data: formatted });
     }

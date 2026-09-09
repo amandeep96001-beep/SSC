@@ -7,6 +7,7 @@ import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
 import { progressForTopic } from '@/shared/utils/examProgress';
 import { useExam } from '@/shared/context/useExam';
 import { showAppToast } from '@/shared/utils/appToast';
+import { ExamLoader } from '@/features/exam/components/ExamLoader';
 import { 
   BookMarked, 
   ChevronRight, 
@@ -95,6 +96,7 @@ interface SyllabusWorkspaceProps {
   handleDeleteSubjectClick: (e: ReactMouseEvent, subjectName: string) => void;
   activeNotes: TopicNotesPayload | null;
   notesLoading?: boolean;
+  testStarting?: boolean;
   startTest: UseStudyReturn['startTest'];
   updateCustomTopic: UseStudyReturn['updateCustomTopic'];
   onOpenNotesDock?: () => void;
@@ -121,6 +123,7 @@ export function SyllabusWorkspace({
   handleDeleteSubjectClick,
   activeNotes,
   notesLoading = false,
+  testStarting = false,
   startTest,
   updateCustomTopic,
   onOpenNotesDock
@@ -452,7 +455,6 @@ export function SyllabusWorkspace({
     const res = await updateCustomTopic(activeNotes.id, {
       name: activeNotes.name,
       notes: newHtml,
-      questions: []
     });
     if (res.success && closeEditor) setIsEditingNotes(false);
     return res;
@@ -810,7 +812,7 @@ export function SyllabusWorkspace({
                     </div>
                     <p className="topic-desc">{topic.syllabus}</p>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="read-more-tag">Read Study notes & formulas</span>
+                      <span className="read-more-tag">Open notes and practice questions</span>
                       {score !== undefined && (
                         <span className="topic-score-badge">Latest: {score}/{maxScore}</span>
                       )}
@@ -832,7 +834,7 @@ export function SyllabusWorkspace({
                     </button>
                   </>
                 ) : (
-                  <p>No active topics are seeded under this subject yet.</p>
+                  <p>No topics have been published for this subject yet.</p>
                 )}
               </div>
             )}
@@ -848,10 +850,10 @@ export function SyllabusWorkspace({
             <div className="syllabus-page-header__row">
               <div className="syllabus-page-header__text">
                 <span className="notes-breadcrumb">Revision Notes</span>
-                <h1>{notesLoading ? 'Loading notes…' : 'Could not load notes'}</h1>
+                <h1>{notesLoading ? 'Loading notes' : 'Notes unavailable'}</h1>
                 {!notesLoading && (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0' }}>
-                    Network issue or topic not found. Go back and try again.
+                    This topic could not be opened. Return to the topic list and try again.
                   </p>
                 )}
               </div>
@@ -869,9 +871,10 @@ export function SyllabusWorkspace({
             </div>
           </header>
           {notesLoading && (
-            <div className="app-loader-overlay app-loader-overlay--inline" aria-busy="true" aria-label="Loading notes">
-              <div className="app-loader-spinner" />
-            </div>
+            <ExamLoader
+              title="Loading notes"
+              subtitle="Preparing the revision sheet for this topic."
+            />
           )}
         </div>
       )}
@@ -879,6 +882,14 @@ export function SyllabusWorkspace({
       {/* --- VIEW: TOPIC REVISION NOTES & TEST STARTER --- */}
       {activeView === 'notes' && activeNotes && !notesLoading && (
         <div className={`study-workspace syllabus-flow notes-flow${notesFocus ? ' notes-flow--focus' : ''}`}>
+          {testStarting && (
+            <div className="app-loader-overlay" aria-busy="true" aria-label="Starting topic test">
+              <ExamLoader
+                title="Starting topic test"
+                subtitle="Selecting questions and opening exam mode."
+              />
+            </div>
+          )}
           {!notesFocus && (
           <header className="syllabus-page-header notes-toolbar-header">
             <div className="syllabus-page-header__row">
@@ -888,10 +899,10 @@ export function SyllabusWorkspace({
                 </span>
                 <h1>{activeNotes.name}</h1>
                 {!activeNotes.isOwned && user?.role !== 'admin' && (
-                  <p className="notes-local-hint">Highlights & edits on official notes stay on this device only.</p>
+                  <p className="notes-local-hint">Highlights and edits on official notes stay on this device.</p>
                 )}
                 {!activeNotes.isOwned && user?.role === 'admin' && (
-                  <p className="notes-local-hint">You are editing the official syllabus — changes save for all students.</p>
+                  <p className="notes-local-hint">You are editing the official syllabus. Saved changes are visible to all students.</p>
                 )}
               </div>
               <div className="syllabus-page-header__actions notes-toolbar-actions">
@@ -909,8 +920,8 @@ export function SyllabusWorkspace({
                   type="button"
                   className="notes-tool-icon sticky-launch-btn"
                   onClick={() => onOpenNotesDock?.()}
-                  title="Quick Notes"
-                  aria-label="Quick Notes"
+                  title="Sticky notes"
+                  aria-label="Sticky notes"
                 >
                   <NotebookPen size={18} strokeWidth={1.75} />
                 </button>
@@ -971,7 +982,7 @@ export function SyllabusWorkspace({
                     </button>
 
                     <div className="notes-actions-divider">
-                      <span>Highlighter Tools</span>
+                      <span>Highlights</span>
                       <div className="notes-actions-highlights">
                         <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
                         <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
@@ -1047,8 +1058,8 @@ export function SyllabusWorkspace({
                       type="button"
                       className="notes-ctrl-btn notes-ctrl-btn--icon"
                       onClick={() => onOpenNotesDock?.()}
-                      title="Quick Notes"
-                      aria-label="Quick Notes"
+                      title="Sticky notes"
+                      aria-label="Sticky notes"
                     >
                       <NotebookPen size={15} strokeWidth={1.75} />
                     </button>
@@ -1265,7 +1276,7 @@ export function SyllabusWorkspace({
                           aria-label="Number of test questions"
                         />
                         {availableQCount > 0 && Number(testQuestionCount) > availableQCount && (
-                          <span className="notes-test-repeat-hint">♻️ questions repeat</span>
+                          <span className="notes-test-repeat-hint">Extra questions will reuse items from this topic.</span>
                         )}
                         <button
                           type="button"

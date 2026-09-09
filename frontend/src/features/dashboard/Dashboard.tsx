@@ -126,6 +126,7 @@ export function Dashboard() {
     subjectsLoading,
     topicsLoading,
     notesLoading,
+    testStarting,
     error: studyError,
     skipToSubjects,
     selectSubject,
@@ -492,7 +493,7 @@ export function Dashboard() {
   
   const [vocabModalOpen, setVocabModalOpen] = useState(false);
   const [editingVocabId, setEditingVocabId] = useState<string | null>(null);
-  const [vocabForm, setVocabForm] = useState<VocabFormState>({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', category: 'Word Power' });
+  const [vocabForm, setVocabForm] = useState<VocabFormState>({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', options: '', category: 'Word Power' });
   const [vocabFormError, setVocabFormError] = useState('');
   const [vocabFormSuccess, setVocabFormSuccess] = useState('');
 
@@ -553,7 +554,7 @@ export function Dashboard() {
   const filteredVocabDB = vocabList;
 
   const resetVocabForm = () => {
-    setVocabForm({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', category: 'Word Power' });
+    setVocabForm({ word: '', pos: '', definition: '', synonyms: '', antonyms: '', options: '', category: 'Word Power' });
     setEditingVocabId(null);
     setVocabFormError('');
     setVocabFormSuccess('');
@@ -566,6 +567,7 @@ export function Dashboard() {
       definition: item.definition || '',
       synonyms: Array.isArray(item.synonyms) ? item.synonyms.join(', ') : (item.synonyms || ''),
       antonyms: Array.isArray(item.antonyms) ? item.antonyms.join(', ') : (item.antonyms || ''),
+      options: Array.isArray(item.options) ? item.options.join(', ') : '',
       category: item.category || 'Word Power',
     });
     setEditingVocabId(item._id || null);
@@ -580,8 +582,9 @@ export function Dashboard() {
       word: vocabForm.word.trim(),
       pos: vocabForm.pos.trim(),
       definition: vocabForm.definition.trim(),
-      synonyms: vocabForm.synonyms.split(',').map((s: string) => s.trim()).filter(Boolean),
-      antonyms: vocabForm.antonyms.split(',').map((a: string) => a.trim()).filter(Boolean),
+      synonyms: vocabForm.category === 'Idioms & Phrases' ? [] : vocabForm.synonyms.split(',').map((s: string) => s.trim()).filter(Boolean),
+      antonyms: vocabForm.category === 'Idioms & Phrases' ? [] : vocabForm.antonyms.split(',').map((a: string) => a.trim()).filter(Boolean),
+      options: vocabForm.options.split(',').map((o: string) => o.trim()).filter(Boolean),
       category: vocabForm.category,
       createdBy: user?.username || 'user',
     };
@@ -992,6 +995,7 @@ export function Dashboard() {
               handleDeleteSubjectClick={handleDeleteSubjectClick}
               activeNotes={activeNotes}
               notesLoading={notesLoading}
+              testStarting={testStarting}
               startTest={startTest}
               updateCustomTopic={updateCustomTopic}
               onOpenNotesDock={openNotesDock}

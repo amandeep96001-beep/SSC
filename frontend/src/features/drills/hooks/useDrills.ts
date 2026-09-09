@@ -4,6 +4,19 @@ import { useApi } from '@/shared/hooks/useApi';
 import type { ApiJson } from '@/shared/services/apiService';
 import { isRecord } from '@/types/app';
 
+export function sameDrillAnswer(a: unknown, b: unknown, type?: string): boolean {
+  const fold = (value: unknown) => {
+    let text = String(value ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (type === 'fraction' || type === 'percentage') {
+      text = text.replace(/%/g, '');
+    }
+    return text;
+  };
+  const left = fold(a);
+  const right = fold(b);
+  return Boolean(left) && left === right;
+}
+
 export interface DrillItem {
   type?: string;
   question?: string;
@@ -50,6 +63,7 @@ export interface DrillFeedback {
   isChecked: boolean;
   isCorrect: boolean;
   showAnswer: boolean;
+  selectedAnswer?: string;
 }
 
 function extractVocabWord(question = ''): string | null {
@@ -115,7 +129,7 @@ export function useDrills(isAuthenticated = false) {
   // Load next question
   const loadNextDrill = useCallback(async (typeToLoad = drillType, baseLimit = maxTableBase) => {
     setUserAnswer('');
-    setFeedback({ isChecked: false, isCorrect: false, showAnswer: false });
+    setFeedback({ isChecked: false, isCorrect: false, showAnswer: false, selectedAnswer: '' });
     
     const result = await fetchNextDrill({ type: typeToLoad, maxBase: baseLimit });
     if (result.success) {
@@ -136,18 +150,26 @@ export function useDrills(isAuthenticated = false) {
       question: currentDrill.question,
       userAnswer: finalAnswer,
       correctAnswer: currentDrill.correctAnswer,
-      questionId: currentDrill._id || null,   // needed for smart drill algorithm
+      questionId: currentDrill._id || null,
     };
-
 
     const result = await verifyDrill(payload);
     if (result.success && isRecord(result.data.data)) {
       const isCorrect = Boolean(result.data.data.isCorrect);
-      
+      const serverCorrect = typeof result.data.data.correctAnswer === 'string'
+        ? result.data.data.correctAnswer
+        : currentDrill.correctAnswer;
+
+      if (serverCorrect && serverCorrect !== currentDrill.correctAnswer) {
+        setCurrentDrill((prev) => (prev ? { ...prev, correctAnswer: serverCorrect } : prev));
+      }
+      setUserAnswer(finalAnswer);
+
       setFeedback({
         isChecked: true,
         isCorrect,
-        showAnswer: true
+        showAnswer: true,
+        selectedAnswer: finalAnswer,
       });
 
       setStats((prev) => ({
@@ -174,7 +196,7 @@ export function useDrills(isAuthenticated = false) {
             updated = [
               {
                 question: currentDrill.question || '',
-                correctAnswer: currentDrill.correctAnswer,
+                correctAnswer: serverCorrect || currentDrill.correctAnswer,
                 userAnswer: finalAnswer,
                 options: currentDrill.options || null,
                 placeholder: currentDrill.placeholder || null,

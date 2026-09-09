@@ -13,10 +13,61 @@ import {
   Star,
   Pencil,
   Upload,
-  Layers
+  Layers,
+  Copy,
+  Check,
 } from 'lucide-react';
-import type { Dispatch, FormEvent, SetStateAction } from 'react';
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import type { VocabFormState, VocabItem } from '@/types/app';
+
+const VOCAB_BULK_TEMPLATES = {
+  idioms: `[
+  {
+    "word": "Break the ice",
+    "pos": "Idiom",
+    "category": "Idioms & Phrases",
+    "definition": "To relieve tension or start a conversation",
+    "options": [
+      "To reveal a secret",
+      "To refuse to listen",
+      "To make a situation worse"
+    ]
+  },
+  {
+    "word": "Hit the nail on the head",
+    "pos": "Idiom",
+    "category": "Idioms & Phrases",
+    "definition": "To describe a situation exactly; to be precisely right",
+    "options": [
+      "To face a difficulty boldly",
+      "To admit defeat and give up",
+      "To end a quarrel and make peace"
+    ]
+  }
+]`,
+  wordPower: `[
+  {
+    "word": "Ephemeral",
+    "pos": "Adjective",
+    "category": "Word Power",
+    "definition": "Lasting for a very short time",
+    "synonyms": ["Brief", "Transient", "Fleeting"],
+    "antonyms": ["Eternal", "Permanent", "Enduring"],
+    "options": ["Eternal", "Abundant", "Hostile"]
+  }
+]`,
+  ows: `[
+  {
+    "word": "Altruist",
+    "pos": "Noun",
+    "category": "One Word Substitution",
+    "definition": "One who is concerned with the welfare of others",
+    "options": ["Misanthrope", "Egoist", "Atheist"]
+  }
+]`,
+} as const;
+
+type BulkTemplateKey = keyof typeof VOCAB_BULK_TEMPLATES;
 
 // Fraction ↔ Percentage Reference Sheet
 const FRACTION_CONVERSIONS = [
@@ -387,7 +438,7 @@ export function RevisionWorkspace({
                     <p className="vocab-def">"{item.definition}"</p>
 
                     {/* Synonyms */}
-                    {(Array.isArray(item.synonyms) ? item.synonyms.length > 0 : Boolean(item.synonyms)) && (
+                    {(item.category !== 'Idioms & Phrases' && (Array.isArray(item.synonyms) ? item.synonyms.length > 0 : Boolean(item.synonyms))) && (
                       <div className="vocab-chip-row">
                         <span className="vocab-chip-label">Syn:</span>
                         {(Array.isArray(item.synonyms) ? item.synonyms : String(item.synonyms).split(',')).map((s, i) => (
@@ -397,11 +448,22 @@ export function RevisionWorkspace({
                     )}
 
                     {/* Antonyms */}
-                    {(Array.isArray(item.antonyms) ? item.antonyms.length > 0 : Boolean(item.antonyms)) && (
+                    {(item.category !== 'Idioms & Phrases' && (Array.isArray(item.antonyms) ? item.antonyms.length > 0 : Boolean(item.antonyms))) && (
                       <div className="vocab-chip-row">
                         <span className="vocab-chip-label">Ant:</span>
                         {(Array.isArray(item.antonyms) ? item.antonyms : String(item.antonyms).split(',')).map((a, i) => (
                           <span key={i} className="vocab-chip ant">{a.trim()}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {Array.isArray(item.options) && item.options.filter(Boolean).length > 0 && (
+                      <div className="vocab-chip-row">
+                        <span className="vocab-chip-label">
+                          {item.category === 'Idioms & Phrases' ? 'Other meanings:' : 'Other options:'}
+                        </span>
+                        {item.options.filter(Boolean).map((opt, i) => (
+                          <span key={i} className="vocab-chip opt">{opt}</span>
                         ))}
                       </div>
                     )}
@@ -485,13 +547,31 @@ export function RevisionWorkspace({
                 <label>Definition *</label>
                 <textarea rows={2} value={vocabForm.definition} onChange={e => setVocabForm(p => ({...p, definition: e.target.value}))} required placeholder="Meaning of the word..." />
               </div>
+              {vocabForm.category !== 'Idioms & Phrases' && (
               <div className="form-group">
                 <label>Synonyms <span style={{color:'var(--text-muted)', fontWeight:400}}>(comma separated)</span></label>
                 <input value={vocabForm.synonyms} onChange={e => setVocabForm(p => ({...p, synonyms: e.target.value}))} placeholder="e.g. Transient, Fleeting, Brief" />
               </div>
+              )}
+              {vocabForm.category !== 'Idioms & Phrases' && (
               <div className="form-group">
                 <label>Antonyms <span style={{color:'var(--text-muted)', fontWeight:400}}>(comma separated)</span></label>
                 <input value={vocabForm.antonyms} onChange={e => setVocabForm(p => ({...p, antonyms: e.target.value}))} placeholder="e.g. Eternal, Enduring, Permanent" />
+              </div>
+              )}
+              <div className="form-group">
+                <label>
+                  {vocabForm.category === 'Idioms & Phrases' ? 'Other meanings (3 MCQ distractors)' : 'Other options (3 MCQ distractors)'}
+                  <span style={{color:'var(--text-muted)', fontWeight:400}}> (comma separated)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  value={vocabForm.options}
+                  onChange={e => setVocabForm(p => ({...p, options: e.target.value}))}
+                  placeholder={vocabForm.category === 'Idioms & Phrases'
+                    ? 'Three other idiom meanings, not the correct one'
+                    : 'Three other words, not the correct answer'}
+                />
               </div>
               {vocabFormError && <p style={{ color: '#f87171', fontSize: '0.85rem', margin: 0 }}>{vocabFormError}</p>}
               {vocabFormSuccess && <p style={{ color: '#4ade80', fontSize: '0.85rem', margin: 0 }}>{vocabFormSuccess}</p>}
@@ -506,50 +586,123 @@ export function RevisionWorkspace({
 
       {/* ── BULK IMPORT VOCAB MODAL ── */}
       {vocabBulkModalOpen && (
-        <div className="modal-overlay" onClick={() => setVocabBulkModalOpen(false)}>
-          <div className="modal-content-card modal-lg" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Bulk Import Vocabulary</h3>
-              <button className="btn-close-modal" onClick={() => setVocabBulkModalOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form className="modal-form" onSubmit={handleVocabBulkSubmit}>
-              <div className="form-group">
-                <label>
-                  Paste JSON Array
-                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'normal', marginTop: '4px' }}>
-                    Valid Categories: "Word Power", "Idioms & Phrases", "One Word Substitution", "Spelling Rules"<br/>
-                    <pre style={{ margin: '8px 0', padding: '8px', background: 'rgba(0,0,0,0.3)', borderRadius: '4px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
-{`[
-  { "word": "Ephemeral", "pos": "Adjective", "category": "Word Power", "definition": "Short-lived", "synonyms": "Brief", "antonyms": "Eternal" },
-  { "word": "Break the ice", "pos": "Idiom", "category": "Idioms & Phrases", "definition": "To relieve tension", "synonyms": "", "antonyms": "" },
-  { "word": "Altruist", "pos": "Noun", "category": "One Word Substitution", "definition": "A selfless person", "synonyms": "Philanthropist", "antonyms": "Egoist" }
-]`}
-                    </pre>
-                  </span>
-                </label>
-                <textarea 
-                  rows={12} 
-                  value={vocabBulkJson} 
-                  onChange={e => setVocabBulkJson(e.target.value)} 
-                  placeholder="Paste JSON Array of vocabulary here..."
-                  style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-input)' }}
-                  required
-                />
-              </div>
-
-              {vocabBulkError && <p style={{ color: '#f87171', fontSize: '0.85rem', margin: 0 }}>{vocabBulkError}</p>}
-              {vocabBulkSuccess && <p style={{ color: '#4ade80', fontSize: '0.85rem', margin: 0 }}>{vocabBulkSuccess}</p>}
-
-              <div className="modal-footer-actions">
-                <button type="button" className="btn-cancel" onClick={() => setVocabBulkModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-save-topic">Import JSON</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <BulkImportVocabModal
+          vocabBulkJson={vocabBulkJson}
+          setVocabBulkJson={setVocabBulkJson}
+          vocabBulkError={vocabBulkError}
+          vocabBulkSuccess={vocabBulkSuccess}
+          onClose={() => setVocabBulkModalOpen(false)}
+          onSubmit={handleVocabBulkSubmit}
+        />
       )}
     </>
+  );
+}
+
+function BulkImportVocabModal({
+  vocabBulkJson,
+  setVocabBulkJson,
+  vocabBulkError,
+  vocabBulkSuccess,
+  onClose,
+  onSubmit,
+}: {
+  vocabBulkJson: string;
+  setVocabBulkJson: Dispatch<SetStateAction<string>>;
+  vocabBulkError: string;
+  vocabBulkSuccess: string;
+  onClose: () => void;
+  onSubmit: (e: FormEvent) => void;
+}) {
+  const [templateKey, setTemplateKey] = useState<BulkTemplateKey>('idioms');
+  const [copied, setCopied] = useState(false);
+  const template = VOCAB_BULK_TEMPLATES[templateKey];
+
+  const copyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(template);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content-card modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Bulk Import Vocabulary</h3>
+          <button type="button" className="btn-close-modal" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+        <form className="modal-form" onSubmit={onSubmit}>
+          <div className="vocab-bulk-guide">
+            <p className="vocab-bulk-guide__lead">
+              Copy a sample JSON, edit the words, then paste below. For idioms, <code>options</code> = 3 wrong meanings (not the correct definition). Leave <code>options</code> empty and the app fills them from the bank.
+            </p>
+
+            <div className="vocab-bulk-tabs" role="tablist" aria-label="JSON templates">
+              {(
+                [
+                  ['idioms', 'Idioms'],
+                  ['wordPower', 'Word Power'],
+                  ['ows', 'One Word'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={templateKey === key}
+                  className={`vocab-bulk-tab ${templateKey === key ? 'active' : ''}`}
+                  onClick={() => setTemplateKey(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="vocab-bulk-template">
+              <div className="vocab-bulk-template__actions">
+                <button type="button" className="vocab-bulk-action" onClick={copyTemplate}>
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Copied' : 'Copy JSON'}
+                </button>
+                <button
+                  type="button"
+                  className="vocab-bulk-action vocab-bulk-action--primary"
+                  onClick={() => setVocabBulkJson(template)}
+                >
+                  Use this template
+                </button>
+              </div>
+              <pre className="vocab-bulk-pre">{template}</pre>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Paste JSON Array</label>
+            <textarea
+              rows={12}
+              value={vocabBulkJson}
+              onChange={(e) => setVocabBulkJson(e.target.value)}
+              placeholder="Paste or click Use this template…"
+              className="vocab-bulk-textarea"
+              required
+            />
+          </div>
+
+          {vocabBulkError && <p className="vocab-bulk-msg vocab-bulk-msg--error">{vocabBulkError}</p>}
+          {vocabBulkSuccess && <p className="vocab-bulk-msg vocab-bulk-msg--ok">{vocabBulkSuccess}</p>}
+
+          <div className="modal-footer-actions">
+            <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-save-topic">Import JSON</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 /**
- * Mock DB Storage for SSC Prep notes & topics.
- * Accessible through standard Model CRUD patterns.
+ * Prep notes live in Mongo (study topics). This in-memory store is only a
+ * fallback for the unused /prep/notes admin endpoint — keep it empty.
  */
 
 export interface IPrepNote {
@@ -12,32 +12,7 @@ export interface IPrepNote {
   createdAt: Date;
 }
 
-let notesDb: IPrepNote[] = [
-  {
-    id: 1,
-    subject: 'Quantitative Aptitude',
-    topic: 'Percentage Essentials',
-    difficulty: 'Easy',
-    content: 'Concept: Percentage means per hundred. Key formulas: x% of y = (x * y) / 100. Fractional equivalents: 1/2 = 50%, 1/3 = 33.33%, 1/4 = 25%, 1/5 = 20%, 1/8 = 12.5%. Always memorize fractional conversions to solve QA questions rapidly in SSC exams.',
-    createdAt: new Date('2026-06-01')
-  },
-  {
-    id: 2,
-    subject: 'English Comprehension',
-    topic: 'Subject-Verb Agreement Rules',
-    difficulty: 'Medium',
-    content: 'Rule 1: Two singular subjects connected by "and" usually take a plural verb. Rule 2: When connected by "or" or "nor", the verb agrees with the closer subject. Example: Neither the teacher nor the students were present.',
-    createdAt: new Date('2026-06-02')
-  },
-  {
-    id: 3,
-    subject: 'General Awareness',
-    topic: 'Indian Constitution - Fundamental Rights',
-    difficulty: 'Hard',
-    content: 'Fundamental Rights are enshrined in Part III (Articles 12 to 35) of the Constitution. Borrowed from USA. Originally 7, now 6 (Right to Property removed by 44th Amendment Act, 1978). Article 32 is called the Heart and Soul of the Constitution by B.R. Ambedkar.',
-    createdAt: new Date('2026-06-03')
-  }
-];
+let notesDb: IPrepNote[] = [];
 
 class PrepModel {
   static async getAllNotes() {

@@ -1,50 +1,22 @@
 /**
- * Fill SSC-style MCQ distractors on every vocab row.
+ * Fill SSC-style MCQ distractors on every vocab row from the live bank.
  * Idioms → 3 other idiom meanings
  * One Word → 3 other substitution words
- * Word Power → 3 other words / synonyms
+ * Word Power → 3 other words (synonym/antonym drills)
  *
- * Also upserts high-frequency SSC idioms missing from the bank.
+ * Also upserts high-frequency SSC idioms / OWS missing from the bank.
+ * Never writes placeholder fillers.
  *
- * Usage: node scripts/seedVocabOptions.js
+ * Usage: npm run seed-vocab-options
  */
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import { Vocab } from '../src/modules/study/vocab.model.js';
+import { fillStoredDistractors } from '../src/modules/study/vocab.mcq.js';
 
-dotenv.config();
-
-function norm(s: unknown): string {
-  return String(s || '').replace(/\s+/g, ' ').trim();
-}
-
-function key(s: unknown): string {
-  return norm(s).toLowerCase();
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function pickThree(pool: string[], excludeKeys: Iterable<unknown>): string[] {
-  const banned = new Set([...excludeKeys].map(key));
-  const unique = [];
-  const seen = new Set();
-  for (const raw of shuffle(pool)) {
-    const v = norm(raw);
-    const k = key(v);
-    if (!v || banned.has(k) || seen.has(k)) continue;
-    seen.add(k);
-    unique.push(v);
-    if (unique.length === 3) break;
-  }
-  return unique;
-}
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '../.env') });
 
 /** High-frequency SSC CGL/CHSL idioms — upsert if missing. */
 const SSC_IDIOMS = [
@@ -173,22 +145,6 @@ const QUALITY_FIXES: Record<string, { synonyms: string[]; antonyms: string[] }> 
   },
 };
 
-function genericFillers(kind: string): string[] {
-  if (kind === 'Idioms & Phrases') {
-    return [
-      'To remain idle and do nothing useful',
-      'A sudden and unexpected misfortune',
-      'To act without any delay',
-      'To be in complete disagreement',
-      'To waste time on unimportant things',
-    ];
-  }
-  if (kind === 'One Word Substitution') {
-    return ['Egoist', 'Stoic', 'Cynic', 'Amateur', 'Fatalist', 'Theist'];
-  }
-  return ['Apathy', 'Reluctance', 'Timidity', 'Indifference', 'Carelessness'];
-}
-
 async function upsertIdioms() {
   const ops = [];
   for (const [word, definition] of SSC_IDIOMS) {
@@ -243,41 +199,6 @@ async function upsertOws() {
   return res.upsertedCount || 0;
 }
 
-async function fillOptions(
-  category: string,
-  pickFrom: (r: { word?: string; definition?: string; synonyms?: string[]; antonyms?: string[] }) => string | undefined
-) {
-  const rows = await Vocab.find({ category }).lean();
-  const pool = rows.map((r) => pickFrom(r)).filter((v): v is string => Boolean(v));
-  let short = 0;
-  const ops = [];
-
-  for (const row of rows) {
-    const correct = pickFrom(row);
-    const exclude = new Set([
-      correct,
-      row.word,
-      row.definition,
-      ...(row.synonyms || []),
-      ...(row.antonyms || []),
-    ]);
-    let options = pickThree(pool, exclude);
-    if (options.length < 3) {
-      options = [...options, ...pickThree(genericFillers(category), new Set([...exclude, ...options]))];
-      options = [...new Set(options.map(norm))].slice(0, 3);
-    }
-    if (options.length < 3) short += 1;
-
-    const patch = { options };
-    const fix = QUALITY_FIXES[row.word];
-    if (fix) Object.assign(patch, fix);
-    ops.push({ updateOne: { filter: { _id: row._id }, update: { $set: patch } } });
-  }
-
-  if (ops.length) await Vocab.bulkWrite(ops, { ordered: false });
-  return { count: rows.length, updated: ops.length, short };
-}
-
 async function run() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
@@ -289,9 +210,14 @@ async function run() {
   const idiomsAdded = await upsertIdioms();
   const owsAdded = await upsertOws();
 
-  const idiomStats = await fillOptions('Idioms & Phrases', (r) => r.definition);
-  const owsStats = await fillOptions('One Word Substitution', (r) => r.word);
-  const wpStats = await fillOptions('Word Power', (r) => r.word);
+  const idiomStats = await fillStoredDistractors('Idioms & Phrases');
+  const owsStats = await fillStoredDistractors('One Word Substitution');
+  const wpStats = await fillStoredDistractors('Word Power');
+
+  const qualityOps = Object.entries(QUALITY_FIXES).map(([word, fix]) => ({
+    updateOne: { filter: { word }, update: { $set: fix } },
+  }));
+  if (qualityOps.length) await Vocab.bulkWrite(qualityOps, { ordered: false });
 
   const withOpts = await Vocab.countDocuments({
     category: { $in: ['Idioms & Phrases', 'One Word Substitution', 'Word Power'] },

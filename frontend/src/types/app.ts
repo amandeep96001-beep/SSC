@@ -150,6 +150,7 @@ export interface VocabFormState {
   definition: string;
   synonyms: string;
   antonyms: string;
+  options: string;
   category: string;
 }
 

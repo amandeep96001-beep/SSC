@@ -29,7 +29,7 @@ interface MockWorkspaceProps {
 
 export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = false }: MockWorkspaceProps) {
   const { exam, examId } = useExam();
-  const { mockTests, loading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
+  const { mockTests, loading, listLoading, createLoading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
   const [showAddForm, setShowAddForm] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingTestId, setDeletingTestId] = useState<string | null>(null);
@@ -245,10 +245,10 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
       <div className="workspace-header-sticky">
         <div className="section-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '15px' }}>
           <div style={{ flex: '1 1 auto', minWidth: '250px' }}>
-            <h1 style={{ margin: '0 0 6px 0' }}>Full Mock Exams</h1>
+            <h1 style={{ margin: '0 0 6px 0' }}>Full-length mock tests</h1>
             <p style={{ margin: 0 }}>
-              {exam.fullName} mocks only · pattern {expectedTotal || exam.mockQuestions} Q · {exam.mockMinutes} min · {exam.markingLabel}.
-              Set section weights below, then add questions as a JSON array.
+              Timed {exam.fullName} papers · {expectedTotal || exam.mockQuestions} questions · {exam.mockMinutes} minutes · {exam.markingLabel}.
+              Attempt a complete paper, or create one that matches the official section pattern.
             </p>
           </div>
           <button className="btn-create-topic" style={{ marginLeft: 'auto' }} onClick={() => {
@@ -257,7 +257,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
             setFormSuccess('');
           }}>
             {showAddForm ? <List size={16} strokeWidth={2} /> : <Plus size={16} strokeWidth={2} />}
-            {showAddForm ? 'View Mocks' : 'Add New Mock'}
+            {showAddForm ? 'All papers' : 'Create mock'}
           </button>
         </div>
 
@@ -268,7 +268,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
         {showAddForm ? (
           <div className="mock-add-layout">
             <div className="mock-glass-card mock-add-form-card">
-              <h2 className="mock-add-title">Create {exam.name} mock</h2>
+              <h2 className="mock-add-title">Create a {exam.name} mock paper</h2>
               <div className="mock-panel-scroll">
                 <form onSubmit={handleAddSubmit} className="mock-add-form">
                   <label className="mock-field">
@@ -437,8 +437,8 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                     >
                       Load sample
                     </button>
-                    <button type="submit" className="btn-create-topic" disabled={loading}>
-                      {loading ? 'Saving…' : `Save ${exam.name} mock`}
+                    <button type="submit" className="btn-create-topic" disabled={createLoading || loading}>
+                      {createLoading || loading ? 'Saving…' : `Save ${exam.name} paper`}
                     </button>
                   </div>
                 </form>
@@ -465,21 +465,25 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
           </div>
         ) : (
           <>
-            {mockTests.length === 0 && !loading ? (
+            {mockTests.length === 0 && !listLoading ? (
               <div className="empty-state-card">
                 <Inbox size={44} className="empty-state-icon" />
-                <h2>No {exam.name} mocks yet</h2>
+                <h2>No {exam.name} papers yet</h2>
                 <p>
-                  Mocks are stored per exam. Switch exam from the picker to see that exam’s papers, or add a new {exam.name} mock.
+                  Mock tests are saved per exam. Switch your target exam to see those papers, or create a {exam.name} paper in the official pattern.
                 </p>
                 <button className="btn-create-topic" onClick={() => setShowAddForm(true)}>
                   <Plus size={16} />
-                  Add {exam.name} Mock
+                  Create {exam.name} paper
                 </button>
               </div>
             ) : (
-              <div className="subjects-grid">
-                {loading && mockTests.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Loading {exam.name} mocks…</p>}
+              <div className="subjects-grid" aria-busy={listLoading && mockTests.length === 0} aria-label="Mock papers">
+                {listLoading && mockTests.length === 0 && (
+                  [0, 1, 2].map((i) => (
+                    <div key={i} className="mock-glass-card mock-card-skeleton" />
+                  ))
+                )}
 
                 {mockTests.map((test) => {
                   const hasMeta = Boolean(test.year || test.date || test.shift);
@@ -508,7 +512,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                             {test.shift && <p>Shift: {test.shift}</p>}
                           </>
                         ) : (
-                          <p className="mock-glass-card__meta-empty">Full-length paper · timed exam</p>
+                          <p className="mock-glass-card__meta-empty">Full-length timed paper</p>
                         )}
                       </div>
                     </div>
@@ -519,7 +523,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                       onClick={() => startMockExam(test._id || test.id || '')}
                     >
                       <Play size={16} style={{ marginRight: '8px', fill: 'currentColor' }} />
-                      Start {exam.mockMinutes} Min Exam
+                      Start exam
                     </button>
                   </div>
                   );
@@ -536,14 +540,12 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
             <div className="modal-header">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', margin: 0 }}>
                 <XCircle size={20} />
-                Confirm Deletion
+                Confirm deletion
               </h3>
             </div>
 
             <div style={{ padding: '20px 0', color: 'var(--text-secondary)' }}>
-              Delete this {exam.name} mock permanently?
-              <br /><br />
-              <strong style={{ color: 'var(--text-heading)' }}>This cannot be undone!</strong>
+              Delete this {exam.name} paper permanently? This cannot be undone.
             </div>
 
             <div className="modal-footer-actions" style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
@@ -564,7 +566,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                   await removeMockTest(deletingTestId || '', examId);
                 }}
               >
-                <Trash2 size={15} strokeWidth={2} /> Yes, Delete It
+                <Trash2 size={15} strokeWidth={2} /> Delete
               </button>
             </div>
           </div>

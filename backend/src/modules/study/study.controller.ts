@@ -4,7 +4,7 @@ import topicRepository from './topic.repository.js';
 import questionRepository from './question.repository.js';
 import vocabRepository from './vocab.repository.js';
 import { Vocab } from './vocab.model.js';
-import type { IVocab } from './vocab.model.js';
+import type { VocabLean } from './vocab.mcq.js';
 import TopicDto from './topic.dto.js';
 import VocabDto from './vocab.dto.js';
 import { shuffle } from '../../shared/utils/shuffle.js';
@@ -547,9 +547,19 @@ export const getVocab: RequestHandler = async (req, res, next) => {
     const skip = (pageN - 1) * limitN;
     const result = await vocabRepository.findAll(query, skip, limitN);
 
+    const data = [];
+    for (const row of result.data) {
+      const options = (row.options || []).map((o: string) => String(o || '').trim()).filter(Boolean);
+      if (row.category !== 'Spelling Rules' && options.length < 3 && row._id) {
+        data.push(await vocabRepository.attachDistractors(row as VocabLean));
+      } else {
+        data.push(row);
+      }
+    }
+
     res.json({
       status: 'success',
-      data: result.data,
+      data,
       meta: {
         total: result.total,
         page: pageN,
@@ -571,7 +581,10 @@ export const addVocab: RequestHandler = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
     }
 
-    const newVocab = await vocabRepository.create(dto);
+    let newVocab = await vocabRepository.create(dto);
+    if (newVocab && (!newVocab.options || newVocab.options.length < 3)) {
+      newVocab = await vocabRepository.attachDistractors(newVocab.toObject() as VocabLean) as typeof newVocab;
+    }
     res.status(201).json({ status: 'success', data: newVocab });
   } catch (error) {
     if (mongoErrorCode(error) === 11000) {
@@ -593,9 +606,22 @@ export const updateVocab: RequestHandler = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: errors.join(' ') });
     }
 
-    const updated = await vocabRepository.update(vocabId, dto);
+    const updateData: Record<string, unknown> = {
+      word: dto.word,
+      pos: dto.pos,
+      definition: dto.definition,
+      synonyms: dto.synonyms,
+      antonyms: dto.antonyms,
+      category: dto.category,
+    };
+    if (dto.options.length >= 3) updateData.options = dto.options;
+
+    let updated = await vocabRepository.update(vocabId, updateData);
     if (!updated) {
       return res.status(404).json({ status: 'error', message: 'Vocab entry not found.' });
+    }
+    if (!updated.options || updated.options.length < 3) {
+      updated = await vocabRepository.attachDistractors(updated.toObject() as VocabLean) as typeof updated;
     }
 
     res.json({ status: 'success', data: updated });
@@ -647,10 +673,15 @@ export const addVocabBulk: RequestHandler = async (req, res, next) => {
     }
 
     const result = await vocabRepository.insertMany(finalArrayToInsert);
+    const withOptions = [];
+    for (const row of result) {
+      const plain = typeof row.toObject === 'function' ? row.toObject() : row;
+      withOptions.push(await vocabRepository.attachDistractors(plain as VocabLean));
+    }
     res.status(201).json({
       status: 'success',
       message: `Successfully inserted ${result.length} new words. (${processedArray.length - result.length} duplicates ignored)`,
-      data: result
+      data: withOptions
     });
   } catch (error) {
     if (mongoErrorCode(error) === 11000) {

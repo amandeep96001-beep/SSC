@@ -12,6 +12,7 @@ import { McqText } from '@/shared/components/ui/McqText';
 import { AddQuestionsPanel } from './AddQuestionsPanel';
 import { isRecord } from '@/types/app';
 import type { DrillItem, DrillStats, DrillFeedback, WrongQuestion } from '../hooks/useDrills';
+import { sameDrillAnswer } from '../hooks/useDrills';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
 import '@/features/drills/drills.css';
@@ -161,8 +162,7 @@ function WrongQuestionCard({ wq, onRemove }: { wq: WrongQuestion; onRemove?: (qu
   const handleRetrySubmit = useCallback((chosen?: string) => {
     const ans = (chosen ?? retryAnswer);
     if (!ans?.trim()) return;
-    const clean = (s: unknown) => String(s).toString().trim().toLowerCase().replace('%', '');
-    const correct = clean(ans) === clean(wq.correctAnswer);
+    const correct = sameDrillAnswer(ans, wq.correctAnswer, wq.type);
     setRetryResult(correct ? 'correct' : 'wrong');
     if (correct) setAttempting(false);
   }, [retryAnswer, wq.correctAnswer]);
@@ -227,11 +227,11 @@ function WrongQuestionCard({ wq, onRemove }: { wq: WrongQuestion; onRemove?: (qu
       {/* Official explanation */}
       {wq.explanation && <div className="wrong-q-hint"><McqText text={wq.explanation} /></div>}
 
-      {wq.type === 'vocab' && (wq.revealDefinition || (wq.revealSynonyms && wq.revealSynonyms.length > 0) || (wq.revealAntonyms && wq.revealAntonyms.length > 0)) && (
+      {wq.type === 'vocab' && (wq.revealDefinition || (wq.category !== 'Idioms & Phrases' && ((wq.revealSynonyms && wq.revealSynonyms.length > 0) || (wq.revealAntonyms && wq.revealAntonyms.length > 0)))) && (
         <div className="wrong-q-hint" style={{ color: '#c4b5fd', background: 'rgba(139, 92, 246, 0.07)', borderColor: '#8b5cf6', padding: '10px', borderRadius: '6px', borderLeft: '3px solid #8b5cf6', marginTop: '10px' }}>
-          {wq.revealDefinition && <div style={{ marginBottom: '4px' }}><strong>Definition:</strong> {wq.revealDefinition}</div>}
-          {wq.revealSynonyms && wq.revealSynonyms.length > 0 && <div style={{ marginBottom: '4px' }}><strong>Synonyms:</strong> {Array.isArray(wq.revealSynonyms) ? wq.revealSynonyms.join(', ') : wq.revealSynonyms}</div>}
-          {wq.revealAntonyms && wq.revealAntonyms.length > 0 && <div><strong>Antonyms:</strong> {Array.isArray(wq.revealAntonyms) ? wq.revealAntonyms.join(', ') : wq.revealAntonyms}</div>}
+          {wq.revealDefinition && <div style={{ marginBottom: '4px' }}><strong>Meaning:</strong> {wq.revealDefinition}</div>}
+          {wq.category !== 'Idioms & Phrases' && wq.revealSynonyms && wq.revealSynonyms.length > 0 && <div style={{ marginBottom: '4px' }}><strong>Synonyms:</strong> {Array.isArray(wq.revealSynonyms) ? wq.revealSynonyms.join(', ') : wq.revealSynonyms}</div>}
+          {wq.category !== 'Idioms & Phrases' && wq.revealAntonyms && wq.revealAntonyms.length > 0 && <div><strong>Antonyms:</strong> {Array.isArray(wq.revealAntonyms) ? wq.revealAntonyms.join(', ') : wq.revealAntonyms}</div>}
         </div>
       )}
 
@@ -250,7 +250,7 @@ function WrongQuestionCard({ wq, onRemove }: { wq: WrongQuestion; onRemove?: (qu
               {wq.options?.map((opt) => (
                 <button
                   key={opt}
-                  className={`retry-option-btn ${retryResult && opt === wq.correctAnswer ? 'retry-opt-correct' : retryResult === 'wrong' && opt === retryAnswer ? 'retry-opt-wrong' : ''}`}
+                  className={`retry-option-btn ${retryResult && sameDrillAnswer(opt, wq.correctAnswer, wq.type) ? 'retry-opt-correct' : retryResult === 'wrong' && sameDrillAnswer(opt, retryAnswer, wq.type) ? 'retry-opt-wrong' : ''}`}
                   onClick={() => handleRetrySubmit(opt)}
                   disabled={!!retryResult}
                 >
@@ -662,12 +662,6 @@ export function DrillWorkspace({
 
                   <div className={`question-text-box ${MCQ_TYPES.includes(drillType) ? 'mcq-question-box' : ''}`}>
                     <h2><McqText text={currentDrill.question} /></h2>
-                    {drillType === 'vocab' && currentDrill.definition && (
-                      <div className="pos-definition">
-                        <span className="pos-badge">{currentDrill.pos}</span>
-                        <p>"{currentDrill.definition}"</p>
-                      </div>
-                    )}
                   </div>
 
                   {drillFeedback.isChecked ? (
@@ -680,16 +674,16 @@ export function DrillWorkspace({
                         <div className="alert-message error drill-error-card">
                           <div className="drill-error-header">
                             <XCircle size={18} />
-                            <span>Incorrect. Correct Key: <strong>{currentDrill.correctAnswer}</strong></span>
+                            <span>Incorrect. Correct option is highlighted below.</span>
                           </div>
                           {drillType === 'vocab' && (
                             <div className="drill-error-vocab-details">
                               {currentDrill.word && (
-                                <div className="drill-error-vocab-row"><strong>Word:</strong> {currentDrill.word}</div>
+                                <div className="drill-error-vocab-row"><strong>{currentDrill.category === 'Idioms & Phrases' ? 'Idiom' : 'Word'}:</strong> {currentDrill.word}</div>
                               )}
                               <div className="drill-error-vocab-row"><strong>Meaning:</strong> {currentDrill.revealDefinition}</div>
-                              {(currentDrill.revealSynonyms?.length ?? 0) > 0 && <div className="drill-error-vocab-row"><strong>Synonyms:</strong> {currentDrill.revealSynonyms?.join(', ')}</div>}
-                              {(currentDrill.revealAntonyms?.length ?? 0) > 0 && <div className="drill-error-vocab-last-row"><strong>Antonyms:</strong> {currentDrill.revealAntonyms?.join(', ')}</div>}
+                              {currentDrill.category !== 'Idioms & Phrases' && (currentDrill.revealSynonyms?.length ?? 0) > 0 && <div className="drill-error-vocab-row"><strong>Synonyms:</strong> {currentDrill.revealSynonyms?.join(', ')}</div>}
+                              {currentDrill.category !== 'Idioms & Phrases' && (currentDrill.revealAntonyms?.length ?? 0) > 0 && <div className="drill-error-vocab-last-row"><strong>Antonyms:</strong> {currentDrill.revealAntonyms?.join(', ')}</div>}
                             </div>
                           )}
                           {MCQ_TYPES.includes(drillType) && currentDrill.explanation && (
@@ -698,6 +692,27 @@ export function DrillWorkspace({
                             </div>
                           )}
                         </div>
+                      )}
+                      {MCQ_TYPES.includes(drillType) && currentDrill.options ? (
+                        <div className="options-selector-grid">
+                          {currentDrill.options.map((opt) => {
+                            const isCorrectOpt = sameDrillAnswer(opt, currentDrill.correctAnswer, drillType);
+                            const isPicked = sameDrillAnswer(opt, drillFeedback.selectedAnswer, drillType);
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                disabled
+                                className={`option-choice-btn${isCorrectOpt ? ' option-choice-btn--correct' : ''}${isPicked && !isCorrectOpt ? ' option-choice-btn--wrong' : ''}`}
+                              >
+                                <span><McqText text={opt} /></span>
+                                {isCorrectOpt ? <CheckCircle size={16} /> : isPicked ? <XCircle size={16} /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="drill-typed-answer">Your answer: <strong>{drillFeedback.selectedAnswer || userAnswer}</strong></p>
                       )}
                       <button
                         type="button"

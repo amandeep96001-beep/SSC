@@ -117,6 +117,10 @@
 }
 
 .option-choice-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   padding: 12px 18px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
@@ -130,9 +134,31 @@
   font-family: var(--font-sans);
 }
 
-.option-choice-btn:hover {
+.option-choice-btn:hover:not(:disabled) {
   background: var(--color-primary-muted);
   border-color: var(--color-primary);
+}
+
+.option-choice-btn:disabled {
+  cursor: default;
+}
+
+.option-choice-btn--correct {
+  border-color: var(--color-success) !important;
+  background: var(--color-success-muted) !important;
+  color: var(--color-success) !important;
+}
+
+.option-choice-btn--wrong {
+  border-color: var(--color-danger) !important;
+  background: var(--color-danger-muted) !important;
+  color: var(--color-danger) !important;
+}
+
+.drill-typed-answer {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
 }
 
 .input-row {

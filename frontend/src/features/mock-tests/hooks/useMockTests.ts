@@ -51,7 +51,9 @@ export function useMockTests() {
 
   return {
     mockTests,
-    loading: listLoading || createLoading || byIdLoading || deleteLoading,
+    loading: listLoading || createLoading || deleteLoading,
+    listLoading,
+    createLoading,
     error: listError || createError || byIdError || deleteError,
     loadMockTests,
     addMockTest,

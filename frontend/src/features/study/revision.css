@@ -339,6 +339,14 @@
   color: #f87171;
   border-color: rgba(248, 113, 113, 0.3);
 }
+.vocab-chip.opt {
+  background: rgba(167, 139, 250, 0.1);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.3);
+  font-weight: 500;
+  white-space: normal;
+  line-height: 1.35;
+}
 
 /* Vocab card action buttons */
 .vocab-card-actions {
@@ -438,4 +446,96 @@
 .vocab-synonyms strong {
   color: var(--text-secondary);
 }
+
+.vocab-bulk-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.vocab-bulk-guide__lead {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.vocab-bulk-guide__lead code {
+  font-size: 0.78rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-secondary);
+}
+.vocab-bulk-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.vocab-bulk-tab {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.vocab-bulk-tab.active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-muted);
+}
+.vocab-bulk-template {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.22);
+}
+.vocab-bulk-template__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.vocab-bulk-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.vocab-bulk-action--primary {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-muted);
+}
+.vocab-bulk-pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.vocab-bulk-textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  background: var(--bg-input);
+}
+.vocab-bulk-msg {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.vocab-bulk-msg--error { color: #f87171; }
+.vocab-bulk-msg--ok { color: #4ade80; }
 

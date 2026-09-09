@@ -654,12 +654,21 @@ export function useStudy() {
       next[currentQuestionIdx] = optIdx;
       return next;
     });
+    setQuestionStatuses((prev) => {
+      const next = [...prev];
+      const current = next[currentQuestionIdx];
+      const marked = current === 'marked' || current === 'marked-answered';
+      next[currentQuestionIdx] = marked ? 'marked-answered' : 'answered';
+      return next;
+    });
   }, [currentQuestionIdx]);
 
   const saveAndNext = useCallback(() => {
     setQuestionStatuses((prev) => {
       const next = [...prev];
-      next[currentQuestionIdx] = selectedAnswers[currentQuestionIdx] !== null ? 'answered' : 'not-answered';
+      next[currentQuestionIdx] = selectedAnswers[currentQuestionIdx] !== null
+        ? (prev[currentQuestionIdx] === 'marked' || prev[currentQuestionIdx] === 'marked-answered' ? 'marked-answered' : 'answered')
+        : 'not-answered';
       return next;
     });
 
@@ -680,7 +689,8 @@ export function useStudy() {
   const markForReview = useCallback(() => {
     setQuestionStatuses((prev) => {
       const next = [...prev];
-      next[currentQuestionIdx] = 'marked';
+      const hasAnswer = selectedAnswers[currentQuestionIdx] !== null;
+      next[currentQuestionIdx] = hasAnswer ? 'marked-answered' : 'marked';
       return next;
     });
 
@@ -696,7 +706,7 @@ export function useStudy() {
     } else {
       showAppToast("Last question — tap Submit to finish the test.", { variant: 'info', durationMs: 2800 });
     }
-  }, [currentQuestionIdx, testQuestions.length]);
+  }, [currentQuestionIdx, selectedAnswers, testQuestions.length]);
 
   const clearResponse = useCallback(() => {
     setSelectedAnswers((prev) => {
@@ -958,6 +968,7 @@ export function useStudy() {
     topicsLoading: getTopicsApi.loading,
     loading: getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
     notesLoading,
+    testStarting: getTestApi.loading,
     error: subjectsError || getTopicsApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
     skipToSubjects,
     selectSubject,
