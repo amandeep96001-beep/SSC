@@ -1,4 +1,4 @@
-const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET'];
+const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL'];
 
 export function isHostedRuntime() {
   return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
@@ -16,5 +16,12 @@ export function validateEnv() {
   if (process.env.JWT_SECRET.length < 32) {
     console.error('JWT_SECRET must be at least 32 characters in production');
     process.exit(1);
+  }
+
+  const frontend = process.env.FRONTEND_URL.trim();
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(frontend)) {
+    console.warn(
+      '[env] FRONTEND_URL points at localhost on a hosted runtime — CORS/email links will break for real users.'
+    );
   }
 }

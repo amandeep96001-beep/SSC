@@ -3,16 +3,31 @@
  */
 
 export function getZonedParts(date = new Date(), timeZone = 'Asia/Kolkata') {
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    weekday: 'short',
-  });
+  let fmt;
+  try {
+    fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      weekday: 'short',
+    });
+  } catch {
+    // Invalid IANA timezone — fall back so one bad reminder cannot break the tick.
+    fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      weekday: 'short',
+    });
+  }
   const map = Object.fromEntries(
     fmt.formatToParts(date).filter((p) => p.type !== 'literal').map((p) => [p.type, p.value])
   );

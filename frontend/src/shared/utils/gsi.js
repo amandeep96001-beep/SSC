@@ -1,7 +1,6 @@
 /** Google Identity Services — preload once; ID-token (mobile-friendly) + auth-code popup. */
 
 let scriptPromise = null;
-let initializeStarted = false;
 let codeClient = null;
 let credentialHandlers = { current: null };
 
@@ -79,14 +78,7 @@ function wireIdCallback(clientId) {
     cancel_on_tap_outside: true,
     use_fedcm_for_prompt: true,
   });
-  initializeStarted = true;
   return gsi;
-}
-
-/** Ensure accounts.id is initialized (used for disableAutoSelect on logout). */
-export async function ensureGsiInitialized(clientId) {
-  await loadGsiScript();
-  return wireIdCallback(clientId);
 }
 
 /**
@@ -145,16 +137,7 @@ export async function requestGoogleCredential(clientId) {
 export async function mountGoogleButton(el, clientId, { onCredential, onError, width } = {}) {
   if (!el || !clientId) return () => {};
   await loadGsiScript();
-  wireIdCallback(clientId);
-
-  credentialHandlers.current = {
-    resolve: (credential) => onCredential?.(credential),
-    reject: (err) => {
-      if (!err?.cancelled) onError?.(err);
-    },
-  };
-
-  // Re-bind initialize so button uses the same handlers
+  // Bind callback once — avoid overwriting with a temporary handler then re-initialize.
   window.google.accounts.id.initialize({
     client_id: clientId,
     callback: (response) => {
@@ -168,7 +151,6 @@ export async function mountGoogleButton(el, clientId, { onCredential, onError, w
     cancel_on_tap_outside: true,
     use_fedcm_for_prompt: true,
   });
-  initializeStarted = true;
 
   el.innerHTML = '';
   const w = Math.max(240, Math.min(width || el.clientWidth || 320, 400));

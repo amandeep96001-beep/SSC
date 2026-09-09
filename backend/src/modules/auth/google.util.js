@@ -26,7 +26,6 @@ function profileFromPayload(payload) {
     email: String(payload.email).toLowerCase().trim(),
     googleId: String(payload.sub),
     name: payload.name || payload.given_name || undefined,
-    picture: payload.picture || undefined,
   };
 }
 

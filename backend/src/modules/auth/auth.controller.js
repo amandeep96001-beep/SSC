@@ -92,14 +92,9 @@ function syllabusProgressToCsv(rows) {
   return `${header}\n${lines.join('\n')}\n`;
 }
 
-function resolveRole(username, adminCode, email) {
-  const byEmail = email ? resolveRoleByEmail(normalizeEmail(email)) : 'user';
-  if (byEmail === 'admin') return 'admin';
-  const adminUser = (process.env.ADMIN_USERNAME || 'admin').toLowerCase();
-  const code = process.env.ADMIN_CODE || 'examprep-admin';
-  if (String(username).trim().toLowerCase() === adminUser) return 'admin';
-  if (adminCode && String(adminCode) === code) return 'admin';
-  return 'user';
+/** Admin only via ADMIN_EMAIL — no username/code shortcuts (those were privilege-escalation vectors). */
+function resolveRole(email) {
+  return email ? resolveRoleByEmail(normalizeEmail(email)) : 'user';
 }
 
 async function createAndStoreOtp(email, purpose = 'email_verify', pendingData = null) {
@@ -136,7 +131,7 @@ async function consumeOtpChallenge(email, code, purpose) {
 
 export const register = async (req, res, next) => {
   try {
-    const { password, adminCode } = req.body;
+    const { password } = req.body;
     const email = normalizeEmail(req.body.email);
     let username = String(req.body.username || '').trim();
 
@@ -168,7 +163,7 @@ export const register = async (req, res, next) => {
     }
 
     const hashed = await hashPassword(password);
-    const role = resolveRole(username, adminCode, email);
+    const role = resolveRole(email);
     
     // Save user details temporarily until OTP verification
     const pendingData = {
@@ -226,16 +221,17 @@ export const login = async (req, res, next) => {
     }
 
     if (user.email && !user.emailVerified && !user.googleId) {
-      const { mail } = await createAndStoreOtp(user.email, 'email_verify');
+      const { mail, debugOtp } = await createAndStoreOtp(user.email, 'email_verify');
       return res.json({
         status: 'success',
         message: mail.sent
           ? 'Verify your email with the OTP we sent, then sign in with your password.'
-          : 'Verify your email with the OTP sent to your inbox, then sign in with your password.',
+          : 'Verify your email — we could not deliver mail; use the on-screen code (local) or fix SMTP.',
         data: {
           needsVerification: true,
           email: user.email,
           mailSent: Boolean(mail.sent),
+          ...(debugOtp ? { debugOtp } : {}),
         },
       });
     }
@@ -510,10 +506,11 @@ export const forgotPassword = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: 'Enter a valid email address.' });
     }
 
+    // Identical response shape whether or not the email exists (no enumeration).
     const generic = {
       status: 'success',
       message: 'If an account exists for that email, a reset code has been sent.',
-      data: { email },
+      data: { email, mailSent: true },
     };
 
     const user = await User.findOne({ email }).lean();
@@ -521,10 +518,13 @@ export const forgotPassword = async (req, res, next) => {
       return res.json(generic);
     }
 
-    const { mail } = await createAndStoreOtp(email, 'password_reset');
+    const { debugOtp } = await createAndStoreOtp(email, 'password_reset');
     return res.json({
       ...generic,
-      data: { ...generic.data, mailSent: Boolean(mail.sent) },
+      data: {
+        ...generic.data,
+        ...(debugOtp ? { debugOtp } : {}),
+      },
     });
   } catch (error) {
     next(error);

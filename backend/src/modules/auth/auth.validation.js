@@ -23,7 +23,22 @@ export const registerValidation = [
 ];
 
 export const loginValidation = [
-  body('username').trim().notEmpty().withMessage('Email or username is required.'),
+  body('username')
+    .optional({ values: 'falsy' })
+    .trim()
+    .notEmpty()
+    .withMessage('Email or username is required.'),
+  body('email')
+    .optional({ values: 'falsy' })
+    .trim()
+    .notEmpty()
+    .withMessage('Email or username is required.'),
+  body().custom((_, { req }) => {
+    if (!String(req.body?.username || req.body?.email || '').trim()) {
+      throw new Error('Email or username is required.');
+    }
+    return true;
+  }),
   body('password').notEmpty().withMessage('Password is required.'),
 ];
 

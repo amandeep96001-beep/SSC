@@ -42,6 +42,15 @@ function createTransport() {
   });
 }
 
+let cachedTransporter = null;
+
+function getTransporter() {
+  if (!cachedTransporter) {
+    cachedTransporter = createTransport();
+  }
+  return cachedTransporter;
+}
+
 function publicLogoUrl() {
   const origin = String(process.env.FRONTEND_URL || 'https://myexamprep-theta.vercel.app')
     .trim()
@@ -84,8 +93,7 @@ export async function sendMail({ to, subject, text, html, attachments = [] }) {
   }
 
   try {
-    const transporter = createTransport();
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from,
       to,
       subject,
@@ -95,6 +103,7 @@ export async function sendMail({ to, subject, text, html, attachments = [] }) {
     });
     return { sent: true };
   } catch (err) {
+    cachedTransporter = null;
     const reason = err?.message || String(err);
     console.error('[mail] SMTP send failed:', reason);
     if (isHostedRuntime()) {
@@ -173,8 +182,8 @@ function buildOtpEmailHtml(code, { title, subtitle, lead }) {
 }
 
 /**
- * Send OTP email. Never returns the code to callers (do not put OTP in API responses).
- * Locally without SMTP: logs the code to the server console only.
+ * Send OTP email.
+ * Locally without SMTP: logs the code to the server console (API may expose debugOtp when SMTP_DEBUG=1).
  * @param {string} email
  * @param {string} code
  * @param {{ purpose?: 'email_verify' | 'password_reset' }} [options]
@@ -229,4 +238,4 @@ export async function sendOtpEmail(email, code, options = {}) {
   }
 }
 
-export { logoImgHtml, LOGO_CID };
+export { logoImgHtml };

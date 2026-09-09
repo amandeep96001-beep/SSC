@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
-  GraduationCap, Mail, Lock, Eye, EyeOff, Loader2, Sun, Moon,
+  Mail, Lock, Eye, EyeOff, Loader2, Sun, Moon,
   ArrowRight, ArrowLeft, ShieldCheck, LogIn, UserPlus, KeyRound,
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
@@ -311,15 +311,31 @@ export function AuthPanel({
     try {
       const res = await loginUser(email.trim(), password);
       if (res.needsVerification) {
-        goToVerify(res.email || email.trim());
-        showAppToast('Please verify your email to continue.', {
-          variant: 'warn',
-          title: 'Verification required',
+        goToVerify(res.email || email.trim(), {
+          mailSent: res.mailSent,
+          debugOtp: res.debugOtp,
         });
+        showAppToast(
+          res.mailSent
+            ? 'Please verify your email to continue.'
+            : (res.debugOtp
+              ? `Email not delivered — use code ${res.debugOtp}`
+              : 'Please verify your email. Delivery failed; check SMTP or spam.'),
+          {
+            variant: res.mailSent ? 'warn' : 'warn',
+            title: 'Verification required',
+            durationMs: res.mailSent ? 5000 : 12000,
+          },
+        );
         return;
       }
       if (!res.success) {
-        toastAuthError('Invalid email or password.');
+        const msg = String(res.message || '');
+        if (/timed out|network|connection/i.test(msg)) {
+          toastAuthError('Network error. Check your connection and try again.');
+        } else {
+          toastAuthError('Invalid email or password.');
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -399,7 +415,14 @@ export function AuthPanel({
         setPassword('');
         setOtpDigits(Array(OTP_LEN).fill(''));
       } else {
-        toastAuthError('Incorrect verification code.');
+        const msg = String(res.message || '');
+        if (/expired/i.test(msg)) {
+          toastAuthError('Code expired. Request a new one.');
+        } else if (/too many/i.test(msg)) {
+          toastAuthError('Too many attempts. Request a new code.');
+        } else {
+          toastAuthError('Incorrect verification code.');
+        }
         setOtpDigits(Array(OTP_LEN).fill(''));
         requestAnimationFrame(() => focusOtp(0));
       }
@@ -417,18 +440,19 @@ export function AuthPanel({
         : await requestOtp(email);
       if (res.success) {
         setResendIn(30);
-        setMailSent(res.mailSent !== false);
+        const delivered = res.mailSent !== false;
+        setMailSent(delivered);
         setDebugOtp(res.debugOtp || '');
         setOtpDigits(Array(OTP_LEN).fill(''));
         showAppToast(
-          res.mailSent
+          delivered
             ? 'A new code has been sent to your email.'
             : (res.debugOtp ? `Use code ${res.debugOtp}` : 'Could not email the code. Try again.'),
-          { variant: res.mailSent ? 'success' : 'warn', durationMs: 10000 },
+          { variant: delivered ? 'success' : 'warn', durationMs: 10000 },
         );
         requestAnimationFrame(() => focusOtp(0));
       } else {
-        toastAuthError(res.message || 'Unable to resend code. Please try again.');
+        toastAuthError('Unable to resend code. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
@@ -470,12 +494,16 @@ export function AuthPanel({
 
   const handleReset = async (e) => {
     e.preventDefault();
-    if (otpValue.length !== OTP_LEN) {
+    if (!/^\d{6}$/.test(otpValue)) {
       toastAuthError('Enter the 6-digit code from your email.');
       return;
     }
     if (!password || password.length < 8) {
       toastAuthError('Password must be at least 8 characters.');
+      return;
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      toastAuthError('Password must include at least one letter and one number.');
       return;
     }
     if (password !== confirmPassword) {
@@ -509,6 +537,7 @@ export function AuthPanel({
   const pageHeading = {
     login: 'Sign in',
     register: 'Create account',
+    'register-step-2': 'Set password',
     verify: 'Verify email',
     forgot: 'Reset password',
     reset: 'Choose new password',

@@ -1,5 +1,4 @@
 import { 
-  GraduationCap, 
   UserCheck, 
   LogOut, 
   Zap, 
@@ -20,7 +19,7 @@ import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
-import { APP_NAME, APP_VERSION } from '@/shared/brand';
+import { APP_NAME } from '@/shared/brand';
 
 export function Sidebar({
   user,

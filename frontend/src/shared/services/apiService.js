@@ -1,23 +1,40 @@
+const SESSION_CLEARED_EVENT = 'examprep:session-cleared';
+
+/** Auth endpoints where 401 means bad credentials, not an expired app session. */
+const PUBLIC_AUTH_401 = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/otp/',
+  '/auth/password/',
+  '/auth/google',
+];
+
 function resolveApiBase() {
-  // On Vercel, always use same-origin /api so vercel.json rewrite controls the
-  // Render host. A baked-in VITE_API_URL (e.g. an old *.onrender.com) goes stale
-  // when the Render service URL changes and bypasses the rewrite.
-  if (typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')) {
-    return '/api';
-  }
-
   const fromEnv = (import.meta.env.VITE_API_URL || '').trim();
-  if (fromEnv) {
-    return fromEnv.endsWith('/api') ? fromEnv : `${fromEnv.replace(/\/+$/, '')}/api`;
-  }
+  const normalize = (url) => (
+    url.endsWith('/api') ? url : `${url.replace(/\/+$/, '')}/api`
+  );
 
-  // Phone / LAN access: hit API on same host, not phone-localhost
   if (typeof window !== 'undefined') {
     const { hostname, protocol } = window.location;
-    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    const isLoopback = hostname === 'localhost' || hostname === '127.0.0.1';
+
+    // Deployed frontend (Vercel / custom domain): same-origin /api → vercel.json rewrite.
+    // Never bake a stale VITE_API_URL to an old Render host in production builds.
+    if (!isLoopback && (import.meta.env.PROD || hostname.endsWith('vercel.app'))) {
+      return '/api';
+    }
+
+    if (fromEnv) return normalize(fromEnv);
+
+    // LAN phone testing against a local API on port 5000
+    if (!isLoopback) {
       return `${protocol}//${hostname}:5000/api`;
     }
+  } else if (fromEnv) {
+    return normalize(fromEnv);
   }
+
   return 'http://localhost:5000/api';
 }
 
@@ -32,6 +49,27 @@ function getAuthHeaders() {
   }
 }
 
+function clearClientSession() {
+  try {
+    localStorage.removeItem('ssc_token');
+    localStorage.removeItem('ssc_user');
+  } catch { /* ignore */ }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SESSION_CLEARED_EVENT));
+  }
+}
+
+function shouldClearSessionOn401(endpoint) {
+  const path = String(endpoint || '');
+  return !PUBLIC_AUTH_401.some((prefix) => path.startsWith(prefix));
+}
+
+function handleUnauthorized(endpoint) {
+  if (shouldClearSessionOn401(endpoint)) {
+    clearClientSession();
+  }
+}
+
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
 
@@ -41,10 +79,21 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const { timeout = 10000, ...restOptions } = options;
+  const { timeout = 10000, signal: externalSignal, ...restOptions } = options;
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+
+  const onExternalAbort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      clearTimeout(id);
+      const err = new Error('Request aborted');
+      err.name = 'AbortError';
+      throw err;
+    }
+    externalSignal.addEventListener('abort', onExternalAbort, { once: true });
+  }
 
   const config = {
     ...restOptions,
@@ -60,6 +109,9 @@ async function request(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
     clearTimeout(id);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
 
     const contentType = response.headers.get('content-type');
     let result;
@@ -71,18 +123,25 @@ async function request(endpoint, options = {}) {
     }
 
     if (response.status === 401) {
-      localStorage.removeItem('ssc_token');
-      localStorage.removeItem('ssc_user');
+      handleUnauthorized(endpoint);
     }
 
     if (!response.ok) {
-      throw new Error(result.message || `Request failed with status ${response.status}`);
+      const err = new Error(result.message || `Request failed with status ${response.status}`);
+      err.status = response.status;
+      throw err;
     }
 
     return result;
   } catch (error) {
     clearTimeout(id);
+    if (externalSignal) {
+      externalSignal.removeEventListener('abort', onExternalAbort);
+    }
     if (error.name === 'AbortError') {
+      if (externalSignal?.aborted) {
+        throw error;
+      }
       throw new Error('Request timed out. Please check your connection.');
     }
     throw error;
@@ -97,6 +156,17 @@ export const apiService = {
   delete: (endpoint, options) => request(endpoint, { method: 'DELETE', ...options }),
   addVocabBulkApi: (body, options) => request('/study/vocab/bulk', { method: 'POST', body, ...options }),
 
+  /** Clear storage + notify React (e.g. logout). */
+  clearSession: clearClientSession,
+
+  /** Subscribe to session wipe from 401 / logout. Returns unsubscribe. */
+  onSessionCleared(handler) {
+    if (typeof window === 'undefined') return () => {};
+    const fn = () => handler();
+    window.addEventListener(SESSION_CLEARED_EVENT, fn);
+    return () => window.removeEventListener(SESSION_CLEARED_EVENT, fn);
+  },
+
   /** Download CSV (or other non-JSON) with auth headers */
   async download(endpoint, filename) {
     const url = `${BASE_URL}${endpoint}`;
@@ -109,8 +179,7 @@ export const apiService = {
       cache: 'no-store',
     });
     if (response.status === 401) {
-      localStorage.removeItem('ssc_token');
-      localStorage.removeItem('ssc_user');
+      handleUnauthorized(endpoint);
     }
     if (!response.ok) {
       let message = `Download failed (${response.status})`;
@@ -124,7 +193,6 @@ export const apiService = {
     const contentType = (response.headers.get('content-type') || '').toLowerCase();
     const text = await response.text();
 
-    // Server sometimes returns JSON error with a 200-ish proxy, or empty body
     if (contentType.includes('application/json')) {
       try {
         const j = JSON.parse(text);
@@ -139,7 +207,6 @@ export const apiService = {
       throw new Error('Export file was empty.');
     }
 
-    // UTF-8 BOM so Excel / Sheets show columns correctly
     const withBom = text.charCodeAt(0) === 0xfeff ? text : `\uFEFF${text}`;
     const blob = new Blob([withBom], { type: 'text/csv;charset=utf-8' });
     const objectUrl = URL.createObjectURL(blob);
@@ -151,7 +218,6 @@ export const apiService = {
     document.body.appendChild(a);
     a.click();
     a.remove();
-    // Revoke after browsers start the download — immediate revoke can yield empty files
     setTimeout(() => URL.revokeObjectURL(objectUrl), 2500);
   },
 };

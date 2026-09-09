@@ -11,6 +11,7 @@ import tcsQuestionRoutes from '../modules/questions/tcs-question.routes.js';
 import reminderRoutes from '../modules/reminders/reminder.routes.js';
 
 import { requireAuth } from '../shared/middleware/auth.middleware.js';
+import { requireDb } from '../shared/middleware/db.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
 
 const router = express.Router();
@@ -42,7 +43,8 @@ router.get('/auth/google-config', (_req, res) => {
 // Public auth routes (login, register, OTP, Google)
 router.use('/auth', authRoutes);
 
-// Everything below requires a valid JWT
+// Everything below requires DB + a valid JWT
+router.use(requireDb);
 router.use(requireAuth);
 router.use('/prep', prepRoutes);
 router.use('/study', studyRoutes);

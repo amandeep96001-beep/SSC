@@ -1,8 +1,16 @@
 import User from '../../modules/auth/user.model.js';
 import { verifyToken } from '../../modules/auth/token.util.js';
+import { getDBStatus } from '../../config/db.config.js';
 
 export async function requireAuth(req, res, next) {
   try {
+    if (!getDBStatus()) {
+      return res.status(503).json({
+        status: 'error',
+        message: 'Database unavailable. Please try again shortly.',
+      });
+    }
+
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) {
       return res.status(401).json({

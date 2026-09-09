@@ -9,21 +9,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import apiRouter from './routes/index.js';
 import { getDBStatus } from './config/db.config.js';
+import { isHostedRuntime } from './config/env.config.js';
 import { notFound, errorHandler } from './shared/middleware/error.middleware.js';
 import { mongoSanitize } from './shared/middleware/sanitize.middleware.js';
 
 function normalizeOrigin(url) {
   return String(url || '').trim().replace(/\/+$/, '');
-}
-
-/** True for Vercel production + preview hosts (e.g. myapp.vercel.app, myapp-git-main-team.vercel.app) */
-function isVercelOrigin(origin) {
-  try {
-    const { protocol, hostname } = new URL(origin);
-    return protocol === 'https:' && (hostname === 'vercel.app' || hostname.endsWith('.vercel.app'));
-  } catch {
-    return false;
-  }
 }
 
 /** Build allowlist from FRONTEND_URL + optional comma-separated FRONTEND_URLS */
@@ -36,7 +27,7 @@ function getAllowedOrigins() {
     .filter(Boolean);
 
   const bakedIn = [
-    // Always allow the known production frontend (Render FRONTEND_URL is often left as localhost)
+    // Known production frontend (Render FRONTEND_URL is sometimes left as localhost)
     'https://myexamprep-theta.vercel.app',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
@@ -49,15 +40,14 @@ function getAllowedOrigins() {
 
 function isOriginAllowed(origin, allowedOrigins) {
   const normalized = normalizeOrigin(origin);
-  if (allowedOrigins.includes(normalized) || isVercelOrigin(normalized)) return true;
+  if (allowedOrigins.includes(normalized)) return true;
 
-  // Local/LAN phone testing (non-production only)
-  if (process.env.NODE_ENV === 'production') return false;
+  // Local/LAN phone testing (non-hosted only)
+  if (isHostedRuntime()) return false;
   try {
     const { hostname, protocol } = new URL(normalized);
     if (protocol !== 'http:' && protocol !== 'https:') return false;
     if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
-    // Private network ranges
     if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
     if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
     if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
@@ -69,15 +59,15 @@ function isOriginAllowed(origin, allowedOrigins) {
 
 export function createApp() {
   const app = express();
-  const isProduction = process.env.NODE_ENV === 'production';
+  const hosted = isHostedRuntime();
   const allowedOrigins = getAllowedOrigins();
 
-  if (isProduction) {
+  if (hosted) {
     app.set('trust proxy', 1);
   }
 
   app.use(helmet({
-    contentSecurityPolicy: isProduction ? undefined : false,
+    contentSecurityPolicy: hosted ? undefined : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     // Allow Google OAuth popup to talk back to the opener window
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
@@ -93,7 +83,7 @@ export function createApp() {
     if (req.method === 'OPTIONS') {
       return res.status(403).json({
         status: 'error',
-        message: 'CORS origin not allowed. Set FRONTEND_URL on the API host to your deployed frontend origin.',
+        message: 'CORS origin not allowed. Set FRONTEND_URL / FRONTEND_URLS on the API host.',
       });
     }
     return next();
@@ -106,7 +96,6 @@ export function createApp() {
       if (isOriginAllowed(origin, allowedOrigins)) {
         return callback(null, true);
       }
-      // Should rarely hit — blocked above — keep cors from reflecting the origin
       return callback(null, false);
     },
     credentials: true,
@@ -115,14 +104,15 @@ export function createApp() {
     optionsSuccessStatus: 204,
   }));
 
-  app.use(express.json({ limit: '25mb' }));
-  app.use(express.urlencoded({ extended: false, limit: '25mb' }));
+  // Notes / question payloads can be large; keep below prior 25mb DoS surface.
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: false, limit: '2mb' }));
   app.use(mongoSanitize);
   app.use(hpp());
-  app.use(morgan(isProduction ? 'combined' : 'dev'));
+  app.use(morgan(hosted ? 'combined' : 'dev'));
 
   // Rate limiting — disabled in local dev (React Strict Mode doubles requests)
-  if (isProduction) {
+  if (hosted) {
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 600,
@@ -143,15 +133,14 @@ export function createApp() {
       status: 'ok',
       message: 'SSC Exam Prep API',
       version: '1.0.0',
-      corsOrigins: allowedOrigins,
     });
   });
 
-  // Liveness for Render — always 200; DB status is in the body.
+  // Readiness — 503 when Mongo is down so Render does not route healthy traffic to a dead DB.
   app.get('/health', (req, res) => {
     const dbOk = getDBStatus();
     const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim() || null;
-    res.status(200).json({
+    res.status(dbOk ? 200 : 503).json({
       status: dbOk ? 'ok' : 'degraded',
       uptime: process.uptime(),
       db: dbOk ? 'connected' : 'disconnected',
@@ -159,6 +148,7 @@ export function createApp() {
     });
   });
 
+  // Liveness / free-tier ping — always 200 (process is up).
   app.get('/keepalive', (req, res) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
   });

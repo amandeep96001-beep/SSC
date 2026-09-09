@@ -55,12 +55,21 @@ export function useStudy() {
   const setActiveView = goToView;
   const [user, setUser] = useState(() => {
     try {
+      const token = localStorage.getItem('ssc_token');
       const stored = localStorage.getItem('ssc_user');
-      return stored ? JSON.parse(stored) : null;
+      if (!token || !stored) {
+        localStorage.removeItem('ssc_token');
+        localStorage.removeItem('ssc_user');
+        return null;
+      }
+      return JSON.parse(stored);
     } catch {
       return null;
     }
   });
+
+  // Keep React session in sync when apiService clears storage on 401
+  useEffect(() => apiService.onSessionCleared(() => setUser(null)), []);
 
   // Refresh role/profile from server so admin promotions apply without re-register
   useEffect(() => {
@@ -80,8 +89,12 @@ export function useStudy() {
           localStorage.setItem('ssc_user', JSON.stringify(next));
           setUser(next);
         }
-      } catch {
-        // keep cached session
+      } catch (err) {
+        if (cancelled) return;
+        // Storage already cleared on 401; drop hollow React session
+        if (err?.status === 401 || !localStorage.getItem('ssc_token')) {
+          setUser(null);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -100,6 +113,7 @@ export function useStudy() {
   const timerValueRef = useRef(900);
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
+  const examAutoSubmittedRef = useRef(false);
   const contentSourceRef = useRef(contentSource);
 
   // Keep ref in sync after each render so callbacks always read the latest value
@@ -116,8 +130,9 @@ export function useStudy() {
   const getTopicsApi = useApi(useCallback((subName, source) =>
     apiService.get(`/study/subjects/${encodeURIComponent(subName)}/topics?source=${encodeURIComponent(source || 'global')}`), []));
   const fetchTopicsRef = useRef(getTopicsApi.execute);
-  fetchTopicsRef.current = getTopicsApi.execute;
-  const getNotesApi = useApi(useCallback((id) => apiService.get(`/study/topics/${id}/notes`), []));
+  useEffect(() => {
+    fetchTopicsRef.current = getTopicsApi.execute;
+  });
   const getTestApi = useApi(useCallback((id, count) => {
     const url = count && count > 0
       ? `/study/topics/${id}/test?count=${encodeURIComponent(count)}`
@@ -187,6 +202,8 @@ export function useStudy() {
         success: false,
         needsVerification: true,
         email: res.data.data.email,
+        mailSent: Boolean(res.data.data.mailSent),
+        debugOtp: res.data.data.debugOtp || '',
         message: res.data.message,
       };
     }
@@ -245,6 +262,8 @@ export function useStudy() {
         success: true,
         message: res.data?.message,
         email: res.data?.data?.email || email,
+        mailSent: res.data?.data?.mailSent !== false,
+        debugOtp: res.data?.data?.debugOtp || '',
       };
     }
     return { success: false, message: forgotPasswordApi.error || 'Unable to send reset code.' };
@@ -272,9 +291,8 @@ export function useStudy() {
 
   const logoutUser = useCallback(() => {
     disableGsiAutoSelect();
+    apiService.clearSession();
     setUser(null);
-    localStorage.removeItem('ssc_user');
-    localStorage.removeItem('ssc_token');
     goToView('home');
   }, [goToView]);
 
@@ -322,7 +340,9 @@ export function useStudy() {
   }, []);
 
   const loadTopicNotesRef = useRef(loadTopicNotes);
-  loadTopicNotesRef.current = loadTopicNotes;
+  useEffect(() => {
+    loadTopicNotesRef.current = loadTopicNotes;
+  });
 
   const selectTopic = useCallback((topicId, subjectName = null) => {
     goToView('notes', {
@@ -335,7 +355,9 @@ export function useStudy() {
   const submitExam = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+    examAutoSubmittedRef.current = true;
 
     const elapsedSeconds = startTimeRef.current
       ? Math.round((Date.now() - startTimeRef.current) / 1000)
@@ -535,6 +557,7 @@ export function useStudy() {
       setTimer(seconds);
       timerValueRef.current = seconds;
       startTimeRef.current = Date.now();
+      examAutoSubmittedRef.current = false;
       goToView('test', {
         subject: selectedSubject,
         topicId: selectedTopicId,
@@ -548,7 +571,9 @@ export function useStudy() {
   const cancelTest = useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = null;
     }
+    examAutoSubmittedRef.current = true;
     setTestQuestions([]);
     setCurrentQuestionIdx(0);
     setSelectedAnswers([]);
@@ -640,25 +665,30 @@ export function useStudy() {
     timerValueRef.current = timer;
   }, [timer]);
 
+  const submitExamRef = useRef(submitExam);
   useEffect(() => {
-    if (activeView === 'test') {
-      timerRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            submitExam();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    submitExamRef.current = submitExam;
+  });
+
+  // Interval depends only on activeView — not submitExam — so answering does not reset the clock.
+  useEffect(() => {
+    if (activeView !== 'test') return undefined;
+    timerRef.current = setInterval(() => {
+      setTimer((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
     };
-  }, [activeView, submitExam]);
+  }, [activeView]);
+
+  useEffect(() => {
+    if (activeView !== 'test' || timer > 0 || examAutoSubmittedRef.current) return;
+    examAutoSubmittedRef.current = true;
+    submitExamRef.current();
+  }, [timer, activeView]);
 
   const refreshTopics = useCallback(async () => {
     if (!selectedSubject) return;
@@ -878,7 +908,7 @@ export function useStudy() {
     topicsLoading: getTopicsApi.loading,
     loading: getTestApi.loading || addTopicApi.loading || updateTopicApi.loading || deleteTopicApi.loading || addSubjectApi.loading || deleteSubjectApi.loading,
     notesLoading,
-    error: subjectsError || getTopicsApi.error || getNotesApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
+    error: subjectsError || getTopicsApi.error || getTestApi.error || addTopicApi.error || updateTopicApi.error || deleteTopicApi.error || addSubjectApi.error || deleteSubjectApi.error,
     skipToSubjects,
     selectSubject,
     selectTopic,

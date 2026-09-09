@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { connectDB, getDBStatus } from './src/config/db.config.js';
-import { validateEnv } from './src/config/env.config.js';
+import { validateEnv, isHostedRuntime } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 
 // Local only — Render uses dashboard env vars.
@@ -22,6 +22,10 @@ async function start() {
     await connectDB();
   } catch (err) {
     console.error('MongoDB connection failed:', err.message);
+    // Hosted: do not serve traffic without a database (auth/progress would 503/401).
+    if (isHostedRuntime()) {
+      process.exit(1);
+    }
   }
 
   const app = createApp();

@@ -100,7 +100,9 @@ export async function upsertUserFromEmail({ email, googleId, displayName, emailV
 }
 
 export function hashOtpCode(code) {
-  return crypto.createHash('sha256').update(String(code)).digest('hex');
+  // Pepper with JWT_SECRET so a leaked OTP collection alone is not enough to forge codes.
+  const pepper = process.env.OTP_PEPPER || process.env.JWT_SECRET || '';
+  return crypto.createHash('sha256').update(`${pepper}:${code}`).digest('hex');
 }
 
 export function generateOtpCode() {

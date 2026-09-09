@@ -48,17 +48,7 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-/** Public — OAuth client IDs are not secret; GIS needs this in the browser. */
-router.get('/google-config', (_req, res) => {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim() || '';
-  res.json({
-    status: 'ok',
-    enabled: Boolean(clientId),
-    clientId: clientId || null,
-  });
-});
-
-// Legacy password auth (kept for scripts / migration; UI uses OTP + Google)
+// Password + OTP + Google (google-config lives on the parent /api router)
 router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, register);
 router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, login);
 

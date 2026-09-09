@@ -291,7 +291,8 @@
 .auth-form {
   display: flex;
   flex-direction: column;
-  min-height: 240px; /* Keeps height consistent between steps without pushing bottom elements far away */
+  gap: 16px;
+  min-height: 240px;
   justify-content: flex-start;
 }
 
@@ -404,12 +405,6 @@
   box-shadow: 0 4px 14px rgba(30, 50, 100, 0.08);
 }
 
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .auth-form .form-group label {
   display: block;
   font-size: 0.75rem;
@@ -488,21 +483,6 @@
 .btn-auth-submit:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-}
-
-.alert-message {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 0.875rem;
-}
-
-.alert-message.error {
-  background: rgba(255, 59, 48, 0.08);
-  border: 1px solid rgba(255, 59, 48, 0.15);
-  color: var(--color-danger);
 }
 
 .spin-icon {

@@ -7,6 +7,7 @@ import { getDBStatus } from '../../config/db.config.js';
 
 let started = false;
 let timerId = null;
+let tickInFlight = false;
 
 async function resolveReminderEmail(reminder) {
   if (reminder.email) return reminder.email;
@@ -14,8 +15,6 @@ async function resolveReminderEmail(reminder) {
     const u = await User.findById(reminder.userId).select('email').lean();
     const email = u?.email || null;
     if (email) {
-      reminder.email = email;
-      // persist for next fire without another lookup
       await Reminder.updateOne({ _id: reminder._id }, { $set: { email } });
     }
     return email;
@@ -24,60 +23,84 @@ async function resolveReminderEmail(reminder) {
   }
 }
 
+async function fireOneReminder(reminder, now, key) {
+  // Atomic claim — prevents overlapping ticks from double-firing the same slot.
+  const claimed = await Reminder.findOneAndUpdate(
+    {
+      _id: reminder._id,
+      enabled: true,
+      lastFiredKey: { $ne: key },
+    },
+    {
+      $set: {
+        lastFiredKey: key,
+        lastFiredAt: now,
+        ...(reminder.repeat === 'once' ? { enabled: false } : {}),
+      },
+    },
+    { new: true },
+  );
+  if (!claimed) return false;
+
+  try {
+    await AppNotification.create({
+      userId: reminder.userId,
+      title: reminder.title,
+      body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
+      kind: 'reminder',
+      reminderId: reminder._id,
+    });
+  } catch (err) {
+    console.error('[reminders:cron] notification create failed:', err.message);
+  }
+
+  try {
+    const email = await resolveReminderEmail(claimed);
+    const mail = await sendReminderEmail({
+      email,
+      title: reminder.title,
+      message: reminder.message,
+      time: reminder.time,
+    });
+    if (mail.sent) {
+      console.info(`[reminders:cron] email sent → ${email} (${reminder.title})`);
+    } else {
+      console.info(
+        `[reminders:cron] email skipped (${mail.reason || 'unknown'}) for ${reminder.username || reminder.userId}`
+      );
+    }
+  } catch (err) {
+    console.error('[reminders:cron] email failed:', err.message);
+  }
+
+  return true;
+}
+
 async function processDueReminders() {
   if (!getDBStatus()) return;
 
   const now = new Date();
-  const enabled = await Reminder.find({ enabled: true }).limit(500);
+  const enabled = await Reminder.find({ enabled: true }).limit(500).lean();
   let fired = 0;
 
   for (const reminder of enabled) {
-    const tz = reminder.timezone || 'Asia/Kolkata';
-    const parts = getZonedParts(now, tz);
-    if (!isReminderDue(reminder, parts)) continue;
-
-    const key = fireKeyFor(reminder, parts.dateISO);
-    if (reminder.lastFiredKey === key) continue;
-
-    reminder.lastFiredKey = key;
-    reminder.lastFiredAt = now;
-    if (reminder.repeat === 'once') {
-      reminder.enabled = false;
-    }
-    await reminder.save();
-
     try {
-      await AppNotification.create({
-        userId: reminder.userId,
-        title: reminder.title,
-        body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
-        kind: 'reminder',
-        reminderId: reminder._id,
-      });
-    } catch (err) {
-      console.error('[reminders:cron] notification create failed:', err.message);
-    }
+      const tz = reminder.timezone || 'Asia/Kolkata';
+      const parts = getZonedParts(now, tz);
+      if (!isReminderDue(reminder, parts)) continue;
 
-    try {
-      const email = await resolveReminderEmail(reminder);
-      const mail = await sendReminderEmail({
-        email,
-        title: reminder.title,
-        message: reminder.message,
-        time: reminder.time,
-      });
-      if (mail.sent) {
-        console.info(`[reminders:cron] email sent → ${email} (${reminder.title})`);
-      } else {
-        console.info(
-          `[reminders:cron] email skipped (${mail.reason || 'unknown'}) for ${reminder.username || reminder.userId}`
-        );
-      }
-    } catch (err) {
-      console.error('[reminders:cron] email failed:', err.message);
-    }
+      const key = fireKeyFor(reminder, parts.dateISO);
+      if (reminder.lastFiredKey === key) continue;
 
-    fired += 1;
+      const didFire = await fireOneReminder(reminder, now, key);
+      if (didFire) fired += 1;
+    } catch (err) {
+      // One bad timezone / document must not abort the whole tick.
+      console.error(
+        `[reminders:cron] skipped reminder ${reminder?._id}:`,
+        err.message
+      );
+    }
   }
 
   if (fired > 0) {
@@ -87,7 +110,6 @@ async function processDueReminders() {
 
 /**
  * Minute ticker — fires due study reminders (email + in-app notification).
- * Uses setInterval so we don't need an extra cron package.
  */
 export function startReminderCron() {
   if (started) return;
@@ -97,12 +119,17 @@ export function startReminderCron() {
   }
 
   const tick = () => {
-    processDueReminders().catch((err) => {
-      console.error('[reminders:cron] tick failed:', err.message);
-    });
+    if (tickInFlight) return;
+    tickInFlight = true;
+    processDueReminders()
+      .catch((err) => {
+        console.error('[reminders:cron] tick failed:', err.message);
+      })
+      .finally(() => {
+        tickInFlight = false;
+      });
   };
 
-  // Align roughly to clock minutes, then every 60s
   const msToNextMinute = 60000 - (Date.now() % 60000);
   setTimeout(() => {
     tick();
@@ -111,10 +138,4 @@ export function startReminderCron() {
 
   started = true;
   console.info('[reminders:cron] scheduled (every 60s) — study reminders');
-}
-
-export function stopReminderCron() {
-  if (timerId) clearInterval(timerId);
-  timerId = null;
-  started = false;
 }

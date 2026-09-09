@@ -12,9 +12,9 @@ const CONNECT_OPTS = {
   socketTimeoutMS: 45000,
   family: 4,
   autoSelectFamily: false,
-  // Atlas DB users live in admin (path /ssc_prep is the app DB only).
-  authSource: 'admin',
 };
+
+let listenersBound = false;
 
 function normalizeUri(raw) {
   let uri = String(raw || '').trim().replace(/\s+/g, '');
@@ -25,6 +25,32 @@ function normalizeUri(raw) {
     uri = uri.slice(1, -1).trim();
   }
   return uri;
+}
+
+function connectOptions(uri) {
+  const opts = { ...CONNECT_OPTS };
+  // Atlas DB users typically live in `admin`. Override via URI ?authSource= or env.
+  const fromEnv = process.env.MONGODB_AUTH_SOURCE?.trim();
+  if (fromEnv) {
+    opts.authSource = fromEnv;
+  } else if (!/[?&]authSource=/i.test(uri)) {
+    opts.authSource = 'admin';
+  }
+  return opts;
+}
+
+function bindConnectionListeners() {
+  if (listenersBound) return;
+  listenersBound = true;
+  mongoose.connection.on('connected', () => {
+    console.log('MongoDB connected');
+  });
+  mongoose.connection.on('error', (err) => {
+    console.error('MongoDB error:', err.message);
+  });
+  mongoose.connection.on('disconnected', () => {
+    console.warn('MongoDB disconnected');
+  });
 }
 
 async function migrateSubjectIndexes() {
@@ -45,17 +71,8 @@ export async function connectDB() {
     process.exit(1);
   }
 
-  mongoose.connection.on('connected', () => {
-    console.log('MongoDB connected');
-  });
-  mongoose.connection.on('error', (err) => {
-    console.error('MongoDB error:', err.message);
-  });
-  mongoose.connection.on('disconnected', () => {
-    console.warn('MongoDB disconnected');
-  });
-
-  await mongoose.connect(uri, CONNECT_OPTS);
+  bindConnectionListeners();
+  await mongoose.connect(uri, connectOptions(uri));
   await migrateSubjectIndexes();
 }
 

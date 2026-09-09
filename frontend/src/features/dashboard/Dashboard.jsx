@@ -818,7 +818,7 @@ export function Dashboard() {
     }
   };
 
-  if (!user) {
+  if (!user || !localStorage.getItem('ssc_token')) {
     return (
       <AuthPanel
         loginUser={loginUser}
