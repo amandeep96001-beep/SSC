@@ -1,0 +1,657 @@
+import type { Request, RequestHandler } from 'express';
+import subjectRepository from './subject.repository.js';
+import topicRepository from './topic.repository.js';
+import questionRepository from './question.repository.js';
+import vocabRepository from './vocab.repository.js';
+import { Vocab } from './vocab.model.js';
+import type { IVocab } from './vocab.model.js';
+import TopicDto from './topic.dto.js';
+import VocabDto from './vocab.dto.js';
+import { shuffle } from '../../shared/utils/shuffle.js';
+import { filterNewTopicQuestions } from './questionDedupe.js';
+import type { TopicQuestionInsert } from './questionDedupe.js';
+import { appendSubjectToExamConfigs } from '../exam-config/exam-config.sync.js';
+import { errorMessage, mongoErrorCode } from '../../types/domain.js';
+
+function parseSource(req: Request): 'mine' | 'global' {
+  const source = String(req.query.source || 'global').toLowerCase();
+  return source === 'mine' ? 'mine' : 'global';
+}
+
+function ownerScope(req: Request): string | null {
+  const source = parseSource(req);
+  return source === 'mine' ? req.user!.id : null;
+}
+
+function isUserOwned(doc: { ownerId?: string | null } | null | undefined, userId: string) {
+  return Boolean(doc?.ownerId && doc.ownerId === userId);
+}
+
+function isAdmin(req: Request) {
+  return req.user?.role === 'admin';
+}
+
+/** Official content: no ownerId. Admin can manage; owner can manage personal. */
+function canManageTopic(topic: { ownerId?: string | null } | null | undefined, req: Request) {
+  if (isUserOwned(topic, req.user!.id)) return true;
+  if (isAdmin(req) && !topic?.ownerId) return true;
+  return false;
+}
+
+function slugifyId(parts: unknown): string {
+  return String(parts)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function paramStr(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
+}
+
+export const getSubjects: RequestHandler = async (req, res, next) => {
+  try {
+    const source = parseSource(req);
+    const subjects = source === 'mine'
+      ? await subjectRepository.findByOwner(req.user!.id, 'name ownerId')
+      : await subjectRepository.findGlobal('name ownerId');
+
+    res.json({
+      status: 'success',
+      data: subjects.map(s => ({
+        name: s.name,
+        isOwned: Boolean(s.ownerId),
+        ownerId: s.ownerId || null
+      })),
+      meta: { source }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addSubject: RequestHandler = async (req, res, next) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) {
+      return res.status(400).json({ status: 'error', message: 'Subject name is required.' });
+    }
+
+    const wantGlobal = String(req.body?.scope || '').toLowerCase() === 'global';
+    if (wantGlobal) {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ status: 'error', message: 'Admin access required to create official subjects.' });
+      }
+
+      const existing = await subjectRepository.findByName(name, true, null);
+      if (existing) {
+        return res.json({
+          status: 'success',
+          data: { name: existing.name, isOwned: false, ownerId: null, alreadyExisted: true }
+        });
+      }
+
+      const created = await subjectRepository.create({ name, ownerId: null });
+      await appendSubjectToExamConfigs(created.name);
+      return res.status(201).json({
+        status: 'success',
+        data: { name: created.name, isOwned: false, ownerId: null }
+      });
+    }
+
+    const existing = await subjectRepository.findByName(name, true, req.user!.id);
+    if (existing) {
+      return res.status(400).json({ status: 'error', message: 'You already have a subject with this name.' });
+    }
+
+    const created = await subjectRepository.create({
+      name,
+      ownerId: req.user!.id
+    });
+
+    res.status(201).json({
+      status: 'success',
+      data: { name: created.name, isOwned: true, ownerId: created.ownerId }
+    });
+  } catch (error) {
+    if (mongoErrorCode(error) === 11000) {
+      return res.status(400).json({ status: 'error', message: 'You already have a subject with this name.' });
+    }
+    next(error);
+  }
+};
+
+export const deleteSubject: RequestHandler = async (req, res, next) => {
+  try {
+    const subjectName = paramStr(req.params.subjectName);
+    const scope = String(req.query.scope || req.body?.scope || req.query.source || '').toLowerCase();
+
+    // Explicit official delete (admin only)
+    if (scope === 'global') {
+      if (!isAdmin(req)) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Admin access required to delete official subjects.'
+        });
+      }
+      const deleted = await subjectRepository.deleteGlobalByName(subjectName);
+      if (!deleted) {
+        return res.status(404).json({ status: 'error', message: 'Official subject not found.' });
+      }
+      const topicDocs = await topicRepository.findIdsBySubjectAndOwner(subjectName, null);
+      const topicIds = topicDocs.map((t) => t.id);
+      await questionRepository.deleteByTopicIds(topicIds);
+      await topicRepository.deleteBySubjectAndOwner(subjectName, null);
+      return res.json({ status: 'success', message: 'Official subject and related topics deleted.' });
+    }
+
+    // Personal subject delete (owner only)
+    const deleted = await subjectRepository.deleteByNameAndOwner(subjectName, req.user!.id);
+    if (!deleted) {
+      return res.status(404).json({ status: 'error', message: 'Subject not found or not owned by you.' });
+    }
+
+    const topicDocs = await topicRepository.findIdsBySubjectAndOwner(subjectName, req.user!.id);
+    const topicIds = topicDocs.map((t) => t.id);
+    await questionRepository.deleteByTopicIds(topicIds);
+    await topicRepository.deleteBySubjectAndOwner(subjectName, req.user!.id);
+
+    res.json({ status: 'success', message: 'Subject and related topics deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTopics: RequestHandler = async (req, res, next) => {
+  try {
+    const subjectName = paramStr(req.params.subjectName);
+    const ownerId = ownerScope(req);
+    const subject = await subjectRepository.resolveByName(subjectName, ownerId);
+    if (!subject) {
+      return res.json({ status: 'success', data: [], meta: { source: parseSource(req) } });
+    }
+
+    const topics = await topicRepository.findBySubjectName(subject.name, ownerId);
+
+    const mappedTopics = topics.map(t => ({
+      id: t.id,
+      name: t.name,
+      syllabus: t.syllabus,
+      isOwned: isUserOwned(t, req.user!.id)
+    }));
+
+    res.json({ status: 'success', data: mappedTopics, meta: { source: parseSource(req) } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTopicNotes: RequestHandler = async (req, res, next) => {
+  try {
+    const topicId = paramStr(req.params.topicId);
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({ status: 'error', message: 'Topic not found.' });
+    }
+
+    // Personal topics are private to the owner
+    if (topic.ownerId && topic.ownerId !== req.user!.id) {
+      return res.status(403).json({ status: 'error', message: 'You do not have access to this topic.' });
+    }
+
+    const questions = await questionRepository.findByTopicId(topicId);
+
+    res.json({
+      status: 'success',
+      data: {
+        id: topic.id,
+        name: topic.name,
+        notes: topic.notes,
+        questions,
+        isOwned: isUserOwned(topic, req.user!.id),
+        ownerId: topic.ownerId || null
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTopicTest: RequestHandler = async (req, res, next) => {
+  try {
+    const topicId = paramStr(req.params.topicId);
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({ status: 'error', message: 'Topic not found.' });
+    }
+
+    if (topic.ownerId && topic.ownerId !== req.user!.id) {
+      return res.status(403).json({ status: 'error', message: 'You do not have access to this topic.' });
+    }
+
+    const questions = await questionRepository.findByTopicId(topicId);
+
+    let pool = questions.map(q => ({
+      q: q.q,
+      o: q.o,
+      a: q.a,
+      e: q.e,
+      state: q.state
+    }));
+
+    // Parse requested count — default 25, max 500
+    const rawCount = parseInt(String(req.query.count ?? ''), 10);
+    const requestedCount = !Number.isNaN(rawCount) && rawCount > 0
+      ? Math.min(rawCount, 500)
+      : 25;
+
+    // Always shuffle the base pool for variety
+    pool = shuffle(pool);
+
+    let testQuestions: typeof pool;
+    if (requestedCount <= pool.length) {
+      // Simple case: enough questions — just take the first N after shuffle
+      testQuestions = pool.slice(0, requestedCount);
+    } else {
+      // Count > available — build enough by cycling through shuffled copies
+      // Each pass is independently shuffled so questions don't repeat in the same order
+      testQuestions = [];
+      let remaining = requestedCount;
+      while (remaining > 0) {
+        const pass = shuffle([...pool]);
+        testQuestions = testQuestions.concat(pass.slice(0, remaining));
+        remaining -= pass.length;
+      }
+    }
+
+    res.json({ status: 'success', data: testQuestions });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addTopic: RequestHandler = async (req, res, next) => {
+  try {
+    const subjectName = paramStr(req.params.subjectName);
+    const userId = req.user!.id;
+    const wantGlobal = String(req.body?.scope || '').toLowerCase() === 'global';
+
+    const dto = new TopicDto(req.body);
+    const errors = dto.validate();
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 'error', message: errors.join(' ') });
+    }
+
+    const topicName = String(dto.name);
+    const topicNotes = String(dto.notes);
+    const topicSyllabus = dto.syllabus != null ? String(dto.syllabus) : '';
+
+    if (wantGlobal) {
+      if (!isAdmin(req)) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Admin access required to create official topics.'
+        });
+      }
+
+      const subject = await subjectRepository.resolveByName(subjectName, null);
+      if (!subject) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Official subject not found. Create the official subject first.'
+        });
+      }
+
+      const resolvedName = subject.name;
+      const existingTopics = await topicRepository.findBySubjectName(resolvedName, null);
+      const rawId = slugifyId(`${resolvedName}-${topicName}`);
+      const finalId = existingTopics.some((t) => t.id === rawId)
+        ? `${rawId}-${Date.now()}`
+        : rawId;
+
+      const newTopic = {
+        id: finalId,
+        subjectName: resolvedName,
+        name: topicName,
+        syllabus: topicSyllabus || 'Official syllabus topic.',
+        notes: topicNotes,
+        ownerId: null
+      };
+
+      await topicRepository.create(newTopic);
+
+      let seedQuestions: TopicQuestionInsert[];
+      if (Array.isArray(dto.questions) && dto.questions.length > 0) {
+        const { toInsert } = filterNewTopicQuestions(dto.questions, finalId);
+        seedQuestions = toInsert.length > 0
+          ? toInsert
+          : [{
+              topicId: finalId,
+              q: `Syllabus Check: Have you reviewed all the study notes for '${topicName}'?`,
+              o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+              a: 0,
+              e: 'Seeded question to verify study progress for this official topic.'
+            }];
+      } else {
+        seedQuestions = [{
+          topicId: finalId,
+          q: `Syllabus Check: Have you reviewed all the study notes for '${topicName}'?`,
+          o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+          a: 0,
+          e: 'Seeded question to verify study progress for this official topic.'
+        }];
+      }
+
+      await questionRepository.insertMany(seedQuestions);
+
+      return res.status(201).json({
+        status: 'success',
+        data: {
+          id: finalId,
+          name: topicName,
+          syllabus: newTopic.syllabus,
+          isOwned: false
+        }
+      });
+    }
+
+    // Personal topics only under the user's own subjects
+    const subject = await subjectRepository.resolveByName(subjectName, userId);
+    if (!subject) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Subject not found in your notes. Switch to My Notes and create a subject first.'
+      });
+    }
+
+    const resolvedName = subject.name;
+    const existingTopics = await topicRepository.findBySubjectName(resolvedName, userId);
+    const rawId = `u-${userId.slice(-6)}-${resolvedName}-${topicName}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const finalId = existingTopics.some((t) => t.id === rawId)
+      ? `${rawId}-${Date.now()}`
+      : rawId;
+
+    const newTopic = {
+      id: finalId,
+      subjectName: resolvedName,
+      name: topicName,
+      syllabus: topicSyllabus || 'Custom added user revision topic.',
+      notes: topicNotes,
+      ownerId: userId
+    };
+
+    await topicRepository.create(newTopic);
+
+    let seedQuestions: TopicQuestionInsert[];
+    if (Array.isArray(dto.questions) && dto.questions.length > 0) {
+      const { toInsert } = filterNewTopicQuestions(dto.questions, finalId);
+      seedQuestions = toInsert.length > 0
+        ? toInsert
+        : [{
+            topicId: finalId,
+            q: `Syllabus Check: Have you reviewed all the study notes for '${topicName}'?`,
+            o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+            a: 0,
+            e: 'This is a custom-seeded question to verify study progress for custom notes.'
+          }];
+    } else {
+      seedQuestions = [{
+        topicId: finalId,
+        q: `Syllabus Check: Have you reviewed all the study notes for '${topicName}'?`,
+        o: ['Yes, completely', 'No, need review', 'Will study again', 'Passed'],
+        a: 0,
+        e: 'This is a custom-seeded question to verify study progress for custom notes.'
+      }];
+    }
+
+    await questionRepository.insertMany(seedQuestions);
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        id: finalId,
+        name: topicName,
+        syllabus: newTopic.syllabus,
+        isOwned: true
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateTopic: RequestHandler = async (req, res, next) => {
+  try {
+    const topicId = paramStr(req.params.topicId);
+
+    const dto = new TopicDto(req.body);
+    const errors = dto.validate();
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 'error', message: errors.join(' ') });
+    }
+
+    const topic = await topicRepository.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({ status: 'error', message: 'Topic not found.' });
+    }
+
+    if (!canManageTopic(topic, req)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Official syllabus topics are read-only. Switch to My Notes to edit your own content.'
+      });
+    }
+
+    const topicName = String(dto.name);
+    const topicNotes = String(dto.notes);
+    const updateData = {
+      name: topicName,
+      syllabus: dto.syllabus ? String(dto.syllabus) : topic.syllabus,
+      notes: topicNotes
+    };
+
+    await topicRepository.update(topicId, updateData);
+
+    let questionsReport: {
+      received: number;
+      inserted: number;
+      duplicates: number;
+      invalid: number;
+    } | null = null;
+    if (Array.isArray(dto.questions) && dto.questions.length > 0) {
+      const existing = await questionRepository.findByTopicId(topicId);
+      const { toInsert, duplicates, invalid, received } = filterNewTopicQuestions(
+        dto.questions,
+        topicId,
+        existing.map((q) => q.q)
+      );
+
+      if (toInsert.length > 0) {
+        await questionRepository.insertMany(toInsert);
+      }
+
+      questionsReport = {
+        received,
+        inserted: toInsert.length,
+        duplicates,
+        invalid,
+      };
+    }
+
+    res.json({
+      status: 'success',
+      message: questionsReport
+        ? `Topic updated. ${questionsReport.inserted} MCQ(s) added, ${questionsReport.duplicates} duplicate(s) skipped${questionsReport.invalid ? `, ${questionsReport.invalid} invalid` : ''}.`
+        : 'Topic updated successfully.',
+      data: {
+        id: topicId,
+        name: topicName,
+        syllabus: updateData.syllabus,
+        isOwned: isUserOwned(topic, req.user!.id),
+        questionsReport,
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteTopic: RequestHandler = async (req, res, next) => {
+  try {
+    const topicId = paramStr(req.params.topicId);
+    const topic = await topicRepository.findById(topicId);
+
+    if (!topic) {
+      return res.status(404).json({ status: 'error', message: 'Topic not found.' });
+    }
+
+    if (!canManageTopic(topic, req)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Official syllabus topics cannot be deleted.'
+      });
+    }
+
+    await topicRepository.deleteById(topicId);
+    await questionRepository.deleteByTopicId(topicId);
+
+    res.json({ status: 'success', message: 'Topic deleted successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getVocab: RequestHandler = async (req, res, next) => {
+  try {
+    const { category, search, page = 1, limit = 30 } = req.query;
+
+    const query: { category?: string; $or?: Array<Record<string, RegExp>> } = {};
+    if (category && category !== 'All') {
+      query.category = String(category);
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(String(search), 'i');
+      query.$or = [
+        { word: searchRegex },
+        { definition: searchRegex },
+        { synonyms: searchRegex },
+        { antonyms: searchRegex }
+      ];
+    }
+
+    const skip = (parseInt(String(page), 10) - 1) * parseInt(String(limit), 10);
+    const result = await vocabRepository.findAll(query, skip, parseInt(String(limit), 10));
+
+    res.json({
+      status: 'success',
+      data: result.data,
+      meta: {
+        total: result.total,
+        page: parseInt(String(page), 10),
+        limit: parseInt(String(limit), 10),
+        totalPages: Math.ceil(result.total / parseInt(String(limit), 10))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addVocab: RequestHandler = async (req, res, next) => {
+  try {
+    const dto = new VocabDto(req.body);
+    const errors = dto.validate();
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 'error', message: errors.join(' ') });
+    }
+
+    const newVocab = await vocabRepository.create(dto);
+    res.status(201).json({ status: 'success', data: newVocab });
+  } catch (error) {
+    if (mongoErrorCode(error) === 11000) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Word "${req.body.word}" already exists in the vocabulary deck.`
+      });
+    }
+    next(error);
+  }
+};
+
+export const updateVocab: RequestHandler = async (req, res, next) => {
+  try {
+    const vocabId = paramStr(req.params.vocabId);
+    const dto = new VocabDto(req.body);
+    const errors = dto.validate();
+    if (errors.length > 0) {
+      return res.status(400).json({ status: 'error', message: errors.join(' ') });
+    }
+
+    const updated = await vocabRepository.update(vocabId, dto);
+    if (!updated) {
+      return res.status(404).json({ status: 'error', message: 'Vocab entry not found.' });
+    }
+
+    res.json({ status: 'success', data: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addVocabBulk: RequestHandler = async (req, res, next) => {
+  try {
+    const vocabArray = req.body;
+    if (!Array.isArray(vocabArray)) {
+      return res.status(400).json({ status: 'error', message: 'Expected a JSON array of vocabulary objects.' });
+    }
+
+    const processedArray = vocabArray.map((item: unknown) => {
+      const dto = new VocabDto(item as ConstructorParameters<typeof VocabDto>[0]);
+      const errors = dto.validate();
+      if (errors.length > 0) {
+        const word = isRecordish(item) && 'word' in item ? String((item as { word?: unknown }).word) : '';
+        throw new Error(`Validation failed for word "${word}": ` + errors.join(' '));
+      }
+      return dto;
+    });
+
+    const incomingWords = processedArray.map(item => item.word);
+    const existingItems = await Vocab.find({ word: { $in: incomingWords } }).select('word').lean();
+    const existingWordsSet = new Set(existingItems.map(item => item.word.toLowerCase()));
+
+    let newVocabsToInsert = processedArray.filter(item => !existingWordsSet.has(item.word.toLowerCase()));
+
+    const uniqueMap = new Map<string, VocabDto>();
+    newVocabsToInsert.forEach(item => {
+      if (!uniqueMap.has(item.word.toLowerCase())) {
+        uniqueMap.set(item.word.toLowerCase(), item);
+      }
+    });
+    const finalArrayToInsert = Array.from(uniqueMap.values());
+
+    if (finalArrayToInsert.length === 0) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'No new words added. All words in the JSON already exist in the database.',
+        data: []
+      });
+    }
+
+    const result = await vocabRepository.insertMany(finalArrayToInsert);
+    res.status(201).json({
+      status: 'success',
+      message: `Successfully inserted ${result.length} new words. (${processedArray.length - result.length} duplicates ignored)`,
+      data: result
+    });
+  } catch (error) {
+    if (mongoErrorCode(error) === 11000) {
+      return res.status(207).json({ status: 'partial_success', message: 'Bulk insert finished, but some duplicate words were skipped.' });
+    }
+    return res.status(400).json({ status: 'error', message: errorMessage(error) });
+  }
+};
+
+function isRecordish(value: unknown): value is object {
+  return Boolean(value) && typeof value === 'object';
+}

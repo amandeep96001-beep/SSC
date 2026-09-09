@@ -15,9 +15,9 @@
   text-rendering: optimizeLegibility;
 }
 
-.notes-reader--size-sm { font-size: 1rem; line-height: 1.72; }
-.notes-reader--size-md { font-size: 1.125rem; line-height: 1.85; }
-.notes-reader--size-lg { font-size: 1.28rem; line-height: 1.95; }
+.notes-reader--size-sm { font-size: 1.05rem; line-height: 1.78; }
+.notes-reader--size-md { font-size: 1.175rem; line-height: 1.88; }
+.notes-reader--size-lg { font-size: 1.32rem; line-height: 1.98; }
 
 .notes-reader--spacing-relaxed {
   line-height: 2.05 !important;
@@ -401,9 +401,9 @@
     overflow-wrap: break-word !important;
   }
 
-  .notes-reader--size-sm { font-size: 1.02rem !important; line-height: 1.75 !important; }
-  .notes-reader--size-md { font-size: 1.125rem !important; line-height: 1.85 !important; }
-  .notes-reader--size-lg { font-size: 1.28rem !important; line-height: 1.95 !important; }
+  .notes-reader--size-sm { font-size: 1.05rem !important; line-height: 1.8 !important; }
+  .notes-reader--size-md { font-size: 1.175rem !important; line-height: 1.9 !important; }
+  .notes-reader--size-lg { font-size: 1.32rem !important; line-height: 2 !important; }
 
   .notes-reader--spacing-relaxed {
     line-height: 2.08 !important;
@@ -687,9 +687,9 @@
     line-height: 1.85 !important;
   }
 
-  .notes-reader--size-sm { font-size: 1.02rem !important; }
-  .notes-reader--size-md { font-size: 1.125rem !important; }
-  .notes-reader--size-lg { font-size: 1.26rem !important; }
+  .notes-reader--size-sm { font-size: 1.05rem !important; }
+  .notes-reader--size-md { font-size: 1.175rem !important; }
+  .notes-reader--size-lg { font-size: 1.3rem !important; }
 
   .notes-reader h2,
   .notes-reader .notes-section-title {

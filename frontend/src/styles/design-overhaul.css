@@ -732,16 +732,14 @@ textarea:focus {
 }
 
 .otp-box {
-  border-radius: 16px !important;
+  border-radius: 14px !important;
   font-weight: 800 !important;
-  border: 2px solid var(--border-color) !important;
-  transition: all 0.18s ease !important;
+  /* visibility / size owned by auth.css — do not fight padding/height here */
 }
 
 .otp-box:focus {
   border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 4px var(--color-primary-muted) !important;
-  transform: scale(1.04) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-glow) !important;
 }
 
 /* ============================================================

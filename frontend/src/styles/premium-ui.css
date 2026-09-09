@@ -826,27 +826,33 @@
 .notes-reader,
 .notes-reader p,
 .notes-reader li,
-.notes-reader .notes-lead {
+.notes-reader .notes-lead,
+.notes-reader span:not([class]),
+.notes-reader div:not([class]) {
   color: var(--text-primary);
 }
 
 .notes-reader h2,
 .notes-reader h3,
 .notes-reader strong,
+.notes-reader b,
 .notes-reader .notes-section-title {
   color: var(--text-primary);
 }
 
 [data-theme="dark"] .notes-reader p,
 [data-theme="dark"] .notes-reader li,
-[data-theme="dark"] .notes-reader .notes-lead {
-  color: #c9cde0;
+[data-theme="dark"] .notes-reader .notes-lead,
+[data-theme="dark"] .notes-reader span:not([class]) {
+  color: #e6e9f6;
 }
 
 [data-theme="dark"] .notes-reader h2,
 [data-theme="dark"] .notes-reader h3,
-[data-theme="dark"] .notes-reader .notes-section-title {
-  color: #eef0fa;
+[data-theme="dark"] .notes-reader .notes-section-title,
+[data-theme="dark"] .notes-reader strong,
+[data-theme="dark"] .notes-reader b {
+  color: #f7f8ff;
 }
 
 /* Inline colors from saved HTML are overridden by theme rules below */
@@ -922,13 +928,13 @@
   width: 100%;
 }
 
-.notes-reader--size-sm { font-size: 1rem; line-height: 1.72; }
-.notes-reader--size-md { font-size: 1.125rem; line-height: 1.85; }
-.notes-reader--size-lg { font-size: 1.28rem; line-height: 1.95; }
+.notes-reader--size-sm { font-size: 1.05rem; line-height: 1.78; }
+.notes-reader--size-md { font-size: 1.175rem; line-height: 1.88; }
+.notes-reader--size-lg { font-size: 1.32rem; line-height: 1.98; }
 
 .notes-reader--comfort {
   font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.012em;
 }
 
 .notes-sheet--comfort {

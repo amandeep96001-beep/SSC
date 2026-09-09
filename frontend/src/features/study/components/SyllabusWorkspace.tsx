@@ -1,0 +1,1329 @@
+import type { TopicNotesPayload, StudyTopic, SubjectListItem, AppUser, McqQuestion, ContentSource } from '@/types/app';
+import type { UseStudyReturn } from '../hooks/useStudy';
+import type { Dispatch, SetStateAction, MouseEvent as ReactMouseEvent, FormEvent, ClipboardEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
+import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
+import { progressForTopic } from '@/shared/utils/examProgress';
+import { useExam } from '@/shared/context/useExam';
+import { showAppToast } from '@/shared/utils/appToast';
+import { 
+  BookMarked, 
+  ChevronRight, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  ClipboardList,
+  Highlighter,
+  Pencil,
+  Save,
+  X,
+  Eraser,
+  List,
+  Eye,
+  ArrowUp,
+  ArrowLeft,
+  Search,
+  Maximize2,
+  Minimize2,
+  ChevronUp,
+  ChevronDown,
+  AlignJustify,
+  Settings2,
+  NotebookPen,
+  MoreHorizontal,
+  Bold,
+  Italic,
+  Underline,
+  Heading2,
+  Heading3,
+  ListOrdered,
+  Copy,
+  Download,
+  RotateCcw,
+  Bookmark
+} from 'lucide-react';
+
+/** Prefer server notes when local cache is dirty Gemini paste or missing upgraded diagrams. */
+function pickNotesSource(activeNotes: TopicNotesPayload | null | undefined): string {
+  if (!activeNotes) return '';
+  const server = activeNotes.notes || '';
+  const stored = activeNotes.id ? localStorage.getItem(`ssc_notes_${activeNotes.id}`) : null;
+  if (!stored) return server;
+  const dirtyCache = /_ngcontent|Google Sans|\$\\rightarrow\$/i.test(stored);
+  const serverHasDiagrams = /notes-diagram/.test(server);
+  const storedHasDiagrams = /notes-diagram/.test(stored);
+  if (dirtyCache || (serverHasDiagrams && !storedHasDiagrams)) {
+    localStorage.setItem(`ssc_notes_${activeNotes.id}`, server);
+    return server;
+  }
+  return stored;
+}
+
+interface TocItem {
+  id: string;
+  text: string;
+  level: number;
+}
+
+interface NoteBookmark {
+  id: string;
+  label?: string;
+  y?: number;
+  scrollTop?: number;
+  createdAt?: number;
+}
+
+interface SyllabusWorkspaceProps {
+  activeView: string;
+  setActiveView: UseStudyReturn['setActiveView'];
+  contentSource: ContentSource;
+  setContentSource: UseStudyReturn['setContentSource'];
+  isMineMode: boolean;
+  canManageContent?: boolean;
+  subjects: SubjectListItem[];
+  selectSubject: UseStudyReturn['selectSubject'];
+  selectedSubject: string | null;
+  topicsList: StudyTopic[];
+  topicsLoading?: boolean;
+  selectTopic: UseStudyReturn['selectTopic'];
+  user: AppUser | null;
+  setModalOpen: Dispatch<SetStateAction<boolean>>;
+  setSubjectModalOpen: Dispatch<SetStateAction<boolean>>;
+  handleOpenEditModal: (e: ReactMouseEvent, topic: StudyTopic) => void;
+  handleDeleteClick: (e: ReactMouseEvent, topicId: string) => void;
+  handleDeleteSubjectClick: (e: ReactMouseEvent, subjectName: string) => void;
+  activeNotes: TopicNotesPayload | null;
+  notesLoading?: boolean;
+  startTest: UseStudyReturn['startTest'];
+  updateCustomTopic: UseStudyReturn['updateCustomTopic'];
+  onOpenNotesDock?: () => void;
+}
+
+export function SyllabusWorkspace({
+  activeView,
+  setActiveView,
+  contentSource,
+  setContentSource,
+  isMineMode,
+  canManageContent = false,
+  subjects,
+  selectSubject,
+  selectedSubject,
+  topicsList,
+  topicsLoading = false,
+  selectTopic,
+  user,
+  setModalOpen,
+  setSubjectModalOpen,
+  handleOpenEditModal,
+  handleDeleteClick,
+  handleDeleteSubjectClick,
+  activeNotes,
+  notesLoading = false,
+  startTest,
+  updateCustomTopic,
+  onOpenNotesDock
+}: SyllabusWorkspaceProps) {
+  const { examId, examSubjects } = useExam();
+  const examScope = { examId, examSubjects };
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [noQuestionsFlash, setNoQuestionsFlash] = useState(false);
+  const [testQuestionCount, setTestQuestionCount] = useState<number | ''>(25);
+
+  // Real questions in DB for this topic (excluding the seeded placeholder)
+  const availableQCount = (activeNotes?.questions || []).filter(
+    (q) => !q.q?.startsWith('Syllabus Check:')
+  ).length;
+  const [localNotesHtml, setLocalNotesHtml] = useState(() => {
+    if (!activeNotes) return '';
+    return prepareNotesHtml(pickNotesSource(activeNotes));
+  });
+  const [prevActiveNotes, setPrevActiveNotes] = useState(activeNotes);
+  const notesRef = useRef<HTMLDivElement>(null);
+  const notesScrollRef = useRef<HTMLDivElement>(null);
+  const notesHtmlSyncKeyRef = useRef('');
+  const searchHitsRef = useRef<Element[]>([]);
+  const searchMatchIdxRef = useRef(0);
+
+  const [notesFontSize, setNotesFontSize] = useState(() => localStorage.getItem('ssc_notes_font') || 'lg');
+  const [notesComfort, setNotesComfort] = useState(() => localStorage.getItem('ssc_notes_comfort') === '1');
+  const [notesLineSpacing, setNotesLineSpacing] = useState(() => localStorage.getItem('ssc_notes_spacing') || 'relaxed');
+  const [notesFocus, setNotesFocus] = useState(false);
+  const [showReadTools, setShowReadTools] = useState(false);
+  const [showToc, setShowToc] = useState(false);
+  const [tocItems, setTocItems] = useState<TocItem[]>([]);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatchIdx, setSearchMatchIdx] = useState(0);
+  const [searchMatchCount, setSearchMatchCount] = useState(0);
+  const [bookmarks, setBookmarks] = useState<NoteBookmark[]>(() => {
+    if (!activeNotes?.id) return [];
+    try {
+      const bm = localStorage.getItem(`ssc_bookmarks_${activeNotes.id}`);
+      return bm ? JSON.parse(bm) as NoteBookmark[] : [];
+    } catch {
+      return [];
+    }
+  });
+  const [manageFlash, setManageFlash] = useState('');
+
+  if (activeNotes !== prevActiveNotes) {
+    setPrevActiveNotes(activeNotes);
+    setLocalNotesHtml(prepareNotesHtml(pickNotesSource(activeNotes)));
+    setReadingProgress(0);
+    setShowScrollTop(false);
+    setSearchQuery('');
+    setSearchMatchIdx(0);
+    setSearchMatchCount(0);
+    searchHitsRef.current = [];
+    searchMatchIdxRef.current = 0;
+    setIsEditingNotes(false);
+    setManageFlash('');
+    // Reset count to available questions for new topic
+    const newAvail = (activeNotes?.questions || []).filter(
+      (q) => !q.q?.startsWith('Syllabus Check:')
+    ).length;
+    if (newAvail > 0) setTestQuestionCount(newAvail);
+    try {
+      const bm = activeNotes ? localStorage.getItem(`ssc_bookmarks_${activeNotes.id}`) : null;
+      setBookmarks(bm ? JSON.parse(bm) : []);
+    } catch {
+      setBookmarks([]);
+    }
+  }
+
+  useEffect(() => {
+    localStorage.setItem('ssc_notes_font', notesFontSize);
+  }, [notesFontSize]);
+
+  useEffect(() => {
+    localStorage.setItem('ssc_notes_comfort', notesComfort ? '1' : '0');
+  }, [notesComfort]);
+
+  useEffect(() => {
+    localStorage.setItem('ssc_notes_spacing', notesLineSpacing);
+  }, [notesLineSpacing]);
+
+  useEffect(() => {
+    if (!notesRef.current || activeView !== 'notes') return;
+    const headings = notesRef.current.querySelectorAll('h2, h3, .notes-section-title');
+    const items: TocItem[] = [];
+    headings.forEach((el, i) => {
+      const id = `note-sec-${activeNotes?.id || 'x'}-${i}`;
+      el.id = id;
+      items.push({
+        id,
+        text: (el.textContent || '').trim().slice(0, 72),
+        level: el.tagName === 'H3' ? 3 : 2
+      });
+    });
+    setTocItems(items);
+  }, [localNotesHtml, activeNotes, activeView]);
+
+  const handleNotesScroll = useCallback(() => {
+    const el = notesScrollRef.current;
+    if (!el) return;
+    const max = el.scrollHeight - el.clientHeight;
+    const pct = max > 0 ? Math.min(100, Math.round((el.scrollTop / max) * 100)) : 0;
+    setReadingProgress(pct);
+    setShowScrollTop(el.scrollTop > 200);
+    if (activeNotes?.id) {
+      localStorage.setItem(`ssc_notes_scroll_${activeNotes.id}`, String(el.scrollTop));
+    }
+  }, [activeNotes?.id]);
+
+  const scrollToSection = useCallback((id: string) => {
+    const target = document.getElementById(id);
+    const container = notesScrollRef.current;
+    if (!target || !container) return;
+    const offset = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 12;
+    container.scrollTo({ top: offset, behavior: 'smooth' });
+  }, []);
+
+  const clearSearchHighlights = useCallback(() => {
+    const root = notesRef.current;
+    if (!root) return;
+    root.querySelectorAll('mark.search-hit').forEach((mark) => {
+      const parent = mark.parentNode;
+      if (!parent) return;
+      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+      parent.normalize?.();
+    });
+    searchHitsRef.current = [];
+  }, []);
+
+  const applySearchHighlights = useCallback((query: string) => {
+    const root = notesRef.current;
+    clearSearchHighlights();
+    const q = (query || '').trim();
+    if (!root || !q) return [];
+
+    const needle = q.toLowerCase();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+        const p = n.parentElement;
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (p.closest('mark.search-hit')) return NodeFilter.FILTER_REJECT;
+        const tag = p.tagName;
+        if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const textNodes: Node[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) textNodes.push(node);
+
+    for (const textNode of textNodes) {
+      if (!textNode.isConnected || !textNode.parentNode) continue;
+      const text = textNode.textContent || '';
+      const lower = text.toLowerCase();
+      const ranges = [];
+      let start = 0;
+      let idx;
+      while ((idx = lower.indexOf(needle, start)) !== -1) {
+        ranges.push([idx, idx + needle.length]);
+        start = idx + needle.length;
+      }
+      if (!ranges.length) continue;
+
+      const parent = textNode.parentNode;
+      const frag = document.createDocumentFragment();
+      let last = 0;
+      for (const [s, e] of ranges) {
+        if (s > last) frag.appendChild(document.createTextNode(text.slice(last, s)));
+        const mark = document.createElement('mark');
+        mark.className = 'search-hit';
+        mark.textContent = text.slice(s, e);
+        frag.appendChild(mark);
+        last = e;
+      }
+      if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      parent.replaceChild(frag, textNode);
+    }
+
+    const ordered = Array.from(root.querySelectorAll('mark.search-hit'));
+    searchHitsRef.current = ordered;
+    return ordered;
+  }, [clearSearchHighlights]);
+
+  const jumpToHit = useCallback((idx: number) => {
+    const container = notesScrollRef.current;
+    const root = notesRef.current;
+    if (!container || !root) return;
+
+    let marks = Array.from(root.querySelectorAll('mark.search-hit'));
+    if (!marks.length && searchQuery.trim()) {
+      marks = applySearchHighlights(searchQuery);
+    }
+    searchHitsRef.current = marks;
+    if (!marks.length || idx < 0 || idx >= marks.length) return;
+
+    marks.forEach((m, i) => {
+      m.classList.toggle('search-hit--active', i === idx);
+    });
+    searchMatchIdxRef.current = idx;
+    setSearchMatchIdx(idx);
+    setSearchMatchCount(marks.length);
+
+    const mark = marks[idx];
+    requestAnimationFrame(() => {
+      const top = mark.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop - 56;
+      container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    });
+  }, [applySearchHighlights, searchQuery]);
+
+  const goToSearchMatch = useCallback((direction: number = 1) => {
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    let marks = notesRef.current
+      ? Array.from(notesRef.current.querySelectorAll('mark.search-hit'))
+      : [];
+    if (!marks.length) marks = applySearchHighlights(q);
+    searchHitsRef.current = marks;
+
+    if (!marks.length) {
+      searchMatchIdxRef.current = 0;
+      setSearchMatchIdx(0);
+      setSearchMatchCount(0);
+      return;
+    }
+
+    const base = searchMatchIdxRef.current;
+    const nextIdx = direction >= 0
+      ? (base + 1) % marks.length
+      : (base - 1 + marks.length) % marks.length;
+    jumpToHit(nextIdx);
+  }, [applySearchHighlights, jumpToHit, searchQuery]);
+
+  const handleSearchSubmit = useCallback((e: FormEvent) => {
+    e?.preventDefault();
+    const marks = applySearchHighlights(searchQuery);
+    setSearchMatchCount(marks.length);
+    searchMatchIdxRef.current = 0;
+    if (marks.length) jumpToHit(0);
+    else setSearchMatchIdx(0);
+  }, [applySearchHighlights, jumpToHit, searchQuery]);
+
+  // Sync notes HTML imperatively — keeps search marks alive across React re-renders
+  useLayoutEffect(() => {
+    if (activeView !== 'notes' || !notesRef.current) return;
+    const key = `${activeNotes?.id || ''}::${localNotesHtml}`;
+    if (notesHtmlSyncKeyRef.current === key) return;
+    notesHtmlSyncKeyRef.current = key;
+    notesRef.current.innerHTML = localNotesHtml || '';
+  }, [activeView, activeNotes?.id, localNotesHtml]);
+
+  // Live-highlight as user types (debounced)
+  useEffect(() => {
+    if (activeView !== 'notes') return undefined;
+    const q = searchQuery.trim();
+    const t = setTimeout(() => {
+      if (!notesRef.current) return;
+      if (!q) {
+        clearSearchHighlights();
+        searchMatchIdxRef.current = 0;
+        setSearchMatchCount(0);
+        setSearchMatchIdx(0);
+        return;
+      }
+      const marks = applySearchHighlights(q);
+      setSearchMatchCount(marks.length);
+      searchMatchIdxRef.current = 0;
+      setSearchMatchIdx(0);
+      marks.forEach((m, i) => m.classList.toggle('search-hit--active', i === 0));
+    }, q ? 180 : 0);
+    return () => clearTimeout(t);
+  }, [searchQuery, localNotesHtml, activeView, applySearchHighlights, clearSearchHighlights]);
+
+  useEffect(() => {
+    if (activeView !== 'notes' || !activeNotes?.id) return;
+    const el = notesScrollRef.current;
+    if (!el) return;
+    const saved = localStorage.getItem(`ssc_notes_scroll_${activeNotes.id}`);
+    requestAnimationFrame(() => {
+      if (saved) el.scrollTop = parseInt(saved, 10) || 0;
+      handleNotesScroll();
+    });
+  }, [activeNotes?.id, activeView, localNotesHtml, handleNotesScroll]);
+
+  const scrollNotesToTop = useCallback(() => {
+    notesScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const handleEditToggle = () => {
+    setIsEditingNotes((prev) => {
+      const next = !prev;
+      if (next) {
+        setShowActionsMenu(false);
+        setShowReadTools(false);
+        setNotesFocus(true);
+        requestAnimationFrame(() => {
+          notesRef.current?.focus?.();
+        });
+      }
+      return next;
+    });
+  };
+
+  const handleStopEditing = useCallback(() => {
+    setIsEditingNotes(false);
+  }, []);
+
+  const persistNotesHtml = useCallback(async (newHtml: string, { closeEditor = false }: { closeEditor?: boolean } = {}) => {
+    if (!activeNotes?.id) return { success: false, message: undefined as string | undefined };
+    localStorage.setItem(`ssc_notes_${activeNotes.id}`, newHtml);
+    setLocalNotesHtml(newHtml);
+
+    const isAdminUser = user?.role === 'admin';
+    // Official syllabus: normal users keep local-only edits; admin saves to server
+    if (!activeNotes.isOwned && !isAdminUser) {
+      if (closeEditor) setIsEditingNotes(false);
+      return { success: true, localOnly: true, message: undefined as string | undefined };
+    }
+
+    const res = await updateCustomTopic(activeNotes.id, {
+      name: activeNotes.name,
+      notes: newHtml,
+      questions: []
+    });
+    if (res.success && closeEditor) setIsEditingNotes(false);
+    return res;
+  }, [activeNotes, updateCustomTopic, user?.role]);
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!notesRef.current) return;
+    setIsSaving(true);
+    const newHtml = prepareNotesHtml(notesRef.current.innerHTML);
+    notesRef.current.innerHTML = newHtml;
+    const res = await persistNotesHtml(newHtml, { closeEditor: true });
+    setIsSaving(false);
+    if (!res.success) {
+      showAppToast(('message' in res && res.message) || 'Failed to save notes', { variant: 'error' });
+    } else {
+      showAppToast('Notes saved.', { variant: 'success', durationMs: 1800 });
+    }
+  }, [persistNotesHtml]);
+
+  const handleNotesPaste = useCallback((e: ClipboardEvent<HTMLDivElement>) => {
+    if (!isEditingNotes) return;
+    const html = e.clipboardData?.getData('text/html') || '';
+    const text = e.clipboardData?.getData('text/plain') || '';
+    if (!html && !text) return;
+    e.preventDefault();
+    const cleaned = prepareNotesFromClipboard(html, text);
+    if (!cleaned) return;
+    // insertHTML keeps caret position better than rewriting whole editor
+    try {
+      document.execCommand('insertHTML', false, cleaned);
+    } catch {
+      if (notesRef.current) {
+        notesRef.current.innerHTML = `${notesRef.current.innerHTML}${cleaned}`;
+      }
+    }
+    setLocalNotesHtml(notesRef.current?.innerHTML || cleaned);
+  }, [isEditingNotes]);
+
+  const handleHighlight = useCallback(async (color: string) => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const mark = document.createElement('mark');
+    mark.className = `hl-${color}`;
+
+    try {
+      range.surroundContents(mark);
+      selection.removeAllRanges();
+      if (notesRef.current) {
+        await persistNotesHtml(notesRef.current.innerHTML);
+      }
+    } catch {
+      showAppToast('Select text within a single line to highlight.', { variant: 'warn' });
+    }
+  }, [persistNotesHtml]);
+
+  const handleRemoveHighlight = useCallback(async () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || selection.isCollapsed) {
+      showAppToast('Click inside or select the highlighted text to remove.', { variant: 'warn' });
+      return;
+    }
+
+    let node: Node | null = selection.anchorNode;
+    while (node && node.nodeName !== 'MARK' && (!(node instanceof HTMLElement) || node.id !== 'notes-content-view')) {
+      node = node.parentNode;
+    }
+
+    if (node && node.nodeName === 'MARK') {
+      const parent = node.parentNode;
+      if (!parent) return;
+      while (node.firstChild) {
+        parent.insertBefore(node.firstChild, node);
+      }
+      parent.removeChild(node);
+
+      if (notesRef.current) {
+        await persistNotesHtml(notesRef.current.innerHTML);
+      }
+    } else {
+      showAppToast('Click inside an existing highlight to remove it.', { variant: 'warn' });
+    }
+  }, [persistNotesHtml]);
+
+  const runFormat = useCallback((command: string, value: string | null = null) => {
+    if (!isEditingNotes || !notesRef.current) return;
+    notesRef.current.focus();
+    try {
+      document.execCommand(command, false, value ?? undefined);
+    } catch {
+      // older browsers / unsupported command
+    }
+  }, [isEditingNotes]);
+
+  const flashManage = useCallback((msg: string) => {
+    setManageFlash(msg);
+    setTimeout(() => setManageFlash(''), 1800);
+  }, []);
+
+  const handleCopyNotes = useCallback(async () => {
+    const text = notesRef.current?.innerText || activeNotes?.notes || '';
+    try {
+      await navigator.clipboard.writeText(text);
+      flashManage('Notes copied');
+    } catch {
+      flashManage('Copy failed');
+    }
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleExportNotes = useCallback(() => {
+    const text = notesRef.current?.innerText || activeNotes?.notes || '';
+    const blob = new Blob([`# ${activeNotes?.name || 'Notes'}\n\n${text}`], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(activeNotes?.name || 'notes').replace(/[^\w\-]+/g, '_').slice(0, 48)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    flashManage('Exported as .txt');
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleResetLocalEdits = useCallback(() => {
+    if (!activeNotes?.id) return;
+    if (!window.confirm('Reset local edits & highlights for this topic? Sticky notes stay.')) return;
+    localStorage.removeItem(`ssc_notes_${activeNotes.id}`);
+    setLocalNotesHtml(prepareNotesHtml(activeNotes.notes || ''));
+    setIsEditingNotes(false);
+    flashManage('Local edits reset');
+    setShowActionsMenu(false);
+  }, [activeNotes, flashManage]);
+
+  const handleAddBookmark = useCallback(() => {
+    if (!activeNotes?.id || !notesScrollRef.current) return;
+    const scrollTop = notesScrollRef.current.scrollTop;
+    const label = `Bookmark @ ${readingProgress}%`;
+    const next = [
+      { id: `bm-${Date.now()}`, label, scrollTop, createdAt: Date.now() },
+      ...bookmarks
+    ].slice(0, 8);
+    setBookmarks(next);
+    localStorage.setItem(`ssc_bookmarks_${activeNotes.id}`, JSON.stringify(next));
+    flashManage('Bookmark saved');
+  }, [activeNotes, bookmarks, readingProgress, flashManage]);
+
+  const jumpToBookmark = useCallback((bm: NoteBookmark) => {
+    notesScrollRef.current?.scrollTo({ top: bm.scrollTop, behavior: 'smooth' });
+  }, []);
+
+  const removeBookmark = useCallback((id: string) => {
+    if (!activeNotes?.id) return;
+    const next = bookmarks.filter((b) => b.id !== id);
+    setBookmarks(next);
+    localStorage.setItem(`ssc_bookmarks_${activeNotes.id}`, JSON.stringify(next));
+  }, [activeNotes, bookmarks]);
+
+  return (
+    <>
+      {/* --- VIEW: SUBJECT LISTS --- */}
+      {activeView === 'subjects' && (
+        <div className="study-workspace syllabus-flow">
+          <header className="syllabus-page-header">
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <h1>Syllabus & Notes</h1>
+                <p>
+                  {isMineMode
+                    ? 'Build your own subjects, topics, notes, and practice questions.'
+                    : canManageContent
+                      ? 'Publish official subjects, topics, and notes for all students.'
+                      : 'Study from your institute\'s published syllabus for your target exam — notes and topic tests.'}
+                </p>
+              </div>
+              {canManageContent && (
+                <div className="syllabus-page-header__actions">
+                  <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
+                    <Plus size={16} /> Add Subject
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="content-source-toggle" role="tablist" aria-label="Content source">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contentSource === 'global'}
+                className={`content-source-btn${contentSource === 'global' ? ' active' : ''}`}
+                onClick={() => setContentSource('global')}
+              >
+                <BookMarked size={14} strokeWidth={2} /> Official Syllabus
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={contentSource === 'mine'}
+                className={`content-source-btn${contentSource === 'mine' ? ' active' : ''}`}
+                onClick={() => setContentSource('mine')}
+              >
+                <NotebookPen size={14} strokeWidth={2} /> My Notes
+              </button>
+            </div>
+          </header>
+          <div className="syllabus-page-body">
+            {subjects.length > 0 ? (
+              <div className="subjects-roster" role="list">
+                {subjects.map((sub, index) => {
+                  const name = typeof sub === 'string' ? sub : sub.name;
+                  const visual = getSubjectVisual(name);
+                  return (
+                    <div
+                      key={`${index}-${name}`}
+                      role="listitem"
+                      className={`subject-selection-card subject-selection-card--${visual.tone}`}
+                      onClick={() => selectSubject(name)}
+                    >
+                      <span className="subject-row__index" aria-hidden>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className="subject-content">
+                        <h3>{name}</h3>
+                        <p>
+                          {isMineMode
+                            ? 'Your topics, notes, and practice questions'
+                            : canManageContent
+                              ? 'Add topics and notes for students'
+                              : visual.label}
+                        </p>
+                      </div>
+                      <div className="subject-row__actions">
+                        {canManageContent && (
+                          <button
+                            type="button"
+                            className="btn-topic-action delete subject-delete-btn"
+                            title="Delete subject"
+                            aria-label={`Delete ${name}`}
+                            onClick={(e) => handleDeleteSubjectClick(e, name)}
+                          >
+                            <Trash2 size={15} strokeWidth={1.75} />
+                          </button>
+                        )}
+                        <ChevronRight className="arrow-icon" size={18} strokeWidth={1.75} aria-hidden />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-syllabus empty-syllabus--cta">
+                {canManageContent ? (
+                  <>
+                    <p>
+                      {isMineMode
+                        ? 'No personal subjects yet. Create one and add your own topics & questions.'
+                        : 'No official subjects yet. Add subjects, then map them to exams in Admin.'}
+                    </p>
+                    <button type="button" className="btn-add" onClick={() => setSubjectModalOpen(true)}>
+                      <Plus size={16} /> Create your first subject
+                    </button>
+                  </>
+                ) : (
+                  <p>No official subjects for this exam yet. Ask your admin to add subjects for your target exam, or switch exam from the picker.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- VIEW: TOPIC LISTS (Under a subject) --- */}
+      {activeView === 'topics' && (
+        <div className="study-workspace syllabus-flow">
+          <header className="syllabus-page-header">
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <h1>{selectedSubject} — Topics</h1>
+                <p>
+                  {isMineMode
+                    ? 'Add topics with notes and MCQs — fully under your control.'
+                    : canManageContent
+                      ? 'Add official topics with notes and MCQs for all students.'
+                      : 'Open a topic for revision notes, then attempt a timed speed test.'}
+                </p>
+              </div>
+              <div className="syllabus-page-header__actions">
+                <button type="button" className="btn-back" onClick={() => setActiveView('subjects')}>
+                  <ArrowLeft size={16} strokeWidth={2} /> All Subjects
+                </button>
+                {canManageContent && (
+                  <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
+                    <Plus size={16} /> Add Topic
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+          <div className="syllabus-page-body">
+            <div className="topics-list-container">
+            {topicsLoading && topicsList.length === 0 ? (
+              <div className="app-loader-overlay app-loader-overlay--inline" aria-busy="true" aria-label="Loading topics">
+                <div className="app-loader-spinner" />
+              </div>
+            ) : topicsList.length > 0 ? (
+              topicsList.map((topic) => {
+                // Look up topic accuracy indicators for THIS exam only
+                const progressRecord = progressForTopic(user?.progress, topic.id, examScope);
+                const status = progressRecord?.status || 'gray';
+                const score = progressRecord?.score;
+                const maxScore = progressRecord?.maxScore || 50;
+                const canManage = canManageContent && (isMineMode ? topic.isOwned : true);
+
+                return (
+                  <div 
+                    key={topic.id}
+                    className="topic-outline-card"
+                    onClick={() => selectTopic(topic.id)}
+                  >
+                    <div className="topic-header-title" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {status !== 'gray' && (
+                        <span className={`progress-status-dot ${status}`} title={
+                          status === 'green' ? `Mastered (Score: ${score}/${maxScore})` :
+                          status === 'yellow' ? `Reviewing (Score: ${score}/${maxScore})` :
+                          status === 'red' ? `Action Needed (Score: ${score}/${maxScore})` :
+                          'Unattempted'
+                        }></span>
+                        )}
+                        <h3>{topic.name}</h3>
+                      </div>
+                      {canManage && (
+                      <div className="topic-actions-bar" style={{ display: 'flex', gap: '8px', marginLeft: 'auto', marginRight: '12px' }}>
+                        <button 
+                          type="button" 
+                          className="btn-topic-action edit"
+                          onClick={(e) => handleOpenEditModal(e, topic)}
+                          title="Edit Notes & Questions"
+                          style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-topic-action delete"
+                          onClick={(e) => handleDeleteClick(e, topic.id)}
+                          title="Delete Topic"
+                          style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      )}
+                      <ChevronRight className="arrow-icon" size={16} />
+                    </div>
+                    <p className="topic-desc">{topic.syllabus}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="read-more-tag">Read Study notes & formulas</span>
+                      {score !== undefined && (
+                        <span className="topic-score-badge">Latest: {score}/{maxScore}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty-syllabus empty-syllabus--cta">
+                {canManageContent ? (
+                  <>
+                    <p>
+                      {isMineMode
+                        ? 'No topics in this subject yet. Add notes and practice questions.'
+                        : 'No official topics yet. Add notes and practice questions for students.'}
+                    </p>
+                    <button type="button" className="btn-add" onClick={() => setModalOpen(true)}>
+                      <Plus size={16} /> Add your first topic
+                    </button>
+                  </>
+                ) : (
+                  <p>No active topics are seeded under this subject yet.</p>
+                )}
+              </div>
+            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- VIEW: TOPIC NOTES LOADING STATE --- */}
+      {activeView === 'notes' && (notesLoading || !activeNotes) && (
+        <div className="study-workspace syllabus-flow">
+          <header className="syllabus-page-header notes-toolbar-header">
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <span className="notes-breadcrumb">Revision Notes</span>
+                <h1>{notesLoading ? 'Loading notes…' : 'Could not load notes'}</h1>
+                {!notesLoading && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '4px 0 0' }}>
+                    Network issue or topic not found. Go back and try again.
+                  </p>
+                )}
+              </div>
+              <div className="syllabus-page-header__actions notes-toolbar-actions">
+                <button
+                  type="button"
+                  className="notes-tool-icon notes-tool-icon--ghost"
+                  onClick={() => setActiveView('topics', { subject: selectedSubject })}
+                  title="Back to topics"
+                  aria-label="Back to topics"
+                >
+                  <ArrowLeft size={18} strokeWidth={1.75} />
+                </button>
+              </div>
+            </div>
+          </header>
+          {notesLoading && (
+            <div className="app-loader-overlay app-loader-overlay--inline" aria-busy="true" aria-label="Loading notes">
+              <div className="app-loader-spinner" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* --- VIEW: TOPIC REVISION NOTES & TEST STARTER --- */}
+      {activeView === 'notes' && activeNotes && !notesLoading && (
+        <div className={`study-workspace syllabus-flow notes-flow${notesFocus ? ' notes-flow--focus' : ''}`}>
+          {!notesFocus && (
+          <header className="syllabus-page-header notes-toolbar-header">
+            <div className="syllabus-page-header__row">
+              <div className="syllabus-page-header__text">
+                <span className="notes-breadcrumb">
+                  {activeNotes.isOwned ? 'My Notes' : 'Official Syllabus'} · Revision Notes
+                </span>
+                <h1>{activeNotes.name}</h1>
+                {!activeNotes.isOwned && user?.role !== 'admin' && (
+                  <p className="notes-local-hint">Highlights & edits on official notes stay on this device only.</p>
+                )}
+                {!activeNotes.isOwned && user?.role === 'admin' && (
+                  <p className="notes-local-hint">You are editing the official syllabus — changes save for all students.</p>
+                )}
+              </div>
+              <div className="syllabus-page-header__actions notes-toolbar-actions">
+                <button
+                  type="button"
+                  className={`notes-tool-icon notes-tool-icon--edit${isEditingNotes ? ' is-active' : ''}`}
+                  onClick={() => (isEditingNotes ? handleStopEditing() : handleEditToggle())}
+                  title={isEditingNotes ? 'Stop editing' : 'Edit notes'}
+                  aria-label={isEditingNotes ? 'Stop editing' : 'Edit notes'}
+                  aria-pressed={isEditingNotes}
+                >
+                  {isEditingNotes ? <X size={18} strokeWidth={1.75} /> : <Pencil size={18} strokeWidth={1.75} />}
+                </button>
+                <button
+                  type="button"
+                  className="notes-tool-icon sticky-launch-btn"
+                  onClick={() => onOpenNotesDock?.()}
+                  title="Quick Notes"
+                  aria-label="Quick Notes"
+                >
+                  <NotebookPen size={18} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  className={`notes-tool-icon${showActionsMenu ? ' is-open' : ''}`}
+                  onClick={() => setShowActionsMenu(!showActionsMenu)}
+                  title="Actions"
+                  aria-label="Actions"
+                  aria-expanded={showActionsMenu}
+                >
+                  <MoreHorizontal size={18} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  className="notes-tool-icon notes-tool-icon--ghost"
+                  onClick={() => { setIsEditingNotes(false); setActiveView('topics', { subject: selectedSubject }); setShowActionsMenu(false); }}
+                  title="Back to topics"
+                  aria-label="Back to topics"
+                >
+                  <ArrowLeft size={18} strokeWidth={1.75} />
+                </button>
+
+                {showActionsMenu && (
+                  <div className="notes-actions-dropdown">
+                    <button type="button" className={`notes-action-btn ${isEditingNotes ? 'active' : ''}`} onClick={() => { handleEditToggle(); }}>
+                      {isEditingNotes ? <X size={16} /> : <Pencil size={16} />}
+                      {isEditingNotes ? 'Stop Editing' : 'Edit Notes'}
+                    </button>
+                    {isEditingNotes && (
+                      <button type="button" className="notes-action-btn save" onClick={handleSaveNotes} disabled={isSaving}>
+                        <Save size={16} />
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                      </button>
+                    )}
+                    <button type="button" className="notes-action-btn" onClick={handleCopyNotes}>
+                      <Copy size={16} /> Copy text
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleExportNotes}>
+                      <Download size={16} /> Export .txt
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleAddBookmark}>
+                      <Bookmark size={16} /> Bookmark position
+                    </button>
+                    <button type="button" className="notes-action-btn" onClick={handleResetLocalEdits}>
+                      <RotateCcw size={16} /> Reset local edits
+                    </button>
+                    <button type="button" className="btn-take-test" onClick={async () => {
+                      const res = await startTest(Number(testQuestionCount) || 25);
+                      setShowActionsMenu(false);
+                      if (res?.noQuestions) {
+                        setNoQuestionsFlash(true);
+                        setTimeout(() => setNoQuestionsFlash(false), 4000);
+                      }
+                    }}>
+                      <ClipboardList size={16} />
+                      Take Topic Test ({testQuestionCount || 25} Q)
+                    </button>
+
+                    <div className="notes-actions-divider">
+                      <span>Highlighter Tools</span>
+                      <div className="notes-actions-highlights">
+                        <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
+                        <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
+                        <button type="button" className="hl-btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
+                        <button type="button" className="hl-btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
+                        <button type="button" className="hl-btn hl-clear" onClick={handleRemoveHighlight} title="Remove Highlight"><Eraser size={16}/></button>
+                      </div>
+                    </div>
+                    {manageFlash && <p className="notes-manage-flash">{manageFlash}</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+          )}
+
+          <div className="notes-reader-panel">
+              {!notesFocus && (
+              <div className={`notes-reading-toolbar${showReadTools ? ' notes-reading-toolbar--open' : ''}`}>
+                <div className="notes-reading-progress" aria-hidden="true">
+                  <div className="notes-reading-progress__fill" style={{ width: `${readingProgress}%` }} />
+                </div>
+
+                <div className="notes-reading-compact">
+                  <span className="notes-reading-compact__meta">
+                    <span className="notes-reading-compact__pct">{readingProgress}%</span>
+                    <span className="notes-reading-compact__label">read</span>
+                  </span>
+                  <div className="notes-reading-compact__actions">
+                    <div className="notes-quick-hl" role="group" aria-label="Highlight selection">
+                      <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Highlight yellow" />
+                      <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Highlight green" />
+                      <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink" aria-label="Highlight pink" />
+                      <button type="button" className="notes-quick-hl__btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue" aria-label="Highlight blue" />
+                      <button type="button" className="notes-quick-hl__btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight" aria-label="Remove highlight">
+                        <Eraser size={11} strokeWidth={2} />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className={`notes-tools-toggle${showReadTools ? ' active' : ''}`}
+                      onClick={() => setShowReadTools((v) => !v)}
+                      aria-expanded={showReadTools}
+                    >
+                      <Settings2 size={15} />
+                      {showReadTools ? 'Hide' : 'Aa'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="notes-reading-panel">
+                  <div className="notes-reading-controls">
+                    <span className="notes-reading-controls__label">Read</span>
+                    <button type="button" className={`notes-ctrl-btn notes-ctrl-btn--size-sm${notesFontSize === 'sm' ? ' active' : ''}`} onClick={() => setNotesFontSize('sm')} title="Smaller text">A</button>
+                    <button type="button" className={`notes-ctrl-btn notes-ctrl-btn--size-md${notesFontSize === 'md' ? ' active' : ''}`} onClick={() => setNotesFontSize('md')} title="Default text">A</button>
+                    <button type="button" className={`notes-ctrl-btn notes-ctrl-btn--size-lg${notesFontSize === 'lg' ? ' active' : ''}`} onClick={() => setNotesFontSize('lg')} title="Larger text">A</button>
+                    <button type="button" className={`notes-ctrl-btn${notesComfort ? ' active' : ''}`} onClick={() => setNotesComfort((v) => !v)} title="Serif font + warm background">
+                      <Eye size={14} /> Serif
+                    </button>
+                    <button type="button" className={`notes-ctrl-btn${notesLineSpacing === 'relaxed' ? ' active' : ''}`} onClick={() => setNotesLineSpacing((s) => s === 'relaxed' ? 'normal' : 'relaxed')} title="Wider line spacing">
+                      <AlignJustify size={14} /> Spacing
+                    </button>
+                    {tocItems.length > 0 && (
+                      <button type="button" className={`notes-ctrl-btn${showToc ? ' active' : ''}`} onClick={() => setShowToc((v) => !v)} title="Table of contents">
+                        <List size={14} /> Contents
+                      </button>
+                    )}
+                    <button type="button" className={`notes-ctrl-btn${notesFocus ? ' active' : ''}`} onClick={() => { setNotesFocus(true); setShowToc(false); setShowReadTools(false); }} title="Focus reading mode">
+                      <Maximize2 size={14} />
+                      Focus
+                    </button>
+                    <button
+                      type="button"
+                      className="notes-ctrl-btn notes-ctrl-btn--icon"
+                      onClick={() => onOpenNotesDock?.()}
+                      title="Quick Notes"
+                      aria-label="Quick Notes"
+                    >
+                      <NotebookPen size={15} strokeWidth={1.75} />
+                    </button>
+                    <button type="button" className="notes-ctrl-btn" onClick={handleAddBookmark} title="Bookmark current position">
+                      <Bookmark size={14} /> Mark
+                    </button>
+                    <span className="notes-reading-controls__label notes-reading-pct notes-reading-pct--desktop">{readingProgress}%</span>
+                  </div>
+                  <form className="notes-search-bar" onSubmit={handleSearchSubmit}>
+                    <Search size={15} className="notes-search-bar__icon" />
+                    <input
+                      type="search"
+                      className="notes-search-bar__input"
+                      placeholder="Search in these notes…"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                    {searchMatchCount > 0 && (
+                      <span className="notes-search-count">{searchMatchIdx + 1}/{searchMatchCount}</span>
+                    )}
+                    <button
+                      type="button"
+                      className="notes-search-nav"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); goToSearchMatch(-1); }}
+                      disabled={!searchQuery.trim() || searchMatchCount < 1}
+                      aria-label="Previous match"
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="notes-search-nav"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); goToSearchMatch(1); }}
+                      disabled={!searchQuery.trim() || searchMatchCount < 1}
+                      aria-label="Next match"
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                  </form>
+                </div>
+              </div>
+              )}
+
+              {notesFocus && !isEditingNotes && (
+                <div className="notes-focus-bar" role="toolbar" aria-label="Focus mode">
+                  <button
+                    type="button"
+                    className="notes-focus-bar__exit"
+                    onClick={() => setNotesFocus(false)}
+                    title="Exit focus"
+                    aria-label="Exit focus"
+                  >
+                    <Minimize2 size={15} />
+                    Exit
+                  </button>
+                  <div className="notes-quick-hl notes-quick-hl--focus" role="group" aria-label="Highlight selection">
+                    <button type="button" className="notes-quick-hl__btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Highlight yellow" />
+                    <button type="button" className="notes-quick-hl__btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Highlight green" />
+                    <button type="button" className="notes-quick-hl__btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink" aria-label="Highlight pink" />
+                    <button type="button" className="notes-quick-hl__btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue" aria-label="Highlight blue" />
+                    <button type="button" className="notes-quick-hl__btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight" aria-label="Remove highlight">
+                      <Eraser size={11} strokeWidth={2} />
+                    </button>
+                  </div>
+                  {searchMatchCount > 0 && (
+                    <span className="notes-focus-bar__search">{searchMatchIdx + 1}/{searchMatchCount}</span>
+                  )}
+                </div>
+              )}
+
+              <div className="notes-reading-layout">
+                {!notesFocus && showToc && tocItems.length > 0 && (
+                  <aside className="notes-toc">
+                    <p className="notes-toc__title">Jump to section</p>
+                    <ul className="notes-toc__list">
+                      {tocItems.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className={`notes-toc__link${item.level === 3 ? ' notes-toc__link--h3' : ''}`}
+                            onClick={() => scrollToSection(item.id)}
+                          >
+                            {item.text}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                    {bookmarks.length > 0 && (
+                      <div className="notes-bookmarks">
+                        <p className="notes-toc__title">Bookmarks</p>
+                        <ul className="notes-toc__list">
+                          {bookmarks.map((bm) => (
+                            <li key={bm.id} className="notes-bookmark-row">
+                              <button type="button" className="notes-toc__link" onClick={() => jumpToBookmark(bm)}>
+                                {bm.label}
+                              </button>
+                              <button type="button" className="notes-bookmark-del" onClick={() => removeBookmark(bm.id)} aria-label="Remove bookmark">
+                                <X size={12} />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </aside>
+                )}
+
+                {!notesFocus && !showToc && bookmarks.length > 0 && (
+                  <aside className="notes-toc notes-toc--bookmarks-only">
+                    <p className="notes-toc__title">Bookmarks</p>
+                    <ul className="notes-toc__list">
+                      {bookmarks.map((bm) => (
+                        <li key={bm.id} className="notes-bookmark-row">
+                          <button type="button" className="notes-toc__link" onClick={() => jumpToBookmark(bm)}>
+                            {bm.label}
+                          </button>
+                          <button type="button" className="notes-bookmark-del" onClick={() => removeBookmark(bm.id)} aria-label="Remove bookmark">
+                            <X size={12} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </aside>
+                )}
+
+              <article className={`notes-sheet notes-sheet--premium${notesComfort ? ' notes-sheet--comfort' : ''}${isEditingNotes ? ' notes-sheet--editing' : ''}`}>
+                <header className="notes-sheet-header notes-sheet-header--desktop">
+                  <div className="notes-sheet-meta">
+                    <span className="notes-sheet-label">Topic notes</span>
+                    <span className="notes-sheet-topic">{activeNotes.name}</span>
+                  </div>
+                  {isEditingNotes && (
+                    <span className="notes-edit-badge">Editing</span>
+                  )}
+                </header>
+
+                {isEditingNotes && (
+                  <div className="notes-inline-toolbar notes-inline-toolbar--top" role="toolbar" aria-label="Note formatting">
+                    <span className="notes-toolbar-label">Write</span>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('bold')} title="Bold"><Bold size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('italic')} title="Italic"><Italic size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('underline')} title="Underline"><Underline size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h2')} title="Heading"><Heading2 size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h3')} title="Subheading"><Heading3 size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertUnorderedList')} title="Bullet list"><List size={15} /></button>
+                    <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertOrderedList')} title="Numbered list"><ListOrdered size={15} /></button>
+                    <span className="notes-toolbar-sep" aria-hidden />
+                    <span className="notes-toolbar-label">Highlight</span>
+                    <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-pink" onClick={() => handleHighlight('pink')} title="Pink"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-blue" onClick={() => handleHighlight('blue')} title="Blue"><Highlighter size={16}/></button>
+                    <button type="button" className="hl-btn hl-clear" onClick={handleRemoveHighlight} title="Remove highlight"><Eraser size={16}/></button>
+                    <button type="button" className="notes-fmt-btn notes-fmt-btn--save" onClick={handleSaveNotes} disabled={isSaving} title="Save">
+                      <Save size={15} /> {isSaving ? '…' : 'Save'}
+                    </button>
+                  </div>
+                )}
+
+                <div ref={notesScrollRef} className="notes-reader-scroll" onScroll={handleNotesScroll}>
+                <div
+                  ref={notesRef}
+                  className={`notes-reader notes-reader--size-${notesFontSize} notes-reader--spacing-${notesLineSpacing}${notesComfort ? ' notes-reader--comfort' : ''} ${isEditingNotes ? 'editing' : ''}`}
+                  id="notes-content-view"
+                  contentEditable={isEditingNotes}
+                  suppressContentEditableWarning
+                  onPaste={handleNotesPaste}
+                  data-placeholder="Tap to start writing your notes…"
+                />
+
+                {!isEditingNotes && !notesFocus && (
+                <footer className="notes-sheet-footer">
+                  {noQuestionsFlash ? (
+                    <div className="notes-no-questions-msg">
+                      <span>No practice questions for this topic yet.</span>
+                      <p>Check back later or switch to another topic to keep learning.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* DB question count badge */}
+                      {availableQCount > 0 ? (
+                        <p className="notes-footer-hint">
+                          <strong className="notes-q-count-badge">{availableQCount}</strong> questions available in DB — choose how many to attempt:
+                        </p>
+                      ) : (
+                        <p className="notes-footer-hint">Lock it in — test yourself while it is fresh.</p>
+                      )}
+                      <div className="notes-test-launcher">
+                        <label className="notes-test-count-label" htmlFor="test-q-count">
+                          No. of Q:
+                        </label>
+                        <input
+                          id="test-q-count"
+                          type="number"
+                          className="notes-test-count-input"
+                          min={1}
+                          max={999}
+                          value={testQuestionCount}
+                          onChange={(e) => {
+                            const input = e.target.value;
+                            if (input === '') {
+                              setTestQuestionCount('');
+                            } else {
+                              const v = parseInt(input, 10);
+                              if (!Number.isNaN(v) && v >= 1) setTestQuestionCount(v);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value === '') {
+                              setTestQuestionCount(25);
+                            }
+                          }}
+                          onFocus={(e) => e.target.select()}
+                          aria-label="Number of test questions"
+                        />
+                        {availableQCount > 0 && Number(testQuestionCount) > availableQCount && (
+                          <span className="notes-test-repeat-hint">♻️ questions repeat</span>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-take-test notes-cta-btn"
+                          onClick={async () => {
+                            const res = await startTest(Number(testQuestionCount) || 25);
+                            if (res?.noQuestions) {
+                              setNoQuestionsFlash(true);
+                              setTimeout(() => setNoQuestionsFlash(false), 4000);
+                            }
+                          }}
+                        >
+                          <ClipboardList size={18} />
+                          Start Test
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </footer>
+                )}
+                </div>
+
+                {isEditingNotes && (
+                  <div className="notes-edit-dock" role="toolbar" aria-label="Save and format">
+                    <div className="notes-edit-dock__formats">
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('bold')} title="Bold"><Bold size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('italic')} title="Italic"><Italic size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('formatBlock', 'h2')} title="Heading"><Heading2 size={16} /></button>
+                      <button type="button" className="notes-fmt-btn" onClick={() => runFormat('insertUnorderedList')} title="Bullet list"><List size={16} /></button>
+                      <button type="button" className="hl-btn hl-yellow" onClick={() => handleHighlight('yellow')} title="Yellow" aria-label="Yellow highlight" />
+                      <button type="button" className="hl-btn hl-green" onClick={() => handleHighlight('green')} title="Green" aria-label="Green highlight" />
+                    </div>
+                    <div className="notes-edit-dock__actions">
+                      <button type="button" className="notes-edit-dock__done" onClick={handleStopEditing}>
+                        Done
+                      </button>
+                      <button type="button" className="notes-edit-dock__save" onClick={handleSaveNotes} disabled={isSaving}>
+                        <Save size={16} />
+                        {isSaving ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
+              </div>
+
+            {showScrollTop && (
+              <button type="button" className="notes-scroll-top" onClick={scrollNotesToTop} aria-label="Scroll to top">
+                <ArrowUp size={20} />
+              </button>
+            )}
+            {manageFlash && !showActionsMenu && (
+              <div className="notes-toast">{manageFlash}</div>
+            )}
+          </div>
+
+        </div>
+      )}
+    </>
+  );
+}

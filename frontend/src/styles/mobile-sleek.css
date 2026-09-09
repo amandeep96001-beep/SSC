@@ -169,6 +169,8 @@
     max-height: 100% !important;
     min-height: 0 !important;
     overflow: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     flex: 1 1 auto !important;
   }
 
@@ -602,7 +604,7 @@
 [data-theme="dark"] .notes-reader td,
 [data-theme="dark"] .notes-reader th,
 [data-theme="dark"] .notes-reader .notes-lead {
-  color: #dce0f0 !important;
+  color: #e8ebf8 !important;
 }
 
 [data-theme="dark"] .notes-reader h1,
@@ -612,7 +614,7 @@
 [data-theme="dark"] .notes-reader .notes-section-title,
 [data-theme="dark"] .notes-reader strong,
 [data-theme="dark"] .notes-reader b {
-  color: #f4f5fc !important;
+  color: #fafbff !important;
 }
 
 [data-theme="light"] .notes-reader,
@@ -621,7 +623,7 @@
 [data-theme="light"] .notes-reader span,
 [data-theme="light"] .notes-reader div,
 [data-theme="light"] .notes-reader .notes-lead {
-  color: #252b42 !important;
+  color: #1e2438 !important;
 }
 
 [data-theme="light"] .notes-reader h1,
@@ -631,7 +633,7 @@
 [data-theme="light"] .notes-reader .notes-section-title,
 [data-theme="light"] .notes-reader strong,
 [data-theme="light"] .notes-reader b {
-  color: #1a1d2e !important;
+  color: #12152a !important;
 }
 
 .notes-sheet--comfort .notes-reader,

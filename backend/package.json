@@ -2,15 +2,18 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "seed": "node scripts/seed.js",
-    "migrate-data": "node scripts/migrateEmbeddedData.js",
-    "clean-db": "node scripts/clean_duplicates.js",
-    "clean-topic-dupes": "node scripts/clean_topic_duplicates.js",
+    "start": "node dist/server.js",
+    "dev": "tsx watch server.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
+    "seed": "tsx scripts/seed.ts",
+    "seed-vocab-options": "tsx scripts/seedVocabOptions.ts",
+    "migrate-data": "tsx scripts/migrateEmbeddedData.ts",
+    "clean-db": "tsx scripts/clean_duplicates.ts",
+    "clean-topic-dupes": "tsx scripts/clean_topic_duplicates.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -33,6 +36,17 @@
     "nodemailer": "^9.0.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/hpp": "^0.2.7",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.13.3",
+    "@types/nodemailer": "^7.0.12",
+    "nodemon": "^3.1.14",
+    "tsx": "^4.23.13",
+    "typescript": "~5.9.3"
   }
 }

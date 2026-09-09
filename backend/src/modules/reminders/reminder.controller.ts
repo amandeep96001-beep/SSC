@@ -1,0 +1,217 @@
+import type { RequestHandler } from 'express';
+import Reminder from './reminder.model.js';
+import type { ReminderRepeat } from './reminder.model.js';
+import AppNotification from './notification.model.js';
+import { normalizeTime } from './reminder.time.js';
+import User from '../auth/user.model.js';
+import { sendReminderEmail } from './reminder.mail.js';
+
+interface ReminderClientSource {
+  toObject?: () => ReminderClientSource;
+  _id: unknown;
+  title: string;
+  message?: string;
+  time: string;
+  date?: string | null;
+  repeat: string;
+  timezone?: string;
+  enabled?: boolean;
+  lastFiredKey?: string | null;
+  lastFiredAt?: Date | null;
+  createdAt?: Date;
+}
+
+function toClient(doc: ReminderClientSource) {
+  const r = doc.toObject ? doc.toObject() : doc;
+  return {
+    id: String(r._id),
+    title: r.title,
+    message: r.message || '',
+    time: r.time,
+    date: r.date || null,
+    repeat: r.repeat,
+    timezone: r.timezone || 'Asia/Kolkata',
+    enabled: Boolean(r.enabled),
+    lastFiredKey: r.lastFiredKey || null,
+    lastFiredAt: r.lastFiredAt || null,
+    createdAt: r.createdAt,
+  };
+}
+
+export const listReminders: RequestHandler = async (req, res, next) => {
+  try {
+    const rows = await Reminder.find({ userId: req.user!.id }).sort({ createdAt: -1 }).lean();
+    res.json({ status: 'success', count: rows.length, data: rows.map(toClient) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createReminder: RequestHandler = async (req, res, next) => {
+  try {
+    const time = normalizeTime(req.body.time);
+    if (!time) {
+      return res.status(400).json({ status: 'error', message: 'Valid time (HH:mm) is required.' });
+    }
+    const title = String(req.body.title || '').trim();
+    if (!title) {
+      return res.status(400).json({ status: 'error', message: 'Title is required.' });
+    }
+    const repeat: ReminderRepeat = ['once', 'daily', 'weekdays'].includes(req.body.repeat)
+      ? req.body.repeat
+      : 'daily';
+    const date = repeat === 'once' ? (req.body.date || null) : null;
+    if (repeat === 'once' && !date) {
+      return res.status(400).json({ status: 'error', message: 'Date is required for one-time reminders.' });
+    }
+
+    let email = req.user!.email;
+    if (!email) {
+      const u = await User.findById(req.user!.id).select('email').lean();
+      email = u?.email || undefined;
+    }
+
+    const row = await Reminder.create({
+      userId: req.user!.id,
+      username: req.user!.username,
+      email: email || undefined,
+      title,
+      message: String(req.body.message || '').trim().slice(0, 200),
+      time,
+      date,
+      repeat,
+      timezone: req.body.timezone || 'Asia/Kolkata',
+      enabled: req.body.enabled !== false,
+    });
+
+    res.status(201).json({ status: 'success', data: toClient(row) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateReminder: RequestHandler = async (req, res, next) => {
+  try {
+    const row = await Reminder.findOne({ _id: req.params.id, userId: req.user!.id });
+    if (!row) {
+      return res.status(404).json({ status: 'error', message: 'Reminder not found.' });
+    }
+
+    if (req.body.title != null) {
+      const title = String(req.body.title).trim();
+      if (!title) return res.status(400).json({ status: 'error', message: 'Title cannot be empty.' });
+      row.title = title;
+    }
+    if (req.body.message != null) row.message = String(req.body.message).trim().slice(0, 200);
+    if (req.body.time != null) {
+      const time = normalizeTime(req.body.time);
+      if (!time) return res.status(400).json({ status: 'error', message: 'Invalid time.' });
+      row.time = time;
+      row.lastFiredKey = null;
+    }
+    if (req.body.repeat != null && ['once', 'daily', 'weekdays'].includes(req.body.repeat)) {
+      row.repeat = req.body.repeat as ReminderRepeat;
+      if (row.repeat !== 'once') row.date = null;
+      row.lastFiredKey = null;
+    }
+    if (req.body.date != null) row.date = row.repeat === 'once' ? req.body.date : null;
+    if (typeof req.body.enabled === 'boolean') row.enabled = req.body.enabled;
+    if (req.body.timezone) row.timezone = req.body.timezone;
+
+    await row.save();
+    res.json({ status: 'success', data: toClient(row) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteReminder: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await Reminder.deleteOne({ _id: req.params.id, userId: req.user!.id });
+    if (!result.deletedCount) {
+      return res.status(404).json({ status: 'error', message: 'Reminder not found.' });
+    }
+    res.json({ status: 'success', message: 'Reminder deleted.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const listNotifications: RequestHandler = async (req, res, next) => {
+  try {
+    const unreadOnly = String(req.query.unread || '') === '1';
+    const filter: { userId: string; read?: boolean } = { userId: req.user!.id };
+    if (unreadOnly) filter.read = false;
+    const rows = await AppNotification.find(filter).sort({ createdAt: -1 }).limit(40).lean();
+    res.json({
+      status: 'success',
+      count: rows.length,
+      data: rows.map((n) => ({
+        id: String(n._id),
+        title: n.title,
+        body: n.body || '',
+        kind: n.kind,
+        read: Boolean(n.read),
+        createdAt: n.createdAt,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const markNotificationsRead: RequestHandler = async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids : null;
+    const filter: { userId: string; read: boolean; _id?: { $in: unknown[] } } = { userId: req.user!.id, read: false };
+    if (ids?.length) filter._id = { $in: ids };
+    const result = await AppNotification.updateMany(filter, { $set: { read: true } });
+    res.json({ status: 'success', modified: result.modifiedCount || 0 });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/** Instant test: push in-app notification + send email to the signed-in user. */
+export const testNotify: RequestHandler = async (req, res, next) => {
+  try {
+    let email = req.user!.email;
+    if (!email) {
+      const u = await User.findById(req.user!.id).select('email').lean();
+      email = u?.email || undefined;
+    }
+
+    const title = 'Study reminder (test)';
+    const body = 'This is a test. Real reminders will look like this — email + app alert.';
+
+    const notif = await AppNotification.create({
+      userId: req.user!.id,
+      title,
+      body,
+      kind: 'reminder',
+      read: true, // test already shown in UI — don't re-toast via poller
+    });
+
+    let mail: { sent: boolean; reason?: string } = { sent: false, reason: 'no_email' };
+    if (email) {
+      mail = await sendReminderEmail({
+        email,
+        title,
+        message: body,
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      });
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        notificationId: String(notif._id),
+        email: email || null,
+        mailSent: Boolean(mail.sent),
+        mailReason: mail.reason || null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
