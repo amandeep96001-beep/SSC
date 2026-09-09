@@ -27,6 +27,17 @@ services:
       # Public URL used by Render cron/pinger to keep the free instance awake.
       - key: KEEPALIVE_URL
         value: https://ssc-0p96.onrender.com
+      # Required for OTP / forgot-password emails (set in Render dashboard).
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
 
   # Ping the API every 5 minutes to prevent Render free-tier sleep.
   - type: cron

@@ -7,6 +7,33 @@ export function normalizeEmail(raw: unknown): string {
   return String(raw || '').trim().toLowerCase();
 }
 
+/**
+ * Addresses that may refer to the same mailbox.
+ * Gmail ignores dots / plus-tags — older validator.normalizeEmail() also rewrote those,
+ * so DB rows may be either dotted or collapsed.
+ */
+export function emailAliases(raw: unknown): string[] {
+  const email = normalizeEmail(raw);
+  if (!email) return [];
+  const out = new Set<string>([email]);
+  const at = email.lastIndexOf('@');
+  if (at <= 0) return [...out];
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  if (domain === 'gmail.com' || domain === 'googlemail.com') {
+    const base = local.split('+')[0].replace(/\./g, '');
+    out.add(`${base}@gmail.com`);
+    out.add(`${base}@googlemail.com`);
+  }
+  return [...out];
+}
+
+export async function findUserByEmail(raw: unknown) {
+  const aliases = emailAliases(raw);
+  if (!aliases.length) return null;
+  return User.findOne({ email: { $in: aliases } });
+}
+
 export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email);
 }
@@ -63,7 +90,7 @@ export async function upsertUserFromEmail({
   const normalized = normalizeEmail(email);
   let user = await User.findOne({
     $or: [
-      { email: normalized },
+      { email: { $in: emailAliases(normalized) } },
       ...(googleId ? [{ googleId: String(googleId) }] : []),
     ],
   });

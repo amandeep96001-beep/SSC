@@ -16,8 +16,10 @@ const passwordRules = body('password')
   .matches(/[0-9]/)
   .withMessage('Password must include at least one number.');
 
+// Do not use express-validator normalizeEmail() — it strips Gmail dots/plus tags and
+// diverges from Google-stored addresses and our trim+lowercase normalizeEmail().
 export const registerValidation = [
-  body('email').trim().isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('email').trim().isEmail().withMessage('Enter a valid email address.'),
   passwordRules,
   usernameRules,
 ];
@@ -46,16 +48,14 @@ export const otpRequestValidation = [
   body('email')
     .trim()
     .isEmail()
-    .withMessage('Enter a valid email address.')
-    .normalizeEmail(),
+    .withMessage('Enter a valid email address.'),
 ];
 
 export const otpVerifyValidation = [
   body('email')
     .trim()
     .isEmail()
-    .withMessage('Enter a valid email address.')
-    .normalizeEmail(),
+    .withMessage('Enter a valid email address.'),
   body('code')
     .trim()
     .matches(/^\d{6}$/)
@@ -66,16 +66,14 @@ export const forgotPasswordValidation = [
   body('email')
     .trim()
     .isEmail()
-    .withMessage('Enter a valid email address.')
-    .normalizeEmail(),
+    .withMessage('Enter a valid email address.'),
 ];
 
 export const resetPasswordValidation = [
   body('email')
     .trim()
     .isEmail()
-    .withMessage('Enter a valid email address.')
-    .normalizeEmail(),
+    .withMessage('Enter a valid email address.'),
   body('code')
     .trim()
     .matches(/^\d{6}$/)

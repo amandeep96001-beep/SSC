@@ -14,6 +14,8 @@ import { verifyGoogleIdToken, exchangeGoogleAuthCode } from './google.util.js';
 import {
   normalizeEmail,
   isValidEmail,
+  emailAliases,
+  findUserByEmail,
   upsertUserFromEmail,
   hashOtpCode,
   otpHashesMatch,
@@ -153,7 +155,8 @@ async function createAndStoreOtp(
   const code = generateOtpCode();
   const codeHash = hashOtpCode(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
-  await OtpChallenge.deleteMany({ email, purpose });
+  const aliases = emailAliases(email);
+  await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
   await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0, pendingData });
   const mail = await sendOtpEmail(email, code, { purpose });
   const debugOtp =
@@ -164,12 +167,13 @@ async function createAndStoreOtp(
 }
 
 async function consumeOtpChallenge(email: string, code: string, purpose: OtpPurpose) {
-  const challenge = await OtpChallenge.findOne({ email, purpose }).sort({ expiresAt: -1 });
+  const aliases = emailAliases(email);
+  const challenge = await OtpChallenge.findOne({ email: { $in: aliases }, purpose }).sort({ expiresAt: -1 });
   if (!challenge || challenge.expiresAt.getTime() < Date.now()) {
     return { ok: false as const, status: 401, message: 'OTP expired. Request a new code.' };
   }
   if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
-    await OtpChallenge.deleteMany({ email, purpose });
+    await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
     return { ok: false as const, status: 429, message: 'Too many incorrect attempts. Request a new code.' };
   }
   if (!otpHashesMatch(challenge.codeHash, hashOtpCode(code))) {
@@ -177,7 +181,7 @@ async function consumeOtpChallenge(email: string, code: string, purpose: OtpPurp
     await challenge.save();
     return { ok: false as const, status: 401, message: 'Incorrect OTP. Try again.' };
   }
-  await OtpChallenge.deleteMany({ email, purpose });
+  await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
   return { ok: true as const, pendingData: challenge.pendingData };
 }
 
@@ -194,7 +198,7 @@ export const register: RequestHandler = async (req, res, next) => {
       });
     }
 
-    const existingEmail = await User.findOne({ email }).lean();
+    const existingEmail = await findUserByEmail(email);
     if (existingEmail) {
       return res.status(409).json({
         status: 'error',
@@ -254,7 +258,7 @@ export const login: RequestHandler = async (req, res, next) => {
     }
 
     const user = isValidEmail(identifier)
-      ? await User.findOne({ email: normalizeEmail(identifier) })
+      ? await findUserByEmail(identifier)
       : await User.findOne({ username: identifier });
 
     if (!user || !user.password) {
@@ -465,20 +469,23 @@ export const requestOtp: RequestHandler = async (req, res, next) => {
       return res.status(400).json({ status: 'error', message: 'Enter a valid email address.' });
     }
 
-    const user = await User.findOne({ email }).lean();
+    const aliases = emailAliases(email);
+    const user = await findUserByEmail(email);
+    const accountEmail = user?.email || email;
     if (user?.emailVerified) {
       return res.json({
         status: 'success',
         message: 'Email already verified. Sign in with your password.',
-        data: { email, alreadyVerified: true },
+        data: { email: accountEmail, alreadyVerified: true },
       });
     }
 
     // Pending registration keeps user data on the OTP challenge until verify.
-    const pending = await OtpChallenge.findOne({ email, purpose: 'email_verify' })
+    const pending = await OtpChallenge.findOne({ email: { $in: aliases }, purpose: 'email_verify' })
       .sort({ expiresAt: -1 })
       .lean();
     const pendingData = pending?.pendingData || null;
+    const otpEmail = pending?.email || accountEmail;
 
     if (!user && !pendingData) {
       return res.json({
@@ -488,14 +495,14 @@ export const requestOtp: RequestHandler = async (req, res, next) => {
       });
     }
 
-    const { mail, debugOtp } = await createAndStoreOtp(email, 'email_verify', pendingData);
+    const { mail, debugOtp } = await createAndStoreOtp(otpEmail, 'email_verify', pendingData);
     res.json({
       status: 'success',
       message: mail.sent
         ? 'Verification OTP sent to your email.'
         : 'Could not deliver email. Use the on-screen code (local) or fix SMTP.',
       data: {
-        email,
+        email: otpEmail,
         mailSent: Boolean(mail.sent),
         ...(debugOtp ? { debugOtp } : {}),
       },
@@ -526,7 +533,7 @@ export const verifyOtp: RequestHandler = async (req, res, next) => {
       });
     }
 
-    let user = await User.findOne({ email });
+    let user = await findUserByEmail(email);
     
     // If user doesn't exist, this was a registration verification. Create the user now.
     if (!user) {
@@ -579,16 +586,18 @@ export const forgotPassword: RequestHandler = async (req, res, next) => {
       data: { email, mailSent: true },
     };
 
-    const user = await User.findOne({ email }).lean();
-    if (!user) {
+    const user = await findUserByEmail(email);
+    if (!user?.email) {
       return res.json(generic);
     }
 
-    const { debugOtp } = await createAndStoreOtp(email, 'password_reset');
+    const accountEmail = user.email;
+    const { mail, debugOtp } = await createAndStoreOtp(accountEmail, 'password_reset');
     return res.json({
       ...generic,
       data: {
-        ...generic.data,
+        email: accountEmail,
+        mailSent: Boolean(mail.sent),
         ...(debugOtp ? { debugOtp } : {}),
       },
     });
@@ -614,15 +623,15 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
       });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
+    const user = await findUserByEmail(email);
+    if (!user?.email) {
       return res.status(401).json({
         status: 'error',
         message: 'Invalid or expired reset code.',
       });
     }
 
-    const consumed = await consumeOtpChallenge(email, code, 'password_reset');
+    const consumed = await consumeOtpChallenge(user.email, code, 'password_reset');
     if (!consumed.ok) {
       return res.status(consumed.status).json({
         status: 'error',
@@ -633,13 +642,13 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
     user.password = await hashPassword(password);
     user.emailVerified = true;
     user.tokenVersion = (user.tokenVersion ?? 0) + 1;
-    if (resolveRoleByEmail(email) === 'admin') user.role = 'admin';
+    if (resolveRoleByEmail(user.email) === 'admin') user.role = 'admin';
     await user.save();
 
     return res.json({
       status: 'success',
       message: 'Password updated. Sign in with your new password.',
-      data: { email, reset: true },
+      data: { email: user.email, reset: true },
     });
   } catch (error) {
     next(error);

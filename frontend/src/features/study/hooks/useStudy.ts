@@ -181,8 +181,8 @@ export function useStudy() {
   const registerApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/register', body, { timeout: 25000 }), []));
   const requestOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/request', body, { timeout: 20000 }), []));
   const verifyOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/verify', body), []));
-  const forgotPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/forgot', body, { timeout: 20000 }), []));
-  const resetPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/reset', body), []));
+  const forgotPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/forgot', body, { timeout: 35000 }), []));
+  const resetPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/reset', body, { timeout: 20000 }), []));
   const googleAuthApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/google', body), []));
   const updateProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/progress', body), []));
   const updateMockProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/mock-progress', body), []));

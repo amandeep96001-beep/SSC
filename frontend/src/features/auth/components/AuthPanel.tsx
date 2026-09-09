@@ -624,7 +624,7 @@ export function AuthPanel({
     try {
       const res = await forgotPassword(email.trim());
       if (!res.success) {
-        toastAuthError('Unable to send reset code. Please try again.');
+        toastAuthError(res.message || 'Unable to send reset code. Please try again.');
         return;
       }
       setEmail(res.email || email.trim());
@@ -633,10 +633,16 @@ export function AuthPanel({
       setConfirmPassword('');
       setOtpDigits(Array(OTP_LEN).fill(''));
       setResendIn(30);
-      showAppToast('If that email exists, a reset code was sent.', {
-        variant: 'success',
-        durationMs: 7000,
-      });
+      const delivered = res.mailSent !== false;
+      setMailSent(delivered);
+      showAppToast(
+        delivered
+          ? 'If that email exists, a reset code was sent. Check your inbox (and spam).'
+          : (import.meta.env.DEV && res.debugOtp
+            ? `Use code ${res.debugOtp}`
+            : 'Could not email the code. Check SMTP settings or try again.'),
+        { variant: delivered ? 'success' : 'warn', durationMs: 10000 },
+      );
       requestAnimationFrame(() => focusOtp(0));
     } finally {
       setIsSubmitting(false);
@@ -669,7 +675,7 @@ export function AuthPanel({
     try {
       const res = await resetPassword(email, otpValue, password);
       if (!res.success) {
-        toastAuthError('Password reset failed. Please try again.');
+        toastAuthError(res.message || 'Password reset failed. Please try again.');
         return;
       }
       showAppToast('Password updated. Sign in with your new password.', {
@@ -890,6 +896,13 @@ export function AuthPanel({
 
         {mode === 'reset' && (
           <form onSubmit={handleReset} className="auth-form" noValidate>
+            <div className={`auth-otp-banner ${mailSent ? '' : 'auth-otp-banner--warn'}`}>
+              <Mail size={18} aria-hidden />
+              <div>
+                <strong>{mailSent ? 'Reset code sent' : 'Email not delivered'}</strong>
+                <span>{maskEmail(email)}</span>
+              </div>
+            </div>
             <div className="form-group">
               <label htmlFor="reset-otp-0">Reset code</label>
               <div
