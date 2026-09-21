@@ -79,9 +79,13 @@ export class ProgressService {
     } = body;
 
     const scopedExamId = examId ? String(examId).trim() : null;
+    const scopedMockTestId = mockTestId ? String(mockTestId).trim() : '';
+    if (!scopedMockTestId) {
+      throw badRequest('mockTestId is required.');
+    }
     const attemptFilter: { username: string; mockTestId: string; examId?: string } = {
       username,
-      mockTestId: String(mockTestId),
+      mockTestId: scopedMockTestId,
     };
     if (scopedExamId) attemptFilter.examId = scopedExamId;
 
@@ -90,7 +94,7 @@ export class ProgressService {
     await mockProgressRepository.create({
       username,
       examId: scopedExamId,
-      mockTestId: String(mockTestId),
+      mockTestId: scopedMockTestId,
       title: String(title ?? ''),
       score: Number(score) || 0,
       correct: Number(correct) || 0,

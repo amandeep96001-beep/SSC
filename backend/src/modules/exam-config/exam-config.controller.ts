@@ -17,7 +17,7 @@ export class ExamConfigController {
   upsertExamConfig = asyncHandler(async (req, res) => {
     const result = await this.examConfigService.upsertExamConfig(
       paramStr(req.params.examId),
-      req.body.subjects,
+      req.body?.subjects,
     );
     return ok(res, result);
   });

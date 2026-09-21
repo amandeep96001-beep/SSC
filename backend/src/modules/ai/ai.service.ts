@@ -46,15 +46,20 @@ function isUsableExplanation(text: unknown): text is string {
 }
 
 async function tryPollinations(prompt: string, retries = 2): Promise<string> {
-  const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=openai`;
+  const url = 'https://text.pollinations.ai/openai';
 
   for (let i = 0; i < retries; i++) {
     const res = await fetch(url, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'text/plain, */*',
+        Accept: 'text/plain, application/json, */*',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'openai',
+      }),
       signal: AbortSignal.timeout(30000),
     });
 
@@ -149,8 +154,8 @@ export class AiService {
     question?: unknown;
     correctAnswer?: unknown;
     explanation?: unknown;
-  }) {
-    const { question, correctAnswer, explanation } = body;
+  } | undefined) {
+    const { question, correctAnswer, explanation } = body ?? {};
     if (!question || !correctAnswer) {
       throw badRequest('question and correctAnswer are required.');
     }

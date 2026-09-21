@@ -23,7 +23,7 @@ export class ExamConfigService {
 
   async upsertExamConfig(examIdRaw: string, subjectsRaw: unknown) {
     const examId = String(examIdRaw || '').trim();
-    if (!EXAM_DEFAULTS[examId]) {
+    if (!Object.prototype.hasOwnProperty.call(EXAM_DEFAULTS, examId)) {
       throw notFound('Unknown exam id.');
     }
     const subjects = Array.isArray(subjectsRaw)

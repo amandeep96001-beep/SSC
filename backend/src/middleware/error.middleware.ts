@@ -52,11 +52,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   };
 
   const isProd = process.env.NODE_ENV === 'production';
-  const operational = isHttpError(error) || (typeof error.statusCode === 'number' && error.statusCode < 500);
 
   let clientMessage: string;
   if (isProd) {
-    if (statusCode >= 500 && !operational) {
+    if (!isHttpError(error)) {
       clientMessage = safeMessages[statusCode] || 'Internal server error';
     } else {
       clientMessage = error.message || safeMessages[statusCode] || 'Request failed';

@@ -16,7 +16,10 @@ export class BaseRepository<T> {
   }
 
   async updateById(id: string, data: Partial<T>) {
-    return this.model.findByIdAndUpdate(id, data, { new: true });
+    return this.model.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    });
   }
 
   async deleteById(id: string) {

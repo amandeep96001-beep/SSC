@@ -32,6 +32,7 @@ export function signToken(user: {
 }): string {
   return jwt.sign(
     {
+      typ: 'access',
       userId: user._id.toString(),
       username: user.username,
       email: user.email || undefined,
@@ -45,7 +46,13 @@ export function signToken(user: {
 
 export function verifyToken(token: string): AuthTokenPayload {
   const payload = jwt.verify(token, getSecret(), { algorithms: [JWT_ALG] });
-  if (typeof payload === 'string' || !payload || typeof payload !== 'object' || !('userId' in payload)) {
+  if (
+    typeof payload === 'string'
+    || !payload
+    || typeof payload !== 'object'
+    || payload.typ !== 'access'
+    || typeof payload.userId !== 'string'
+  ) {
     throw new Error('Invalid token payload');
   }
   return payload as AuthTokenPayload;

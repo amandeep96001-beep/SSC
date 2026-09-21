@@ -23,6 +23,7 @@ export interface PublicUserSource {
 }
 
 export interface AuthTokenPayload extends JwtPayload {
+  typ: 'access';
   userId: string;
   username: string;
   email?: string;

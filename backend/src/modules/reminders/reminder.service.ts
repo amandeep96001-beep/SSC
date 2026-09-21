@@ -119,6 +119,9 @@ export class ReminderService {
       row.lastFiredKey = null;
     }
     if (body.date != null) row.date = row.repeat === 'once' ? (body.date as string) : null;
+    if (row.repeat === 'once' && !row.date) {
+      throw badRequest('Date is required for one-time reminders.');
+    }
     if (typeof body.enabled === 'boolean') row.enabled = body.enabled;
     if (body.timezone) row.timezone = String(body.timezone);
 

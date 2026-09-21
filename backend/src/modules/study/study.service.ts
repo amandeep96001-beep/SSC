@@ -113,7 +113,7 @@ export class StudyService {
       };
     } catch (error) {
       if (mongoErrorCode(error) === 11000) {
-        throw conflict('You already have a subject with this name.');
+        throw conflict('An official subject with this name already exists.');
       }
       throw error;
     }
@@ -237,7 +237,9 @@ export class StudyService {
   pool = shuffle(pool);
 
   let testQuestions: typeof pool;
-  if (requestedCount <= pool.length) {
+  if (pool.length === 0) {
+    testQuestions = [];
+  } else if (requestedCount <= pool.length) {
     testQuestions = pool.slice(0, requestedCount);
   } else {
     testQuestions = [];

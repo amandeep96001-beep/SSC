@@ -29,6 +29,7 @@ export class PrepService {
 
   async deleteNote(idRaw: string) {
     const id = parseInt(idRaw, 10);
+    if (Number.isNaN(id)) throw badRequest('Note id must be a number.');
     const success = await prepRepository.deleteNote(id);
     if (!success) throw notFound(`Note with id ${id} not found.`);
     return { message: `Note with id ${id} successfully deleted.` };

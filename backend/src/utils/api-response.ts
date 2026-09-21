@@ -5,7 +5,7 @@ export interface ApiSuccessBody {
 }
 
 export function ok(res: Response, payload: ApiSuccessBody = {}, statusCode = 200): Response {
-  return res.status(statusCode).json({ status: 'success', ...payload });
+  return res.status(statusCode).json({ ...payload, status: 'success' });
 }
 
 export function created(res: Response, payload: ApiSuccessBody = {}): Response {
