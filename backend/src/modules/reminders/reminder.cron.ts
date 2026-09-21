@@ -112,9 +112,6 @@ async function processDueReminders() {
   }
 }
 
-/**
- * Minute ticker — fires due study reminders (email + in-app notification).
- */
 export function startReminderCron() {
   if (started) return;
   if (String(process.env.REMINDER_CRON || '1') === '0') {

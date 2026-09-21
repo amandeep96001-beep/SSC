@@ -147,6 +147,7 @@ export function Dashboard() {
     requestOtp,
     verifyOtp,
     forgotPassword,
+    verifyPasswordResetOtp,
     resetPassword,
     loginWithGoogle,
     logoutUser,
@@ -843,6 +844,7 @@ export function Dashboard() {
         requestOtp={requestOtp}
         verifyOtp={verifyOtp}
         forgotPassword={forgotPassword}
+        verifyPasswordResetOtp={verifyPasswordResetOtp}
         resetPassword={resetPassword}
         loginWithGoogle={loginWithGoogle}
       />

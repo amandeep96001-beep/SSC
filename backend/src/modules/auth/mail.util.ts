@@ -235,8 +235,8 @@ export async function sendOtpEmail(
     ? {
       title: 'ExamPrep password reset',
       subtitle: 'Password reset',
-      lead: 'Enter this 6-digit code to reset your password.',
-      text: `Your ExamPrep password reset code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+      lead: 'Enter this 6-digit code to verify your identity. After verification you will receive a secure link to set a new password.',
+      text: `Your ExamPrep password reset code is ${code}. It expires in 10 minutes.\n\nAfter verifying the code, use the secure reset link shown in the app to choose a new password.\n\nIf you did not request this, ignore this email.`,
     }
     : {
       title: 'ExamPrep login code',

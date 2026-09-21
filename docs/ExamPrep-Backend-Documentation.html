@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ExamPrep — Backend Documentation</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #1a1d26;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+  h1 { font-size: 22pt; margin: 0 0 6px; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 14pt;
+    margin: 28px 0 10px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #3b4cca;
+    color: #1e2a5a;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11.5pt; margin: 18px 0 6px; color: #2a3568; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; color: #334155; }
+  p, li { margin: 4px 0; }
+  ul, ol { padding-left: 1.25rem; margin: 6px 0; }
+  .meta { color: #64748b; font-size: 9.5pt; margin-bottom: 18px; }
+  .cover {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 22px;
+    background: linear-gradient(165deg, #f8fafc, #eef2ff);
+    margin-bottom: 22px;
+  }
+  .cover .tag {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4338ca;
+    margin-bottom: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 8px 0 14px;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #dbe2ea;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #eef2ff; color: #1e2a5a; font-weight: 650; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code, .mono {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 8.5pt;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 8pt;
+    line-height: 1.4;
+    overflow: hidden;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  .box {
+    border-left: 3px solid #6366f1;
+    background: #f8fafc;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+  }
+  .toc a { color: #334155; text-decoration: none; }
+  .toc li { margin: 3px 0; }
+  .footer-note { margin-top: 36px; font-size: 8.5pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+  @media print {
+    body { padding: 0; }
+    .cover { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="tag">ExamPrep · Backend API</div>
+  <h1>Backend Documentation</h1>
+  <p class="meta">
+    Full technical reference for explaining the API — architecture, auth, modules, security, data, deploy.<br/>
+    Stack: <strong>Node.js ≥20 · Express 5 · TypeScript · MongoDB (Mongoose) · JWT · Nodemailer · Google Auth · Gemini (optional)</strong><br/>
+    Live API: <code>https://ssc-0p96.onrender.com</code> · Generated for walkthrough / interview / handover
+  </p>
+</div>
+
+<h2>1. What this backend is</h2>
+<p>
+ExamPrep API powers a competitive-exam prep product (SSC, Banking, Railways, UPSC, CAT, State PSC).
+It serves authentication, syllabus/notes, daily drills, timed topic tests, full mocks, analytics data,
+competition (battle) mode, reminders, exam config, and an optional AI explainer.
+</p>
+<ul>
+  <li><strong>Repo path:</strong> <code>backend/</code></li>
+  <li><strong>Entry:</strong> <code>server.ts</code> → <code>createApp()</code> in <code>src/app.ts</code> → <code>/api</code> router</li>
+  <li><strong>Dev:</strong> <code>npm run dev</code> (tsx watch) · <strong>Prod:</strong> <code>npm run build</code> → <code>node dist/server.js</code></li>
+</ul>
+
+<h2>2. Table of contents</h2>
+<ol class="toc">
+  <li>Boot &amp; request pipeline</li>
+  <li>Auth system (register, OTP, Google, JWT)</li>
+  <li>API modules &amp; endpoints</li>
+  <li>MongoDB models</li>
+  <li>Security</li>
+  <li>Environment variables</li>
+  <li>Scripts &amp; data</li>
+  <li>Deploy (Render)</li>
+  <li>How to explain it in 2 minutes</li>
+</ol>
+
+<h2>3. Boot &amp; request pipeline</h2>
+<h3>3.1 Process start (<code>server.ts</code>)</h3>
+<ol>
+  <li>Load <code>.env</code> only when not on Render (hosted uses dashboard env).</li>
+  <li><code>validateEnv()</code> — production requires Mongo, JWT_SECRET (≥32), FRONTEND_URL.</li>
+  <li><code>connectDB()</code> — hosted exits if Mongo fails; local can run degraded.</li>
+  <li>Mount Express app, start reminder cron (every minute unless <code>REMINDER_CRON=0</code>).</li>
+  <li>Listen on <code>PORT</code> (default 5000).</li>
+</ol>
+
+<h3>3.2 Middleware order (<code>app.ts</code>)</h3>
+<pre>Helmet → Permissions-Policy → Compression
+→ CORS gate → CORS
+→ JSON / urlencoded (2mb)
+→ mongoSanitize → HPP → Morgan
+→ Rate limit (hosted only, 600 / 15 min on /api)
+→ /api router
+→ / , /health , /keepalive
+→ 404 → error handler</pre>
+
+<table>
+  <tr><th>Path</th><th>Purpose</th></tr>
+  <tr><td><code>GET /</code></td><td>API identity</td></tr>
+  <tr><td><code>GET /health</code></td><td>Readiness — <strong>503</strong> if Mongo down</td></tr>
+  <tr><td><code>GET /keepalive</code></td><td>Liveness / free-tier wake ping — always 200</td></tr>
+  <tr><td><code>GET /api/health</code></td><td>Same readiness under /api</td></tr>
+</table>
+
+<h3>3.3 API zones</h3>
+<ul>
+  <li><strong>Public:</strong> <code>/api/auth/*</code> (with own limiters), <code>/api/auth/google-config</code></li>
+  <li><strong>Protected:</strong> everything else under <code>/api</code> after global <code>requireDb</code> + <code>requireAuth</code></li>
+</ul>
+
+<h2>4. Auth system</h2>
+<p class="box">This is the most important story to tell in an interview: secure session design with OTP, Google, and tokenVersion invalidation.</p>
+
+<h3>4.1 Flows</h3>
+<pre>Register → email OTP (pending user in OtpChallenge) → verify OTP creates User → password login → JWT
+Login (unverified) → force OTP again → then password login
+Google → verify ID token (preferred) or auth-code → upsert user → JWT
+Forgot password → OTP → reset (+ bump tokenVersion) → login
+Logout → tokenVersion++ → old JWTs rejected</pre>
+
+<h3>4.2 Design choices worth explaining</h3>
+<ul>
+  <li><strong>Register does not create User immediately</strong> — password hash + profile sit in OTP <code>pendingData</code> until email verify.</li>
+  <li><strong>OTP codes are hashed</strong> (HMAC with pepper), TTL 10 minutes, max 5 attempts.</li>
+  <li><strong>Forgot password never reveals</strong> whether an email exists (anti-enumeration).</li>
+  <li><strong>Gmail aliases</strong> (dots / plus / googlemail) matched so OTP/login don’t break.</li>
+  <li><strong>Admin role only from <code>ADMIN_EMAIL</code></strong> — never trusted from the client.</li>
+  <li><strong>JWT carries <code>tv</code> (tokenVersion)</strong> — logout &amp; password reset invalidate all sessions.</li>
+  <li><strong>Google preferred path = ID token</strong> (no client secret). Code flow optional if <code>GOOGLE_CLIENT_SECRET</code> set.</li>
+  <li><strong>Passwords:</strong> bcrypt cost 12; legacy SHA-256 upgraded on successful login.</li>
+</ul>
+
+<h3>4.3 Auth endpoints</h3>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+  <tr><td>GET</td><td>/api/auth/google-config</td><td>Public clientId + codeFlowEnabled</td></tr>
+  <tr><td>POST</td><td>/api/auth/register</td><td>Start registration + send OTP</td></tr>
+  <tr><td>POST</td><td>/api/auth/login</td><td>Email/username + password</td></tr>
+  <tr><td>POST</td><td>/api/auth/otp/request</td><td>Resend verify OTP</td></tr>
+  <tr><td>POST</td><td>/api/auth/otp/verify</td><td>Verify email (no JWT yet)</td></tr>
+  <tr><td>POST</td><td>/api/auth/password/forgot</td><td>Send reset OTP</td></tr>
+  <tr><td>POST</td><td>/api/auth/password/reset</td><td>New password + invalidate sessions</td></tr>
+  <tr><td>POST</td><td>/api/auth/google</td><td>credential or code → session</td></tr>
+  <tr><td>GET</td><td>/api/auth/me</td><td>Current user + progress</td></tr>
+  <tr><td>POST</td><td>/api/auth/logout</td><td>Bump tokenVersion</td></tr>
+  <tr><td>POST</td><td>/api/auth/progress</td><td>Save topic test attempt</td></tr>
+  <tr><td>POST</td><td>/api/auth/mock-progress</td><td>Save mock attempt</td></tr>
+  <tr><td>GET</td><td>/api/auth/progress/export</td><td>CSV (self or admin all)</td></tr>
+  <tr><td>GET</td><td>/api/auth/mock-progress/export</td><td>CSV (self or admin all)</td></tr>
+  <tr><td>GET</td><td>/api/auth/admin/summary</td><td>Admin institute stats</td></tr>
+</table>
+
+<h2>5. Feature modules &amp; endpoints</h2>
+
+<h3>5.1 Study — <code>/api/study</code></h3>
+<p>Subjects, topics, notes, topic tests, vocabulary bank.</p>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Who</th></tr>
+  <tr><td>GET/POST</td><td>/subjects</td><td>Any user</td></tr>
+  <tr><td>DELETE</td><td>/subjects/:subjectName</td><td>Any user</td></tr>
+  <tr><td>GET/POST</td><td>/subjects/:subjectName/topics</td><td>Any user</td></tr>
+  <tr><td>GET</td><td>/topics/:topicId/notes</td><td>Any user</td></tr>
+  <tr><td>GET</td><td>/topics/:topicId/test</td><td>Any user</td></tr>
+  <tr><td>PUT/DELETE</td><td>/topics/:topicId</td><td>Any user</td></tr>
+  <tr><td>GET</td><td>/vocab</td><td>Any user</td></tr>
+  <tr><td>POST / PUT</td><td>/vocab, /vocab/bulk, /vocab/:id</td><td>Admin</td></tr>
+</table>
+
+<h3>5.2 Drill — <code>/api/drill</code></h3>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+  <tr><td>GET</td><td>/next</td><td>Next weighted practice item (TCS / vocab / tables)</td></tr>
+  <tr><td>POST</td><td>/verify</td><td>Check answer; store DrillPerformance</td></tr>
+  <tr><td>GET</td><td>/related</td><td>Related questions for a topic</td></tr>
+</table>
+
+<h3>5.3 Mock — <code>/api/mock</code></h3>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Who</th></tr>
+  <tr><td>GET /</td><td>List mocks</td><td>Any user</td></tr>
+  <tr><td>POST /</td><td>Create mock</td><td>Admin</td></tr>
+  <tr><td>GET /:id</td><td>Full paper</td><td>Any user</td></tr>
+  <tr><td>DELETE /:id</td><td>Delete</td><td>Admin</td></tr>
+</table>
+
+<h3>5.4 Competition — <code>/api/competition</code></h3>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+  <tr><td>GET</td><td>/questions</td><td>Random TCS sample for battle</td></tr>
+  <tr><td>POST</td><td>/submit</td><td>Save score (clamped); return PB + rank</td></tr>
+  <tr><td>GET</td><td>/leaderboard</td><td>Top 10 by subject</td></tr>
+</table>
+
+<h3>5.5 AI — <code>/api/ai</code></h3>
+<p><code>POST /explain</code> — wrong-answer explanation (Gemini → Pollinations fallback → static template). Rate limit 30 / 15 min.</p>
+
+<h3>5.6 Exam config — <code>/api/exam-config</code></h3>
+<p><code>GET /</code> list configs; <code>PUT /:examId</code> admin upsert subject lists per exam (SSC, Banking, …).</p>
+
+<h3>5.7 Questions — <code>/api/questions</code></h3>
+<table>
+  <tr><th>Method</th><th>Path</th><th>Who</th></tr>
+  <tr><td>GET</td><td>/tcs/stats</td><td>Admin</td></tr>
+  <tr><td>POST</td><td>/tcs/bulk</td><td>Admin bulk upload</td></tr>
+  <tr><td>POST</td><td>/add</td><td>Any user contribute to bank</td></tr>
+</table>
+
+<h3>5.8 Reminders — <code>/api/reminders</code></h3>
+<p>CRUD reminders; list/mark/test notifications. Cron emails + creates in-app <code>AppNotification</code>.</p>
+
+<h3>5.9 Prep — <code>/api/prep</code></h3>
+<p>Status ping + legacy sticky notes (admin write). Primary notes live on study topics.</p>
+
+<h2>6. MongoDB models (collections)</h2>
+<table>
+  <tr><th>Model</th><th>Used for</th></tr>
+  <tr><td>User</td><td>Accounts, role, googleId, tokenVersion</td></tr>
+  <tr><td>OtpChallenge</td><td>Hashed OTP + pending register data (TTL)</td></tr>
+  <tr><td>Progress</td><td>Topic test attempts (red/yellow/green)</td></tr>
+  <tr><td>MockProgress</td><td>Full mock attempts</td></tr>
+  <tr><td>Subject / Topic / Question</td><td>Syllabus tree + topic MCQs</td></tr>
+  <tr><td>Vocab</td><td>Word power / idioms / OWS for drills</td></tr>
+  <tr><td>TCSQuestion</td><td>Large MCQ bank (drills + battle)</td></tr>
+  <tr><td>DrillPerformance</td><td>Adaptive weighting (30-day TTL)</td></tr>
+  <tr><td>MockTest</td><td>Full papers with sections</td></tr>
+  <tr><td>CompetitionScore</td><td>Battle leaderboard</td></tr>
+  <tr><td>ExamConfig</td><td>Per-exam subject mapping</td></tr>
+  <tr><td>Reminder / AppNotification</td><td>Schedules + inbox</td></tr>
+</table>
+<p>Static seed/reference JSON also exists under <code>backend/data/chsl/</code> (topics + drills).</p>
+
+<h2>7. Security checklist</h2>
+<ul>
+  <li>Helmet + COOP for Google popups + FedCM Permissions-Policy</li>
+  <li>Strict CORS allowlist (prod Vercel + FRONTEND_URL / FRONTEND_URLS)</li>
+  <li>Global + auth + OTP + AI rate limits on hosted</li>
+  <li>Body size cap 2mb; HPP; Mongo operator / prototype pollution sanitize</li>
+  <li>express-validator on auth/progress bodies</li>
+  <li>No stack traces to clients in production</li>
+  <li>CSV export escapes formula injection (=, +, -, @)</li>
+  <li><code>trust proxy</code> on Render for correct client IPs</li>
+</ul>
+
+<h2>8. Environment variables</h2>
+<h3>Required in production</h3>
+<table>
+  <tr><th>Variable</th><th>Why</th></tr>
+  <tr><td>MONGODB_URI</td><td>Database</td></tr>
+  <tr><td>JWT_SECRET</td><td>≥32 chars signing key</td></tr>
+  <tr><td>FRONTEND_URL</td><td>CORS + email links</td></tr>
+</table>
+<h3>Important optional</h3>
+<table>
+  <tr><th>Variable</th><th>Why</th></tr>
+  <tr><td>ADMIN_EMAIL</td><td>Only admin promotion path</td></tr>
+  <tr><td>GOOGLE_CLIENT_ID / SECRET</td><td>Google sign-in</td></tr>
+  <tr><td>SMTP_*</td><td>OTP + reminder email</td></tr>
+  <tr><td>GEMINI_API_KEY</td><td>AI explanations</td></tr>
+  <tr><td>OTP_PEPPER</td><td>OTP hash pepper</td></tr>
+  <tr><td>FRONTEND_URLS</td><td>Extra CORS origins</td></tr>
+  <tr><td>REMINDER_CRON=0</td><td>Disable cron</td></tr>
+  <tr><td>KEEPALIVE_URL</td><td>Render free-tier ping target</td></tr>
+</table>
+
+<h2>9. Scripts</h2>
+<table>
+  <tr><th>Command</th><th>Purpose</th></tr>
+  <tr><td>npm run seed</td><td>Seed subjects / topics / questions</td></tr>
+  <tr><td>npm run seed-vocab-options</td><td>Vocab distractors + SSC idioms/OWS</td></tr>
+  <tr><td>npm run migrate-data</td><td>Legacy embedded topics → collections</td></tr>
+  <tr><td>npm run clean-db</td><td>Dedupe TCS questions</td></tr>
+  <tr><td>npm run clean-topic-dupes</td><td>Dedupe topic questions</td></tr>
+</table>
+
+<h2>10. Deploy (Render)</h2>
+<ul>
+  <li>Blueprint: <code>render.yaml</code> — web service <code>ssc-backend</code>, free Node, health check <code>/health</code></li>
+  <li>Build: <code>npm install &amp;&amp; npm run build</code> (postinstall also builds)</li>
+  <li>Start: <code>node dist/server.js</code></li>
+  <li>Cron every 5 minutes hits <code>/keepalive</code> to reduce free-tier sleep</li>
+  <li>Frontend on Vercel proxies <code>/api/*</code> → this Render host</li>
+</ul>
+
+<h2>11. Folder map</h2>
+<pre>backend/
+├── server.ts                 # process entry
+├── render.yaml
+├── src/
+│   ├── app.ts                # Express factory
+│   ├── routes/index.ts       # /api map
+│   ├── config/               # db + env
+│   ├── shared/middleware/    # auth, db, validate, sanitize, errors
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── study/
+│   │   ├── drill/
+│   │   ├── mock/
+│   │   ├── competition/
+│   │   ├── ai/
+│   │   ├── exam-config/
+│   │   ├── questions/
+│   │   ├── reminders/
+│   │   └── prep/
+│   └── types/
+├── scripts/                  # seed / migrate / cleanup
+└── data/                     # CHSL JSON reference content</pre>
+
+<h2>12. How to explain this backend (2-minute pitch)</h2>
+<ol>
+  <li>“I built a production-style Express + Mongo API for an exam-prep product.”</li>
+  <li>“Auth is layered: email OTP registration, Google ID-token login, JWT with tokenVersion invalidation, rate limits, and hashed OTPs.”</li>
+  <li>“Domain modules cover syllabus, adaptive drills, mocks, battle mode, reminders, and admin exam config.”</li>
+  <li>“Security is intentional: Helmet, CORS allowlist, sanitize, validation, admin only via ADMIN_EMAIL.”</li>
+  <li>“Deployed on Render with health + keepalive; frontend on Vercel talks through an /api rewrite.”</li>
+</ol>
+
+<p class="footer-note">
+  ExamPrep Backend Documentation · Keep this PDF with the repo for demos and interviews · Source of truth remains the TypeScript under <code>backend/src</code>.
+</p>
+
+</body>
+</html>

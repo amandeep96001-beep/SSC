@@ -13,6 +13,25 @@ class VocabRepository {
     return await Vocab.findById(id);
   }
 
+  async findByIdLean(id: string) {
+    return Vocab.findById(id).lean() as Promise<VocabLean | null>;
+  }
+
+  async findByWordCaseInsensitive(word: string) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return Vocab.findOne({
+      word: new RegExp(`^${escaped}$`, 'i'),
+    }).lean() as Promise<VocabLean | null>;
+  }
+
+  async sampleRelated(filter: Record<string, unknown>, size: number) {
+    return Vocab.aggregate<VocabLean>([{ $match: filter }, { $sample: { size } }]);
+  }
+
+  async findWordsByList(words: string[]) {
+    return Vocab.find({ word: { $in: words } }).select('word').lean();
+  }
+
   async create(vocabData: object) {
     const newVocab = new Vocab(vocabData);
     return await newVocab.save();

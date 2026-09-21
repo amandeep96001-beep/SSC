@@ -1,29 +1,20 @@
-/**
- * Auth routes — /api/auth/*
- *
- * Public endpoints are rate-limited tightly.
- * Session endpoints expect requireAuth from the parent router where noted.
- */
-
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 
+import { register, login, logout, getMe, loginWithGoogle } from './controllers/auth.controller.js';
+import { requestOtp, verifyOtp } from './controllers/otp.controller.js';
 import {
-  register,
-  login,
-  logout,
+  forgotPassword,
+  verifyPasswordResetOtp,
+  resetPassword,
+} from './controllers/password.controller.js';
+import {
   saveProgress,
   saveMockProgress,
-  getMe,
   exportMockProgressCsv,
   exportSyllabusProgressCsv,
-  getAdminSummary,
-  requestOtp,
-  verifyOtp,
-  forgotPassword,
-  resetPassword,
-  loginWithGoogle,
-} from './auth.controller.js';
+} from './controllers/progress.controller.js';
+import { getAdminSummary } from './controllers/admin.controller.js';
 
 import {
   registerValidation,
@@ -33,6 +24,7 @@ import {
   otpRequestValidation,
   otpVerifyValidation,
   forgotPasswordValidation,
+  verifyPasswordResetOtpValidation,
   resetPasswordValidation,
   googleAuthValidation,
 } from './auth.validation.js';
@@ -42,8 +34,6 @@ import { requireAuth, requireAdmin } from '../../shared/middleware/auth.middlewa
 import { requireDb } from '../../shared/middleware/db.middleware.js';
 
 const router = express.Router();
-
-// ___________________________________________ limiters ___________________________________________
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -61,36 +51,24 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// ___________________________________________ register / login ___________________________________________
-
 router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, register);
 router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, login);
-
-// ___________________________________________ otp + password ___________________________________________
 
 router.post('/otp/request', otpLimiter, requireDb, otpRequestValidation, validateRequest, requestOtp);
 router.post('/otp/verify', authLimiter, requireDb, otpVerifyValidation, validateRequest, verifyOtp);
 router.post('/password/forgot', otpLimiter, requireDb, forgotPasswordValidation, validateRequest, forgotPassword);
+router.post('/password/verify-otp', authLimiter, requireDb, verifyPasswordResetOtpValidation, validateRequest, verifyPasswordResetOtp);
 router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, validateRequest, resetPassword);
 
-// ___________________________________________ google ___________________________________________
-
-// Frontend prefers ID token; auth-code popup is optional when GOOGLE_CLIENT_SECRET is set.
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);
-
-// ___________________________________________ session ___________________________________________
 
 router.get('/me', requireAuth, getMe);
 router.post('/logout', requireAuth, logout);
-
-// ___________________________________________ progress ___________________________________________
 
 router.post('/progress', requireAuth, progressValidation, validateRequest, saveProgress);
 router.post('/mock-progress', requireAuth, mockProgressValidation, validateRequest, saveMockProgress);
 router.get('/mock-progress/export', requireAuth, exportMockProgressCsv);
 router.get('/progress/export', requireAuth, exportSyllabusProgressCsv);
-
-// ___________________________________________ admin ___________________________________________
 
 router.get('/admin/summary', requireAuth, requireAdmin, getAdminSummary);
 

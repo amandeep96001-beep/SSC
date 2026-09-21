@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import TCSQuestion from './tcs-question.model.js';
 import type { ITCSQuestion } from './tcs-question.model.js';
-import DrillPerformance from '../drill/drill-performance.model.js';
+import drillPerformanceRepository from '../drill/repositories/drill-performance.repository.js';
 
 // How many days before a correctly-answered question can reappear
 const CORRECT_COOLDOWN_DAYS = 3;
@@ -12,13 +12,33 @@ const WEAK_POOL_PROBABILITY = 0.70;
 // Max performance records to scan per request (keeps queries fast)
 const PERF_SCAN_LIMIT = 300;
 
-interface PerfRecord {
-  _id: mongoose.Types.ObjectId;
-  correct: boolean;
-  seenAt: Date;
+export type TCSQuestionInsert = Pick<
+  ITCSQuestion,
+  'question' | 'options' | 'correctAnswer' | 'explanation' | 'subject' | 'category' | 'year' | 'isImportant'
+>;
+
+export interface RelatedQuestionsInput {
+  subject: string;
+  category?: string | null;
+  excludeIds?: Array<string | mongoose.Types.ObjectId>;
+  excludeQuestion?: string | null;
+  limit?: number;
 }
 
 class TCSQuestionRepository {
+  static async findAllQuestionTexts(): Promise<{ question: string }[]> {
+    return TCSQuestion.find({}, { question: 1 }).lean();
+  }
+
+  static async insertMany(
+    questions: TCSQuestionInsert[],
+    options: { ordered?: boolean } = {},
+  ): Promise<number> {
+    if (questions.length === 0) return 0;
+    const result = await TCSQuestion.insertMany(questions, { ordered: options.ordered ?? false });
+    return result.length;
+  }
+
   static async getRandomBySubject(subject: string) {
     const count = await TCSQuestion.countDocuments({ subject });
     if (count === 0) return null;
@@ -26,19 +46,6 @@ class TCSQuestionRepository {
     return await TCSQuestion.findOne({ subject }).skip(skip).lean();
   }
 
-  /**
-   * Weighted selection for drill sessions.
-   *
-   * Algorithm:
-   *  1. Load user's recent DrillPerformance for this subject (last PERF_SCAN_LIMIT records).
-   *  2. Classify question IDs:
-   *       - "weak"  : answered wrong within WRONG_BOOST_DAYS → HIGH priority
-   *       - "cool"  : answered correctly within CORRECT_COOLDOWN_DAYS → skip (cooldown)
-   *       - "fresh" : everything else (unseen or cooled-down correct) → NORMAL priority
-   *  3. With WEAK_POOL_PROBABILITY, try to serve a "weak" question.
-   *     Otherwise (or if weak pool is empty) serve a "fresh" question.
-   *  4. Falls back to pure random if no performance data exists yet.
-   */
   static async getWeightedQuestion(subject: string, userId: mongoose.Types.ObjectId | string | null | undefined) {
     // No userId → pure random (unauthenticated or first drill)
     if (!userId) return this.getRandomBySubject(subject);
@@ -48,20 +55,11 @@ class TCSQuestionRepository {
     const cooldownCutoff = new Date(now.getTime() - CORRECT_COOLDOWN_DAYS * 86400_000);
     const boostCutoff    = new Date(now.getTime() - WRONG_BOOST_DAYS   * 86400_000);
 
-    // Load most recent result per question for this user+subject
-    const perfRecords = await DrillPerformance.aggregate<PerfRecord>([
-      { $match: { userId: uid, subject } },
-      { $sort: { seenAt: -1 } },
-      { $limit: PERF_SCAN_LIMIT },
-      // Latest result per question
-      {
-        $group: {
-          _id: '$questionId',
-          correct: { $first: '$correct' },
-          seenAt:  { $first: '$seenAt' },
-        }
-      }
-    ]);
+    const perfRecords = await drillPerformanceRepository.getRecentPerfGrouped(
+      uid,
+      subject,
+      PERF_SCAN_LIMIT,
+    );
 
     if (perfRecords.length === 0) {
       // No history yet — pure random
@@ -103,6 +101,10 @@ class TCSQuestionRepository {
     return q || this.getRandomBySubject(subject);
   }
 
+  static async findByIdForVerify(id: string) {
+    return TCSQuestion.findById(id).select('options correctAnswer').lean();
+  }
+
   static async getCountBySubject() {
     const rows = await TCSQuestion.aggregate<{ _id: string | null; count: number }>([
       { $group: { _id: '$subject', count: { $sum: 1 } } },
@@ -140,13 +142,7 @@ class TCSQuestionRepository {
     excludeIds = [],
     excludeQuestion,
     limit = 10,
-  }: {
-    subject: string;
-    category?: string | null;
-    excludeIds?: unknown[];
-    excludeQuestion?: unknown;
-    limit?: number;
-  }) {
+  }: RelatedQuestionsInput) {
     const filter: Record<string, unknown> = { subject };
     if (category) filter.category = category;
 
@@ -154,7 +150,7 @@ class TCSQuestionRepository {
     if (excludeQuestion) {
       andConditions.push({ question: { $ne: String(excludeQuestion) } });
     }
-    if (excludeIds && excludeIds.length > 0) {
+    if (excludeIds.length > 0) {
       const objectIds = excludeIds
         .filter((id) => mongoose.Types.ObjectId.isValid(String(id)))
         .map((id) => new mongoose.Types.ObjectId(String(id)));

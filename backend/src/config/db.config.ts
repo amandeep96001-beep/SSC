@@ -1,18 +1,9 @@
-/**
- * Database connection
- *
- * Force IPv4 first (Atlas / some hosts misbehave on IPv6).
- * Subject index migration runs once after connect so old unique `name_1` does not bite.
- */
-
 import dns from 'node:dns';
 import mongoose, { type ConnectOptions } from 'mongoose';
 import Subject from '../modules/study/subject.model.js';
 import { errorMessage, mongoErrorCode, mongoErrorCodeName } from '../types/domain.js';
 
 dns.setDefaultResultOrder('ipv4first');
-
-// ___________________________________________ options ___________________________________________
 
 const CONNECT_OPTS: ConnectOptions = {
   maxPoolSize: 10,
@@ -62,8 +53,6 @@ function bindConnectionListeners(): void {
   });
 }
 
-// ___________________________________________ migrate ___________________________________________
-
 async function migrateSubjectIndexes(): Promise<void> {
   try {
     await Subject.collection.dropIndex('name_1');
@@ -74,8 +63,6 @@ async function migrateSubjectIndexes(): Promise<void> {
   }
   await Subject.syncIndexes();
 }
-
-// ___________________________________________ connect ___________________________________________
 
 export async function connectDB(): Promise<void> {
   const uri = normalizeUri(process.env.MONGODB_URI);

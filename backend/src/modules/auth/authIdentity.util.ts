@@ -1,60 +1,24 @@
-/**
- * Auth identity helpers
- *
- * Email normalization, Gmail alias matching, OTP hashing, username allocation,
- * and upsert-from-Google / verified-email flows.
- */
-
 import crypto from 'crypto';
-import User from './user.model.js';
+import userRepository from './repositories/user.repository.js';
+import {
+  normalizeEmail,
+  emailAliases,
+  resolveRoleByEmail,
+} from './email.util.js';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export {
+  normalizeEmail,
+  emailAliases,
+  isValidEmail,
+  resolveRoleByEmail,
+} from './email.util.js';
 
-// ___________________________________________ email ___________________________________________
-
-export function normalizeEmail(raw: unknown): string {
-  return String(raw || '').trim().toLowerCase();
+export interface UpsertUserFromEmailInput {
+  email: string;
+  googleId?: string;
+  displayName?: string;
+  emailVerified?: boolean;
 }
-
-/**
- * Addresses that may refer to the same mailbox.
- * Gmail ignores dots / plus-tags — older validator.normalizeEmail() also rewrote those,
- * so DB rows may be either dotted or collapsed.
- */
-export function emailAliases(raw: unknown): string[] {
-  const email = normalizeEmail(raw);
-  if (!email) return [];
-  const out = new Set<string>([email]);
-  const at = email.lastIndexOf('@');
-  if (at <= 0) return [...out];
-  const local = email.slice(0, at);
-  const domain = email.slice(at + 1);
-  if (domain === 'gmail.com' || domain === 'googlemail.com') {
-    const base = local.split('+')[0].replace(/\./g, '');
-    out.add(`${base}@gmail.com`);
-    out.add(`${base}@googlemail.com`);
-  }
-  return [...out];
-}
-
-export async function findUserByEmail(raw: unknown) {
-  const aliases = emailAliases(raw);
-  if (!aliases.length) return null;
-  return User.findOne({ email: { $in: aliases } });
-}
-
-export function isValidEmail(email: string): boolean {
-  return EMAIL_RE.test(email);
-}
-
-export function resolveRoleByEmail(email: string): 'user' | 'admin' {
-  const adminEmail = normalizeEmail(process.env.ADMIN_EMAIL || '');
-  if (adminEmail && email === adminEmail) return 'admin';
-  return 'user';
-}
-
-// ___________________________________________ username ___________________________________________
-
 
 function slugFromEmail(email: string): string {
   const local = String(email).split('@')[0] || 'user';
@@ -70,13 +34,12 @@ function slugFromName(name: unknown, email: string): string {
   return slugFromEmail(email);
 }
 
-/** Unique username for progress keyed by username */
 export async function allocateUsername(seed: unknown): Promise<string> {
   let base = String(seed || 'user').replace(/[^a-zA-Z0-9_]/g, '').slice(0, 24);
   if (base.length < 3) base = `user${base}`;
   let candidate = base.slice(0, 32);
   let n = 0;
-  while (await User.exists({ username: candidate })) {
+  while (await userRepository.existsByUsername(candidate)) {
     n += 1;
     const suffix = String(n);
     candidate = `${base.slice(0, 32 - suffix.length - 1)}_${suffix}`;
@@ -88,33 +51,28 @@ export async function allocateUsername(seed: unknown): Promise<string> {
   return candidate;
 }
 
-// ___________________________________________ upsert user ___________________________________________
+export async function findUserByEmail(raw: unknown) {
+  return userRepository.findByEmail(raw);
+}
 
 export async function upsertUserFromEmail({
   email,
   googleId,
   displayName,
   emailVerified,
-}: {
-  email: unknown;
-  googleId?: unknown;
-  displayName?: unknown;
-  emailVerified?: unknown;
-}) {
+}: UpsertUserFromEmailInput) {
   const normalized = normalizeEmail(email);
-  let user = await User.findOne({
-    $or: [
-      { email: { $in: emailAliases(normalized) } },
-      ...(googleId ? [{ googleId: String(googleId) }] : []),
-    ],
-  });
+  let user = await userRepository.findByEmailOrGoogleId(
+    normalized,
+    googleId ? String(googleId) : null,
+  );
 
   const role = resolveRoleByEmail(normalized);
   const markVerified = emailVerified === true || Boolean(googleId);
 
   if (!user) {
     const username = await allocateUsername(slugFromName(displayName, normalized));
-    user = await User.create({
+    user = await userRepository.create({
       username,
       email: normalized,
       googleId: googleId ? String(googleId) : undefined,
@@ -144,13 +102,11 @@ export async function upsertUserFromEmail({
       user.role = role;
       dirty = true;
     }
-    if (dirty) await user.save();
+    if (dirty) await userRepository.save(user);
   }
 
   return user;
 }
-
-// ___________________________________________ otp crypto ___________________________________________
 
 export function hashOtpCode(code: string): string {
   const pepper = process.env.OTP_PEPPER || process.env.JWT_SECRET || 'dev-otp-pepper';

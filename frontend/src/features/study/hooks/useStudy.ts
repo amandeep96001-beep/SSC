@@ -182,6 +182,7 @@ export function useStudy() {
   const requestOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/request', body, { timeout: 20000 }), []));
   const verifyOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/verify', body), []));
   const forgotPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/forgot', body, { timeout: 35000 }), []));
+  const verifyPasswordResetOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/verify-otp', body, { timeout: 20000 }), []));
   const resetPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/reset', body, { timeout: 20000 }), []));
   const googleAuthApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/google', body), []));
   const updateProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/progress', body), []));
@@ -307,8 +308,27 @@ export function useStudy() {
     return { success: false, message: forgotPasswordApi.error || 'Unable to send reset code.' };
   }, [forgotPasswordApi]);
 
-  const resetPassword = useCallback(async (email: string, code: string, password: string) => {
-    const res = await resetPasswordApi.execute({ email, code, password });
+  const verifyPasswordResetOtp = useCallback(async (email: string, code: string) => {
+    const res = await verifyPasswordResetOtpApi.execute({ email, code });
+    const payload = res.success ? asAuthPayload(res.data?.data) : null;
+    if (res.success && payload?.resetToken && payload?.resetUrl) {
+      return {
+        success: true,
+        message: res.data?.message,
+        email: payload.email || email,
+        resetToken: payload.resetToken,
+        resetUrl: payload.resetUrl,
+        expiresIn: typeof payload.expiresIn === 'number' ? payload.expiresIn : 900,
+      };
+    }
+    return {
+      success: false,
+      message: verifyPasswordResetOtpApi.error || 'OTP verification failed.',
+    };
+  }, [verifyPasswordResetOtpApi]);
+
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    const res = await resetPasswordApi.execute({ token, password });
     const payload = res.success ? asAuthPayload(res.data?.data) : null;
     if (res.success && payload?.reset) {
       return { success: true, message: res.data.message };
@@ -990,6 +1010,7 @@ export function useStudy() {
     requestOtp,
     verifyOtp,
     forgotPassword,
+    verifyPasswordResetOtp,
     resetPassword,
     loginWithGoogle,
     logoutUser,

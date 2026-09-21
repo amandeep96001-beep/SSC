@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>ExamPrep — Frontend Documentation</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #1a1d26;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+  h1 { font-size: 22pt; margin: 0 0 6px; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 14pt;
+    margin: 28px 0 10px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #0f766e;
+    color: #134e4a;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 11.5pt; margin: 18px 0 6px; color: #115e59; page-break-after: avoid; }
+  h4 { font-size: 10.5pt; margin: 12px 0 4px; color: #334155; }
+  p, li { margin: 4px 0; }
+  ul, ol { padding-left: 1.25rem; margin: 6px 0; }
+  .meta { color: #64748b; font-size: 9.5pt; margin-bottom: 18px; }
+  .cover {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 22px;
+    background: linear-gradient(165deg, #f8fafc, #ecfdf5);
+    margin-bottom: 22px;
+  }
+  .cover .tag {
+    display: inline-block;
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #0f766e;
+    margin-bottom: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin: 8px 0 14px;
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 1px solid #dbe2ea;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #ecfdf5; color: #134e4a; font-weight: 650; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  code {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 8.5pt;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 8pt;
+    line-height: 1.4;
+    overflow: hidden;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  .box {
+    border-left: 3px solid #14b8a6;
+    background: #f8fafc;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+  }
+  .toc a { color: #334155; text-decoration: none; }
+  .footer-note { margin-top: 36px; font-size: 8.5pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+  @media print {
+    body { padding: 0; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="tag">ExamPrep · Frontend SPA</div>
+  <h1>Frontend Documentation</h1>
+  <p class="meta">
+    Full product + engineering reference — screens, auth UI, navigation, features, styling, deploy.<br/>
+    Stack: <strong>React 19 · Vite 8 · TypeScript · React Router 7 · GSAP · Recharts · Lucide · KaTeX</strong><br/>
+    Live app: <code>https://myexamprep-theta.vercel.app</code> · Generated for walkthrough / interview / handover
+  </p>
+</div>
+
+<h2>1. What this frontend is</h2>
+<p>
+ExamPrep is a single-page app for competitive exam preparation. After login, users pick a target exam
+and get a calm LMS shell: daily focus, syllabus notes, revision deck, drills, timed topic tests,
+full mocks, performance/analytics, MCQ battle, reminders, and an admin console.
+</p>
+<ul>
+  <li><strong>Repo path:</strong> <code>frontend/</code></li>
+  <li><strong>Brand:</strong> ExamPrep (<code>src/shared/brand.ts</code>)</li>
+  <li><strong>Dev:</strong> <code>npm run dev</code> (Vite :5173, proxies <code>/api</code> → localhost:5000)</li>
+  <li><strong>Build:</strong> <code>npm run build</code> → <code>dist/</code> on Vercel</li>
+</ul>
+
+<h2>2. Table of contents</h2>
+<ol class="toc">
+  <li>Boot architecture</li>
+  <li>Navigation model (activeView + URLs)</li>
+  <li>Auth UI</li>
+  <li>Every feature / screen</li>
+  <li>Shared services &amp; state</li>
+  <li>Styling &amp; mobile</li>
+  <li>Env + Vercel</li>
+  <li>User journeys to demo</li>
+  <li>2-minute pitch</li>
+</ol>
+
+<h2>3. Boot architecture</h2>
+<pre>index.html
+  → main.tsx
+    → ThemeProvider + ExamProvider + ErrorBoundary + HelmetProvider
+      → App.tsx (BrowserRouter)
+        → Dashboard.tsx   ← ONE shell for the whole product</pre>
+<p class="box">
+There is no multi-page React Router tree of pages. URLs map to an <code>activeView</code> string;
+<code>Dashboard</code> decides what to render. That keeps deep-links and reload working while the UI stays one app.
+</p>
+
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td><code>src/main.tsx</code></td><td>Root, providers, back-trap install, global CSS</td></tr>
+  <tr><td><code>src/app/App.tsx</code></td><td>BrowserRouter → Dashboard</td></tr>
+  <tr><td><code>src/app/paths.ts</code></td><td>path ↔ activeView mapping</td></tr>
+  <tr><td><code>src/features/dashboard/Dashboard.tsx</code></td><td>Auth gate, sidebar, lazy workspaces, exams fullscreen</td></tr>
+</table>
+
+<h2>4. Navigation model</h2>
+<table>
+  <tr><th>URL</th><th>activeView</th><th>Screen</th></tr>
+  <tr><td>/ or /home</td><td>home</td><td>What to Study</td></tr>
+  <tr><td>/drill</td><td>drill</td><td>Daily Drills</td></tr>
+  <tr><td>/study</td><td>subjects</td><td>Syllabus subjects</td></tr>
+  <tr><td>/study/:subject</td><td>topics</td><td>Topic list</td></tr>
+  <tr><td>/study/:subject/:topicId</td><td>notes</td><td>Notes reader</td></tr>
+  <tr><td>/study/.../test</td><td>test</td><td>Topic timed exam (fullscreen)</td></tr>
+  <tr><td>/results</td><td>results</td><td>Exam results (fullscreen)</td></tr>
+  <tr><td>/mock</td><td>mock</td><td>Full mocks list</td></tr>
+  <tr><td>/mock/:id/exam</td><td>mock_exam_active</td><td>Full mock portal (fullscreen)</td></tr>
+  <tr><td>/roadmap</td><td>roadmap</td><td>Syllabus roadmap</td></tr>
+  <tr><td>/revision</td><td>revision</td><td>Revision deck</td></tr>
+  <tr><td>/performance</td><td>performance</td><td>Attempt history</td></tr>
+  <tr><td>/analytics</td><td>analytics</td><td>Charts</td></tr>
+  <tr><td>/competition</td><td>competition</td><td>MCQ Battle</td></tr>
+  <tr><td>/reminders</td><td>reminders</td><td>Study reminders</td></tr>
+  <tr><td>/admin</td><td>admin</td><td>Admin console</td></tr>
+</table>
+<p>Query <code>?source=mine</code> vs official/global syllabus for personal notes.</p>
+
+<h3>Dashboard render branches</h3>
+<pre>!user / no ssc_token     → AuthPanel (no sidebar)
+activeView === test       → ExamPortal fullscreen
+mock_exam_active          → FullMockPortal fullscreen
+results                   → ResultsPortal fullscreen
+else                      → LMS shell: Sidebar + lazy workspace</pre>
+
+<h2>5. Auth UI</h2>
+<p>Implemented in <code>features/auth/components/AuthPanel.tsx</code> + <code>shared/utils/gsi.ts</code>. Handlers live in <code>useStudy</code>.</p>
+<table>
+  <tr><th>Mode</th><th>What user does</th><th>API</th></tr>
+  <tr><td>login</td><td>Email/username + password</td><td>POST /auth/login</td></tr>
+  <tr><td>register → step-2</td><td>Email then password</td><td>POST /auth/register</td></tr>
+  <tr><td>verify</td><td>6-digit OTP</td><td>POST /auth/otp/verify (+ request)</td></tr>
+  <tr><td>forgot / reset</td><td>Email → OTP → new password</td><td>/password/forgot + /reset</td></tr>
+  <tr><td>Google</td><td>Continue with Google</td><td>POST /auth/google</td></tr>
+</table>
+<h3>Google sign-in (worth explaining)</h3>
+<ul>
+  <li>Client ID from <code>VITE_GOOGLE_CLIENT_ID</code> or runtime <code>GET /auth/google-config</code></li>
+  <li><strong>Credential / ID token first</strong> (FedCM / One Tap) — no client secret needed</li>
+  <li>Auth-code popup only if server reports <code>codeFlowEnabled</code></li>
+  <li>Mobile prefers official GIS button (popups unreliable)</li>
+  <li>Vercel + Vite headers: COOP + Permissions-Policy for identity-credentials</li>
+</ul>
+<p>Session: <code>localStorage</code> keys <code>ssc_token</code>, <code>ssc_user</code>. 401 on protected calls clears session.</p>
+<p>Auth page is <strong>viewport-locked</strong> (no page scrollbar) — form densifies to fit.</p>
+
+<h2>6. Features (what you built for users)</h2>
+
+<h3>6.1 What to Study (Home)</h3>
+<ul>
+  <li>Target exam + exam date (ExamPicker / ExamContext)</li>
+  <li>Daily focus checklist, subject shortcuts, strong/weak topics from progress</li>
+  <li>Wrong-vocab CTA into drills; links to reminders &amp; performance</li>
+</ul>
+
+<h3>6.2 Syllabus &amp; Notes</h3>
+<ul>
+  <li>Official (global) vs My Notes (personal) toggle</li>
+  <li>Subject → topics → rich HTML notes (TOC, search, bookmarks, diagrams)</li>
+  <li>Start topic test → TCS-style ExamPortal → Results</li>
+  <li>Sticky notes + floating notes dock</li>
+</ul>
+
+<h3>6.3 Revision Deck</h3>
+<ul>
+  <li>Multiplication / square / cube tables</li>
+  <li>Fraction ↔ percentage reference</li>
+  <li>Vocab CRUD + bulk JSON (idioms, word power, OWS)</li>
+</ul>
+
+<h3>6.4 Syllabus Roadmap</h3>
+<ul>
+  <li>Static per-exam syllabus checklist</li>
+  <li>Topic status rings (pending / in progress / done), notes modal</li>
+  <li>Progress stored client-side</li>
+</ul>
+
+<h3>6.5 Daily Drills</h3>
+<p>Types: table, fraction, percentage, square, cube, vocab, GK / English / Maths / Reasoning MCQ.</p>
+<ul>
+  <li>Wrong-log re-attempt</li>
+  <li>Related questions</li>
+  <li>AI explanation on mistakes</li>
+  <li>Add-questions panel for bank uploads</li>
+</ul>
+
+<h3>6.6 Topic Exam + Results</h3>
+<ul>
+  <li>Fullscreen portal: timer, palette, mark-for-review, clear, save &amp; next</li>
+  <li>Mobile swipe between questions</li>
+  <li>Submit → results with score / accuracy / review</li>
+</ul>
+
+<h3>6.7 Full Mocks</h3>
+<ul>
+  <li>List / create / delete papers (admin create)</li>
+  <li>Section limits by exam profile</li>
+  <li>Timed multi-section FullMockPortal</li>
+  <li>Progress saved via <code>POST /auth/mock-progress</code></li>
+</ul>
+
+<h3>6.8 Performance &amp; Analytics</h3>
+<ul>
+  <li>Performance: attempt tables, status rings, CSV export</li>
+  <li>Analytics: Recharts — mock scores, topic distribution, time spent (exam-filtered)</li>
+</ul>
+
+<h3>6.9 MCQ Battle (Competition)</h3>
+<ul>
+  <li>20 questions × 45s; subjects Mixed / GK / English / Maths / Reasoning</li>
+  <li>Submit score → personal best + rank + leaderboard</li>
+</ul>
+
+<h3>6.10 Reminders</h3>
+<ul>
+  <li>Once / daily / weekdays schedules</li>
+  <li>Browser notifications + server notification poll while logged in</li>
+</ul>
+
+<h3>6.11 Admin</h3>
+<p>Visible when <code>user.role === 'admin'</code> (set by backend ADMIN_EMAIL).</p>
+<ul>
+  <li>Map subjects to exams</li>
+  <li>TCS bank upload (single / bulk / PDF text extract)</li>
+  <li>Mock section patterns</li>
+  <li>Institute stats + CSV tools</li>
+</ul>
+
+<h3>6.12 ExamPicker</h3>
+<p>First-login modal: SSC, Banking, Railways, UPSC, CAT, State PSC, Other — drives marking scheme, mock shape, and Today Focus copy via <code>examProfiles.ts</code>.</p>
+
+<h2>7. Shared layer</h2>
+<table>
+  <tr><th>Piece</th><th>Role</th></tr>
+  <tr><td><code>apiService</code></td><td>HTTP client, Bearer token, timeouts, 401 session clear</td></tr>
+  <tr><td><code>ThemeContext</code></td><td>Light / dark (<code>data-theme</code>)</td></tr>
+  <tr><td><code>ExamContext</code></td><td>Target exam, date, subjects from /exam-config</td></tr>
+  <tr><td><code>useStudy</code></td><td>Auth + syllabus + tests + progress (central hook)</td></tr>
+  <tr><td><code>useDrills</code> / <code>useMockTests</code></td><td>Feature data hooks</td></tr>
+  <tr><td><code>useAppNavigation</code></td><td>activeView ↔ URL</td></tr>
+  <tr><td><code>gsi.ts</code></td><td>Google Identity Services helpers</td></tr>
+  <tr><td><code>backTrap</code></td><td>Smart browser-back inside the SPA</td></tr>
+  <tr><td><code>notesMarkup</code> / KaTeX</td><td>Safe / pretty notes &amp; MCQ text</td></tr>
+  <tr><td><code>appToast</code></td><td>Themed toast notifications</td></tr>
+</table>
+
+<h2>8. Styling &amp; mobile</h2>
+<ul>
+  <li>Fonts: <strong>Manrope</strong> (UI) + <strong>Outfit</strong> (display)</li>
+  <li>Design tokens in <code>styles/index.css</code> — CSS variables for light/dark</li>
+  <li>Global layers: premium-ui, layout, workspace, modals, mobile-layout, mobile-sleek, design-overhaul</li>
+  <li>Feature CSS co-located (auth, exam, drills, study, etc.)</li>
+  <li>GSAP for auth entrance + workspace transitions (respects reduced motion)</li>
+  <li>Mobile: hamburger drawer sidebar; exams fullscreen; touch swipe; auth no-scroll viewport</li>
+</ul>
+
+<h2>9. Environment &amp; deploy</h2>
+<table>
+  <tr><th>Variable</th><th>Use</th></tr>
+  <tr><td>VITE_API_URL</td><td>Optional local API base (ignored on Vercel prod)</td></tr>
+  <tr><td>VITE_GOOGLE_CLIENT_ID</td><td>Google Web client (also injectable from backend .env at build)</td></tr>
+</table>
+<p><strong>API base rules:</strong> on Vercel production → same-origin <code>/api</code> (rewrite to Render). Locally → proxy or localhost:5000.</p>
+<h3>vercel.json</h3>
+<ul>
+  <li>Rewrite <code>/api/:path*</code> → <code>https://ssc-0p96.onrender.com/api/:path*</code></li>
+  <li>SPA fallback → <code>index.html</code></li>
+  <li>Headers: COOP, nosniff, referrer, X-Frame-Options DENY, Permissions-Policy, CSP</li>
+</ul>
+
+<h2>10. Folder map</h2>
+<pre>frontend/
+├── index.html
+├── vercel.json
+├── vite.config.ts
+└── src/
+    ├── main.tsx
+    ├── app/                 # App + path helpers
+    ├── types/app.ts
+    ├── features/
+    │   ├── dashboard/       # shell
+    │   ├── auth/
+    │   ├── home/
+    │   ├── study/
+    │   ├── drills/
+    │   ├── exam/
+    │   ├── mock-tests/
+    │   ├── roadmap/
+    │   ├── analytics/
+    │   ├── competition/
+    │   ├── reminders/
+    │   └── admin/
+    ├── shared/              # api, context, hooks, utils, UI
+    └── styles/              # tokens + layout + mobile</pre>
+
+<h2>11. Demo journeys (use these when explaining)</h2>
+<ol>
+  <li><strong>Sign up:</strong> Register → OTP → ExamPicker → Home</li>
+  <li><strong>Study:</strong> Syllabus → notes → Start test → Results</li>
+  <li><strong>Speed:</strong> Daily Drills → wrong-log → AI explain</li>
+  <li><strong>Paper:</strong> Full Mocks → timed portal → Performance / Analytics</li>
+  <li><strong>Compete:</strong> MCQ Battle → leaderboard</li>
+  <li><strong>Admin:</strong> Map subjects / upload TCS bank / mock pattern</li>
+</ol>
+
+<h2>12. How to explain this frontend (2-minute pitch)</h2>
+<ol>
+  <li>“I built ExamPrep as a React + Vite SPA — one Dashboard shell, URL-synced views, lazy-loaded workspaces.”</li>
+  <li>“Auth UI covers password, OTP, forgot-reset, and Google GIS with credential-first + FedCM headers.”</li>
+  <li>“Product surface includes syllabus notes, revision, adaptive drills, TCS-style exams, full mocks, analytics, battle mode, and reminders.”</li>
+  <li>“Exam-aware UX: ExamPicker + profiles drive marking, mock sections, and Today Focus.”</li>
+  <li>“Shipped on Vercel with /api rewrite to Render, CSP/COOP headers, and a polished light/dark mobile-ready UI.”</li>
+</ol>
+
+<p class="footer-note">
+  ExamPrep Frontend Documentation · Pair with the Backend PDF for a full-stack story · Source of truth is <code>frontend/src</code>.
+</p>
+
+</body>
+</html>

@@ -1,8 +1,3 @@
-/**
- * Prep notes live in Mongo (study topics). This in-memory store is only a
- * fallback for the unused /prep/notes admin endpoint — keep it empty.
- */
-
 export interface IPrepNote {
   id: number;
   subject: string;

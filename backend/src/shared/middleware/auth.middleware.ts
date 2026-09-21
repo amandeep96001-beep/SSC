@@ -1,17 +1,8 @@
-/**
- * Auth middleware — JWT gate + admin gate
- *
- * Validates Bearer token, checks tokenVersion (logout / password reset invalidate),
- * and syncs role from ADMIN_EMAIL when configured.
- */
-
 import type { RequestHandler } from 'express';
 import User from '../../modules/auth/user.model.js';
 import { verifyToken } from '../../modules/auth/token.util.js';
 import { getDBStatus } from '../../config/db.config.js';
 import { resolveRoleByEmail } from '../../modules/auth/authIdentity.util.js';
-
-// ___________________________________________ requireAuth ___________________________________________
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
@@ -76,8 +67,6 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     });
   }
 };
-
-// ___________________________________________ requireAdmin ___________________________________________
 
 export const requireAdmin: RequestHandler = (req, res, next) => {
   if (req.user?.role !== 'admin') {

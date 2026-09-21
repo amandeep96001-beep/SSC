@@ -1,11 +1,5 @@
-/**
- * Require a live Mongo connection before hitting DB-backed handlers.
- */
-
 import type { RequestHandler } from 'express';
 import { getDBStatus } from '../../config/db.config.js';
-
-// ___________________________________________ requireDb ___________________________________________
 
 export const requireDb: RequestHandler = (_req, res, next) => {
   if (getDBStatus()) return next();

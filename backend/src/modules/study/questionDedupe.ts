@@ -1,5 +1,3 @@
-/** Shared topic-question dedupe helpers (normalize + filter). */
-
 import { isRecord } from '../../types/domain.js';
 
 export interface TopicQuestionInsert {

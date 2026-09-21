@@ -1,15 +1,6 @@
-/**
- * Google Identity Services helpers
- *
- * Prefer ID-token verification (no client secret).
- * Auth-code exchange is optional and requires GOOGLE_CLIENT_SECRET.
- */
-
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 
 let idClient: OAuth2Client | null = null;
-
-// ___________________________________________ config ___________________________________________
 
 function getClientId(): string {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
@@ -38,9 +29,6 @@ function profileFromPayload(payload: TokenPayload | undefined) {
   };
 }
 
-// ___________________________________________ id token ___________________________________________
-
-/** Verify GIS ID token (credential from One Tap / official button). */
 export async function verifyGoogleIdToken(credential: unknown) {
   if (!credential || typeof credential !== 'string') {
     throw new Error('Missing Google credential.');
@@ -55,12 +43,7 @@ export async function verifyGoogleIdToken(credential: unknown) {
   return profileFromPayload(ticket.getPayload());
 }
 
-// ___________________________________________ auth code ___________________________________________
-
-/**
- * Exchange GIS popup auth code for a profile.
- * redirect_uri must be `postmessage` for the popup code flow.
- */
+/** Popup auth-code exchange; redirect_uri must be `postmessage`. */
 export async function exchangeGoogleAuthCode(code: unknown) {
   if (!code || typeof code !== 'string') {
     throw new Error('Missing Google auth code.');

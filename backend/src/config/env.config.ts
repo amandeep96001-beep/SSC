@@ -1,19 +1,8 @@
-/**
- * Environment checks
- *
- * Local: permissive — missing vars are fine while iterating.
- * Hosted: fail fast on secrets / FRONTEND_URL, warn on common misconfig.
- */
-
-// ___________________________________________ runtime ___________________________________________
-
 const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL'] as const;
 
 export function isHostedRuntime(): boolean {
   return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
 }
-
-// ___________________________________________ validate ___________________________________________
 
 export function validateEnv(): void {
   if (!isHostedRuntime()) return;

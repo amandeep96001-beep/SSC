@@ -1,10 +1,3 @@
-/**
- * JWT sign / verify
- *
- * Hosted: JWT_SECRET required.
- * Local: ephemeral secret so the API can boot without .env (sessions die on restart).
- */
-
 import crypto from 'crypto';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { isHostedRuntime } from '../../config/env.config.js';
@@ -22,8 +15,6 @@ export interface AuthTokenPayload extends JwtPayload {
 
 let ephemeralDevSecret: string | null = null;
 
-// ___________________________________________ secret ___________________________________________
-
 function getSecret(): string {
   const secret = process.env.JWT_SECRET?.trim();
   if (secret) return secret;
@@ -38,8 +29,6 @@ function getSecret(): string {
   }
   return ephemeralDevSecret;
 }
-
-// ___________________________________________ sign / verify ___________________________________________
 
 export function signToken(user: {
   _id: { toString(): string };
@@ -67,4 +56,46 @@ export function verifyToken(token: string): AuthTokenPayload {
     throw new Error('Invalid token payload');
   }
   return payload as AuthTokenPayload;
+}
+
+/** Short-lived, single-purpose JWT issued only after a successful password-reset OTP. */
+export const PASSWORD_RESET_TTL_SEC = 15 * 60;
+
+export interface PasswordResetTokenPayload extends JwtPayload {
+  typ: 'password_reset';
+  userId: string;
+  email: string;
+  tv: number;
+}
+
+export function signPasswordResetToken(user: {
+  _id: { toString(): string };
+  email: string;
+  tokenVersion?: number;
+}): string {
+  return jwt.sign(
+    {
+      typ: 'password_reset',
+      userId: user._id.toString(),
+      email: user.email,
+      tv: user.tokenVersion ?? 0,
+    },
+    getSecret(),
+    { expiresIn: PASSWORD_RESET_TTL_SEC, algorithm: JWT_ALG },
+  );
+}
+
+export function verifyPasswordResetToken(token: string): PasswordResetTokenPayload {
+  const payload = jwt.verify(token, getSecret(), { algorithms: [JWT_ALG] });
+  if (
+    typeof payload === 'string'
+    || !payload
+    || typeof payload !== 'object'
+    || payload.typ !== 'password_reset'
+    || typeof payload.userId !== 'string'
+    || typeof payload.email !== 'string'
+  ) {
+    throw new Error('Invalid password reset token');
+  }
+  return payload as PasswordResetTokenPayload;
 }

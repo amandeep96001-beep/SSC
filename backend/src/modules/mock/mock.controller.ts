@@ -1,137 +1,27 @@
-import type { RequestHandler } from 'express';
-import MockTest from './mock-test.model.js';
+import { asyncHandler } from '../../shared/utils/async-handler.js';
+import { ok, created } from '../../shared/utils/api-response.js';
+import * as mockService from './mock.service.js';
 
-function examFilter(examId: unknown) {
-  const id = String(examId || 'ssc').trim() || 'ssc';
-  // Legacy rows without examId belong to SSC
-  if (id === 'ssc') {
-    return {
-      $or: [
-        { examId: 'ssc' },
-        { examId: { $exists: false } },
-        { examId: null },
-        { examId: '' },
-      ],
-    };
-  }
-  return { examId: id };
+function paramStr(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
 }
 
-// @desc    Add a new full mock test
-// @route   POST /api/mock
-export const createMockTest: RequestHandler = async (req, res, next) => {
-  try {
-    const { title, year, date, shift, questions, examId } = req.body;
+export const createMockTest = asyncHandler(async (req, res) => {
+  const result = await mockService.createMockTest(req.body);
+  return created(res, { data: result.data });
+});
 
-    if (!title || !questions || !Array.isArray(questions)) {
-      res.status(400);
-      throw new Error('Title and a valid questions array are required');
-    }
+export const getMockTests = asyncHandler(async (req, res) => {
+  const result = await mockService.getMockTests(req.query.examId || 'ssc');
+  return ok(res, { data: result.data });
+});
 
-    if (questions.length > 0) {
-      const q = questions[0];
-      if (!q.section || !q.q || !q.o || typeof q.a !== 'number') {
-        res.status(400);
-        throw new Error('Questions array format is invalid. Ensure section, q, o, and a are provided.');
-      }
-    }
+export const getMockTestById = asyncHandler(async (req, res) => {
+  const result = await mockService.getMockTestById(paramStr(req.params.id));
+  return ok(res, { data: result.data });
+});
 
-    const resolvedExamId = String(examId || 'ssc').trim() || 'ssc';
-
-    const mockTest = new MockTest({
-      title,
-      examId: resolvedExamId,
-      year: year || '',
-      date: date || '',
-      shift: shift || '',
-      questions: questions.map((row: { section: unknown; q: unknown; o: unknown; a: unknown; e?: unknown }) => ({
-        section: String(row.section).trim(),
-        q: row.q,
-        o: Array.isArray(row.o) ? row.o.map((opt: unknown) => (typeof opt === 'string' ? opt : String(opt))) : [],
-        a: row.a,
-        e: row.e || '',
-      })),
-    });
-
-    const savedTest = await mockTest.save();
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        id: savedTest._id,
-        title: savedTest.title,
-        examId: savedTest.examId,
-        questionsCount: savedTest.questions.length
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get mock tests for an exam (metadata only)
-// @route   GET /api/mock?examId=ssc
-export const getMockTests: RequestHandler = async (req, res, next) => {
-  try {
-    const examId = req.query.examId || 'ssc';
-    const tests = await MockTest.find(examFilter(examId)).sort({ createdAt: -1 });
-
-    const formattedTests = tests.map((t) => ({
-      _id: t._id,
-      title: t.title,
-      examId: t.examId || 'ssc',
-      year: t.year,
-      date: t.date,
-      shift: t.shift,
-      createdAt: t.createdAt,
-      questionsCount: t.questions ? t.questions.length : 0
-    }));
-
-    res.json({
-      status: 'success',
-      data: formattedTests
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get a specific mock test by ID (full data)
-// @route   GET /api/mock/:id
-export const getMockTestById: RequestHandler = async (req, res, next) => {
-  try {
-    const test = await MockTest.findById(req.params.id);
-
-    if (!test) {
-      res.status(404);
-      throw new Error('Mock Test not found');
-    }
-
-    res.json({
-      status: 'success',
-      data: test
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Delete a mock test
-// @route   DELETE /api/mock/:id
-export const deleteMockTest: RequestHandler = async (req, res, next) => {
-  try {
-    const test = await MockTest.findByIdAndDelete(req.params.id);
-
-    if (!test) {
-      res.status(404);
-      throw new Error('Mock Test not found');
-    }
-
-    res.json({
-      status: 'success',
-      message: 'Mock test deleted successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+export const deleteMockTest = asyncHandler(async (req, res) => {
+  const result = await mockService.deleteMockTest(paramStr(req.params.id));
+  return ok(res, { message: result.message });
+});

@@ -257,6 +257,9 @@ export interface AuthApiPayload {
   debugOtp?: string;
   verified?: boolean;
   reset?: boolean;
+  resetToken?: string;
+  resetUrl?: string;
+  expiresIn?: number;
   alreadyVerified?: boolean;
   id?: string;
 }

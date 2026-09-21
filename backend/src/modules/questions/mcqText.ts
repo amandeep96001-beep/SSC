@@ -1,5 +1,3 @@
-/** Shared MCQ text cleanup for upload + DB repair. */
-
 const CITE_RE = /\s*\[cite:\s*\d+\]\.?/gi;
 
 const COMMON_IDIOMS = [

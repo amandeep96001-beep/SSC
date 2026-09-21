@@ -1,16 +1,7 @@
-/**
- * Password hashing
- *
- * bcrypt for new hashes. Legacy SHA-256 hashes are still accepted once,
- * then upgraded on successful login (see auth.controller).
- */
-
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 const SALT_ROUNDS = 12;
-
-// ___________________________________________ hash / verify ___________________________________________
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);

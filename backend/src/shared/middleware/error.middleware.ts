@@ -1,12 +1,6 @@
-/**
- * Central error handler
- *
- * Never leak stack traces in production. Map known Mongo / JWT failures to
- * stable client messages so the UI stays calm under outages.
- */
-
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { errorMessage, isRecord, mongoErrorCode } from '../../types/domain.js';
+import { HttpError, isHttpError, notFound as notFoundError } from '../errors/http-error.js';
 
 interface AppError extends Error {
   code?: number | string;
@@ -20,24 +14,26 @@ function asAppError(err: unknown): AppError {
   return wrapped;
 }
 
-// ___________________________________________ errorHandler ___________________________________________
+function resolveStatusCode(error: AppError): number {
+  if (isHttpError(error) || typeof error.statusCode === 'number') {
+    return error.statusCode!;
+  }
+
+  if (error.name === 'ValidationError') return 400;
+  if (mongoErrorCode(error) === 11000 || error.code === 11000) return 409;
+  if (error.message?.includes('JWT_SECRET')) return 503;
+  if (error.name === 'MongoServerError' || error.name === 'MongooseError') return 503;
+  if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') return 401;
+
+  return 500;
+}
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   void req;
   void next;
 
   const error = asAppError(err);
-  let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-
-  if (error.name === 'ValidationError') {
-    statusCode = 400;
-  } else if (mongoErrorCode(error) === 11000 || error.code === 11000) {
-    statusCode = 409;
-  } else if (error.message?.includes('JWT_SECRET')) {
-    statusCode = 503;
-  } else if (error.name === 'MongoServerError' || error.name === 'MongooseError') {
-    statusCode = 503;
-  }
+  const statusCode = resolveStatusCode(error);
 
   if (process.env.NODE_ENV !== 'production') {
     console.error(`[Error Handler] ${error.stack}`);
@@ -47,32 +43,37 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
 
   const safeMessages: Record<number, string> = {
     400: 'Invalid request data.',
+    401: 'Unauthorized.',
+    403: 'Forbidden.',
     404: 'Not found.',
     409: 'That account could not be created. Try a different username or sign in.',
+    429: 'Too many requests.',
     503: 'Service temporarily unavailable. Try again shortly.',
   };
 
   const isProd = process.env.NODE_ENV === 'production';
-  const clientMessage = isProd
-    ? (safeMessages[statusCode]
-      || (statusCode >= 500 ? 'Internal server error' : (error.message || 'Request failed')))
-    : (safeMessages[statusCode] && statusCode >= 500
-      ? safeMessages[statusCode]
-      : (error.message || 'Internal Server Error'));
+  const operational = isHttpError(error) || (typeof error.statusCode === 'number' && error.statusCode < 500);
+
+  let clientMessage: string;
+  if (isProd) {
+    if (statusCode >= 500 && !operational) {
+      clientMessage = safeMessages[statusCode] || 'Internal server error';
+    } else {
+      clientMessage = error.message || safeMessages[statusCode] || 'Request failed';
+    }
+  } else {
+    clientMessage = error.message || safeMessages[statusCode] || 'Internal Server Error';
+  }
 
   res.status(statusCode).json({
     status: 'error',
-    message: statusCode === 400 && error.message && !isProd
-      ? error.message
-      : clientMessage,
+    message: clientMessage,
     stack: isProd ? undefined : error.stack,
   });
 };
 
-// ___________________________________________ notFound ___________________________________________
-
-export const notFound: RequestHandler = (_req, res, next) => {
-  const error = new Error('Not found.');
-  res.status(404);
-  next(error);
+export const notFound: RequestHandler = (_req, _res, next) => {
+  next(notFoundError('Not found.'));
 };
+
+export { HttpError };

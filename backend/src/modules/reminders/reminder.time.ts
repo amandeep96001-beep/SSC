@@ -1,7 +1,3 @@
-/**
- * Timezone helpers for reminder cron (no extra date libs).
- */
-
 export function getZonedParts(date = new Date(), timeZone = 'Asia/Kolkata') {
   let fmt;
   try {

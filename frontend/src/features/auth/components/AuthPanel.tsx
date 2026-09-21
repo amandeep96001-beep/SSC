@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import {
   Mail, Lock, Eye, EyeOff, Loader2, Sun, Moon,
-  ArrowRight, ArrowLeft, ShieldCheck, LogIn, UserPlus, KeyRound,
+  ArrowRight, ArrowLeft, ShieldCheck, LogIn, UserPlus, KeyRound, Copy, Link2,
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, pageTitle } from '@/shared/brand';
@@ -180,6 +180,9 @@ export interface AuthActionResult {
   debugOtp?: string;
   message?: string;
   alreadyVerified?: boolean;
+  resetToken?: string;
+  resetUrl?: string;
+  expiresIn?: number;
 }
 
 interface AuthPanelProps {
@@ -188,7 +191,8 @@ interface AuthPanelProps {
   requestOtp: (email: string) => Promise<AuthActionResult>;
   verifyOtp: (email: string, code: string) => Promise<AuthActionResult>;
   forgotPassword: (email: string) => Promise<AuthActionResult>;
-  resetPassword: (email: string, code: string, password: string) => Promise<AuthActionResult>;
+  verifyPasswordResetOtp: (email: string, code: string) => Promise<AuthActionResult>;
+  resetPassword: (token: string, password: string) => Promise<AuthActionResult>;
   loginWithGoogle: (payload: string | { credential?: string; code?: string }) => Promise<AuthActionResult>;
 }
 
@@ -198,6 +202,7 @@ export function AuthPanel({
   requestOtp,
   verifyOtp,
   forgotPassword,
+  verifyPasswordResetOtp,
   resetPassword,
   loginWithGoogle,
 }: AuthPanelProps) {
@@ -211,6 +216,8 @@ export function AuthPanel({
   const [resendIn, setResendIn] = useState(0);
   const [mailSent, setMailSent] = useState(true);
   const [debugOtp, setDebugOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetUrl, setResetUrl] = useState('');
   const [googleClientId, setGoogleClientId] = useState(
     () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
   );
@@ -223,7 +230,7 @@ export function AuthPanel({
   const entranceDoneRef = useRef(false);
   const { theme, toggleTheme } = useTheme();
   const otpValue = otpDigits.join('');
-  const isOtpMode = mode === 'verify' || mode === 'reset';
+  const isOtpMode = mode === 'verify' || mode === 'reset-otp';
   const showAuthTabs = mode === 'login' || mode === 'register' || mode === 'register-step-2';
   const showGoogle = mode === 'login' || mode === 'register';
 
@@ -247,7 +254,7 @@ export function AuthPanel({
 
     const shell = shellRef.current;
     const showcase = shell.querySelectorAll(
-      '.auth-showcase__eyebrow, .auth-showcase__title, .auth-showcase__copy, .auth-showcase__art'
+      '.auth-showcase__art, .auth-showcase__eyebrow, .auth-showcase__title, .auth-showcase__copy, .auth-showcase__exams'
     );
     const stageBits = shell.querySelectorAll('.auth-form-stage > *');
 
@@ -287,23 +294,15 @@ export function AuthPanel({
         '-=0.3',
       );
 
-    // Soft ambient float on desk art
+    // Quiet leaf sway — no floating chips / fake dashboards
     if (artRef.current) {
-      gsap.to(artRef.current.querySelector('.auth-art-screen'), {
-        y: -4,
-        duration: 3.2,
+      gsap.to(artRef.current.querySelector('.auth-illu__leaf'), {
+        rotation: 4,
+        transformOrigin: '60% 100%',
+        duration: 3.4,
         ease: 'sine.inOut',
         yoyo: true,
         repeat: -1,
-      });
-      gsap.to(artRef.current.querySelector('.auth-art-book'), {
-        y: -6,
-        rotation: 10,
-        duration: 3.8,
-        ease: 'sine.inOut',
-        yoyo: true,
-        repeat: -1,
-        delay: 0.4,
       });
     }
   }, { scope: pageRef });
@@ -339,9 +338,9 @@ export function AuthPanel({
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;
       gsap.to(art, {
-        x: x * 12,
-        y: y * 8,
-        duration: 0.7,
+        x: x * 6,
+        y: y * 4,
+        duration: 0.8,
         ease: 'power2.out',
         overwrite: 'auto',
       });
@@ -368,6 +367,8 @@ export function AuthPanel({
     setResendIn(0);
     setMailSent(true);
     setDebugOtp('');
+    setResetToken('');
+    setResetUrl('');
   };
 
   const switchAuthMode = (nextMode: string) => {
@@ -375,6 +376,26 @@ export function AuthPanel({
     setMode(nextMode);
     resetAuthFields();
   };
+
+  // Deep-link: /?reset=<token> opens the set-password step with the secure token.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const token = (params.get('reset') || params.get('resetToken') || '').trim();
+      if (!token || token.length < 20) return;
+      setResetToken(token);
+      setResetUrl(`${window.location.origin}/?reset=${encodeURIComponent(token)}`);
+      setMode('reset');
+      setPassword('');
+      setConfirmPassword('');
+      params.delete('reset');
+      params.delete('resetToken');
+      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+      window.history.replaceState({}, '', next);
+    } catch {
+      // ignore malformed URLs
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -604,7 +625,7 @@ export function AuthPanel({
     if (resendIn > 0 || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const res = mode === 'reset'
+      const res = mode === 'reset-otp'
         ? await forgotPassword(email)
         : await requestOtp(email);
       if (res.success) {
@@ -646,13 +667,16 @@ export function AuthPanel({
         return;
       }
       setEmail(res.email || email.trim());
-      setMode('reset');
+      setMode('reset-otp');
       setPassword('');
       setConfirmPassword('');
+      setResetToken('');
+      setResetUrl('');
       setOtpDigits(Array(OTP_LEN).fill(''));
       setResendIn(30);
       const delivered = res.mailSent !== false;
       setMailSent(delivered);
+      setDebugOtp(import.meta.env.DEV ? (res.debugOtp || '') : '');
       showAppToast(
         delivered
           ? 'If that email exists, a reset code was sent. Check your inbox (and spam).'
@@ -667,10 +691,58 @@ export function AuthPanel({
     }
   };
 
-  const handleReset = async (e: FormEvent) => {
+  const handleVerifyResetOtp = async (e: FormEvent) => {
     e.preventDefault();
     if (!/^\d{6}$/.test(otpValue)) {
       toastAuthError('Enter the 6-digit code from your email.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await verifyPasswordResetOtp(email, otpValue);
+      if (!res.success || !res.resetToken || !res.resetUrl) {
+        const msg = res.message || '';
+        if (/expired/i.test(msg)) {
+          toastAuthError('Code expired. Request a new one.');
+        } else if (/too many/i.test(msg)) {
+          toastAuthError('Too many attempts. Request a new code.');
+        } else {
+          toastAuthError('Incorrect verification code.');
+        }
+        setOtpDigits(Array(OTP_LEN).fill(''));
+        requestAnimationFrame(() => focusOtp(0));
+        return;
+      }
+      setResetToken(res.resetToken);
+      setResetUrl(res.resetUrl);
+      setPassword('');
+      setConfirmPassword('');
+      setOtpDigits(Array(OTP_LEN).fill(''));
+      setMode('reset-link');
+      showAppToast('Code verified. Use the secure link to set your new password.', {
+        variant: 'success',
+        durationMs: 4500,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCopyResetUrl = async () => {
+    if (!resetUrl) return;
+    try {
+      await navigator.clipboard.writeText(resetUrl);
+      showAppToast('Secure reset link copied.', { variant: 'success', durationMs: 2200 });
+    } catch {
+      toastAuthError('Could not copy the link. Select and copy it manually.');
+    }
+  };
+
+  const handleReset = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!resetToken) {
+      toastAuthError('Reset link missing. Verify your email code again.');
+      setMode('forgot');
       return;
     }
     if (!password || password.length < 8) {
@@ -685,13 +757,9 @@ export function AuthPanel({
       toastAuthError('Passwords do not match.');
       return;
     }
-    if (!resetPassword) {
-      toastAuthError('Password reset is not available.');
-      return;
-    }
     setIsSubmitting(true);
     try {
-      const res = await resetPassword(email, otpValue, password);
+      const res = await resetPassword(resetToken, password);
       if (!res.success) {
         toastAuthError(res.message || 'Password reset failed. Please try again.');
         return;
@@ -703,6 +771,8 @@ export function AuthPanel({
       setPassword('');
       setConfirmPassword('');
       setOtpDigits(Array(OTP_LEN).fill(''));
+      setResetToken('');
+      setResetUrl('');
       setShowPassword(false);
     } finally {
       setIsSubmitting(false);
@@ -715,6 +785,8 @@ export function AuthPanel({
     'register-step-2': 'Set password',
     verify: 'Verify email',
     forgot: 'Reset password',
+    'reset-otp': 'Verify reset code',
+    'reset-link': 'Secure reset link',
     reset: 'Choose new password',
   }[mode] || 'Sign in';
 
@@ -738,58 +810,92 @@ export function AuthPanel({
 
       <div className="auth-shell" ref={shellRef}>
         <aside className="auth-showcase" aria-hidden="true">
-          <div className="auth-showcase__glow" />
-          <div className="auth-showcase__grid" />
-          <p className="auth-showcase__eyebrow">SSC · Banking · Railways · UPSC</p>
-          <h2 className="auth-showcase__title">
-            Prep that feels
-            <span> focused.</span>
-          </h2>
-          <p className="auth-showcase__copy">
-            Drills, mocks, notes, and battles — one calm workspace for every exam day.
-          </p>
+          <div className="auth-showcase__wash" />
           <div className="auth-showcase__art" ref={artRef}>
-            <div className="auth-art-desk">
-              <div className="auth-art-lamp" />
-              <div className="auth-art-screen">
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="auth-art-book" />
-              <div className="auth-art-chip auth-art-chip--a">+12 streak</div>
-              <div className="auth-art-chip auth-art-chip--b">Mock 84%</div>
-            </div>
+            <svg className="auth-illu" viewBox="0 0 280 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* desk surface */}
+              <ellipse className="auth-illu__desk" cx="140" cy="168" rx="108" ry="14" />
+              {/* open notebook */}
+              <g className="auth-illu__book">
+                <path d="M52 58c18-10 36-10 54 0v86c-18-8-36-8-54 0V58Z" />
+                <path d="M106 58c18 10 36 10 54 0v86c-18 8-36 8-54 0V58Z" />
+                <path className="auth-illu__spine" d="M106 58v86" />
+                <path className="auth-illu__line" d="M66 78h28M66 92h24M66 106h30M66 120h20" />
+                <path className="auth-illu__line" d="M122 78h28M122 92h24M122 106h30M122 120h18" />
+              </g>
+              {/* pencil */}
+              <g className="auth-illu__pencil">
+                <path d="M178 118l62-36 6 10-62 36-6-10Z" />
+                <path className="auth-illu__tip" d="M178 118l-10 6 4 6 12-2-6-10Z" />
+                <path className="auth-illu__eraser" d="M234 88l6 10 8-5-6-10-8 5Z" />
+              </g>
+              {/* plant pot */}
+              <g className="auth-illu__plant">
+                <path d="M38 142h28l-4 22H42l-4-22Z" />
+                <ellipse cx="52" cy="142" rx="16" ry="5" />
+                <path className="auth-illu__leaf" d="M52 140c-2-22 10-36 22-40-4 14-2 28-10 40-4 0-8 0-12 0Z" />
+                <path className="auth-illu__leaf auth-illu__leaf--b" d="M52 140c2-18-8-32-20-36 2 12 4 26 12 36 2 0 6 0 8 0Z" />
+              </g>
+              {/* mug */}
+              <g className="auth-illu__mug">
+                <rect x="196" y="132" width="28" height="26" rx="3" />
+                <path d="M224 138h8a8 8 0 0 1 0 16h-8" />
+                <path className="auth-illu__steam" d="M204 126c2-4 0-6 2-8M212 124c2-4 0-7 2-9" />
+              </g>
+            </svg>
+          </div>
+          <div className="auth-showcase__copyblock">
+            <p className="auth-showcase__eyebrow">Exam prep</p>
+            <h2 className="auth-showcase__title">
+              Study calm.
+              <span>Sit for the exam ready.</span>
+            </h2>
+            <p className="auth-showcase__copy">
+              Notes, drills, and mocks in one quiet place — built for long study days.
+            </p>
+            <ul className="auth-showcase__exams">
+              <li>SSC</li>
+              <li>Banking</li>
+              <li>Railways</li>
+              <li>UPSC</li>
+            </ul>
           </div>
         </aside>
 
         <div className="auth-card">
           <div className="auth-form-stage" ref={formStageRef}>
-          <div className="auth-brand">
-            <div className={`auth-brand-icon ${isOtpMode ? 'auth-brand-icon--otp' : ''}`} style={(!isOtpMode && mode !== 'forgot' && mode !== 'reset') ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {}}>
-              {mode === 'forgot' || mode === 'reset'
-                ? <KeyRound size={28} />
-                : mode === 'verify'
-                  ? <ShieldCheck size={28} />
-                  : <img src="/logo.png" alt="App Logo" className="auth-brand-logo" />}
-            </div>
-            <p className="auth-brand-tagline">{APP_NAME}</p>
+          <div className={`auth-brand${isOtpMode || mode === 'forgot' || mode === 'reset-link' || mode === 'reset' ? ' auth-brand--compact' : ''}`}>
+            {mode !== 'reset' && (
+              <div className={`auth-brand-icon ${isOtpMode || mode === 'reset-link' ? 'auth-brand-icon--otp' : ''}`} style={(!isOtpMode && mode !== 'forgot' && mode !== 'reset-link') ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {}}>
+                {mode === 'forgot' || mode === 'reset-otp' || mode === 'reset-link'
+                  ? <KeyRound size={26} />
+                  : mode === 'verify'
+                    ? <ShieldCheck size={26} />
+                    : <img src="/logo.png" alt="App Logo" className="auth-brand-logo" />}
+              </div>
+            )}
+            {mode !== 'reset' && <p className="auth-brand-tagline">{APP_NAME}</p>}
             <h1>
               {mode === 'login' && 'Welcome back'}
               {mode === 'register' && 'Create account'}
               {mode === 'register-step-2' && 'Set a password'}
               {mode === 'verify' && 'Verify email'}
               {mode === 'forgot' && 'Reset password'}
-              {mode === 'reset' && 'New password'}
+              {mode === 'reset-otp' && 'Verify reset code'}
+              {mode === 'reset-link' && 'Secure reset link'}
+              {mode === 'reset' && 'Set new password'}
             </h1>
-            <p className="auth-brand-action">
-              {mode === 'login' && 'Sign in to continue your prep.'}
-              {mode === 'register' && 'Start your exam prep in a minute.'}
-              {mode === 'register-step-2' && 'Almost there, secure your account.'}
-              {mode === 'verify' && 'Confirm your email address to continue.'}
-              {mode === 'forgot' && 'Enter your email and we’ll send a reset code.'}
-              {mode === 'reset' && `Enter the code sent to ${maskEmail(email)} and choose a new password.`}
-            </p>
+            {mode !== 'reset' && (
+              <p className="auth-brand-action">
+                {mode === 'login' && 'Sign in to continue your prep.'}
+                {mode === 'register' && 'Start your exam prep in a minute.'}
+                {mode === 'register-step-2' && 'Almost there, secure your account.'}
+                {mode === 'verify' && 'Confirm your email address to continue.'}
+                {mode === 'forgot' && 'Enter your email and we will send a verification code.'}
+                {mode === 'reset-otp' && 'Enter the 6-digit code from your email.'}
+                {mode === 'reset-link' && 'Copy this link or continue to choose a new password.'}
+              </p>
+            )}
           </div>
 
           {showAuthTabs && (
@@ -916,19 +1022,27 @@ export function AuthPanel({
           </form>
         )}
 
-        {mode === 'reset' && (
-          <form onSubmit={handleReset} className="auth-form" noValidate>
-            <div className={`auth-otp-banner ${mailSent ? '' : 'auth-otp-banner--warn'}`}>
-              <Mail size={18} aria-hidden />
-              <div>
-                <strong>{mailSent ? 'Reset code sent' : 'Email not delivered'}</strong>
-                <span>{maskEmail(email)}</span>
-              </div>
+        {mode === 'reset-otp' && (
+          <form onSubmit={handleVerifyResetOtp} className="auth-form auth-form--otp" noValidate>
+            <div className={`auth-status-chip ${mailSent ? '' : 'auth-status-chip--warn'}`} role="status">
+              <Mail size={14} aria-hidden />
+              <span className="auth-status-chip__label">
+                {mailSent ? 'Code sent to' : 'Email failed · use debug code for'}
+              </span>
+              <span className="auth-status-chip__email">{maskEmail(email)}</span>
             </div>
-            <div className="form-group">
-              <label htmlFor="reset-otp-0">Reset code</label>
+
+            {import.meta.env.DEV && debugOtp && (
+              <div className="auth-otp-debug auth-otp-debug--compact" role="status">
+                <span>Debug code</span>
+                <kbd>{debugOtp}</kbd>
+              </div>
+            )}
+
+            <div className="form-group auth-otp-group">
+              <label htmlFor="reset-otp-0">6-digit code</label>
               <div
-                className="otp-boxes"
+                className="otp-boxes otp-boxes--compact"
                 onPaste={(e) => {
                   e.preventDefault();
                   setOtpFromString(e.clipboardData.getData('text') || '');
@@ -955,58 +1069,19 @@ export function AuthPanel({
                 ))}
               </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="reset-pass">New password</label>
-              <div className="input-with-icon">
-                <Lock size={16} className="field-icon" aria-hidden />
-                <input
-                  id="reset-pass"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="At least 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <p className="auth-hint">Must include a letter and a number.</p>
-            </div>
-            <div className="form-group">
-              <label htmlFor="reset-pass-confirm">Confirm password</label>
-              <div className="input-with-icon">
-                <Lock size={16} className="field-icon" aria-hidden />
-                <input
-                  id="reset-pass-confirm"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  placeholder="Re-enter new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isSubmitting}
-                  required
-                />
-              </div>
-            </div>
+
             <button
               type="submit"
               className="btn-auth-submit"
               disabled={isSubmitting || otpValue.length !== OTP_LEN}
             >
               {isSubmitting ? (
-                <><Loader2 size={18} className="spin-icon" /><span>Updating…</span></>
+                <><Loader2 size={18} className="spin-icon" /><span>Verifying…</span></>
               ) : (
-                <><span>Update password</span><ArrowRight size={18} /></>
+                <><span>Verify code</span><ArrowRight size={18} /></>
               )}
             </button>
+
             <div className="auth-otp-actions">
               <button
                 type="button"
@@ -1014,7 +1089,7 @@ export function AuthPanel({
                 disabled={isSubmitting}
                 onClick={() => switchAuthMode('login')}
               >
-                <ArrowLeft size={14} /> Back to sign in
+                <ArrowLeft size={14} /> Sign in
               </button>
               <button
                 type="button"
@@ -1022,9 +1097,131 @@ export function AuthPanel({
                 disabled={isSubmitting || resendIn > 0}
                 onClick={handleResend}
               >
-                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
+                {resendIn > 0 ? `Resend ${resendIn}s` : 'Resend code'}
               </button>
             </div>
+          </form>
+        )}
+
+        {mode === 'reset-link' && (
+          <div className="auth-form auth-form--reset-link">
+            <div className="auth-status-chip" role="status">
+              <ShieldCheck size={14} aria-hidden />
+              <span className="auth-status-chip__label">Verified for</span>
+              <span className="auth-status-chip__email">{maskEmail(email)}</span>
+            </div>
+
+            <p className="auth-reset-link-note">
+              This secure link expires in 15 minutes and works only once. Do not share it.
+            </p>
+
+            <div className="auth-reset-url-box">
+              <Link2 size={16} aria-hidden />
+              <code className="auth-reset-url-text" title={resetUrl}>{resetUrl}</code>
+              <button
+                type="button"
+                className="auth-reset-copy"
+                onClick={handleCopyResetUrl}
+                aria-label="Copy reset link"
+              >
+                <Copy size={15} />
+                Copy
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="btn-auth-submit"
+              onClick={() => {
+                setMode('reset');
+                setPassword('');
+                setConfirmPassword('');
+              }}
+            >
+              <span>Set new password</span><ArrowRight size={18} />
+            </button>
+
+            <button
+              type="button"
+              className="auth-back-link auth-back-link--block"
+              onClick={() => switchAuthMode('login')}
+            >
+              <ArrowLeft size={14} /> Back to sign in
+            </button>
+          </div>
+        )}
+
+        {mode === 'reset' && (
+          <form onSubmit={handleReset} className="auth-form auth-form--reset" noValidate>
+            <div className="auth-status-chip" role="status">
+              <ShieldCheck size={14} aria-hidden />
+              <span className="auth-status-chip__label">Secure link active</span>
+              {email ? <span className="auth-status-chip__email">{maskEmail(email)}</span> : null}
+            </div>
+
+            <div className="auth-pass-grid">
+              <div className="form-group">
+                <label htmlFor="reset-pass">New password</label>
+                <div className="input-with-icon">
+                  <Lock size={15} className="field-icon" aria-hidden />
+                  <input
+                    id="reset-pass"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="8+ chars, letter + number"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isSubmitting}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="reset-pass-confirm">Confirm</label>
+                <div className="input-with-icon">
+                  <Lock size={15} className="field-icon" aria-hidden />
+                  <input
+                    id="reset-pass-confirm"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isSubmitting}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-auth-submit"
+              disabled={isSubmitting || !resetToken}
+            >
+              {isSubmitting ? (
+                <><Loader2 size={18} className="spin-icon" /><span>Updating…</span></>
+              ) : (
+                <><span>Update password</span><ArrowRight size={18} /></>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="auth-back-link auth-back-link--block"
+              disabled={isSubmitting}
+              onClick={() => switchAuthMode('login')}
+            >
+              <ArrowLeft size={14} /> Sign in
+            </button>
           </form>
         )}
         {mode === 'register' && (
