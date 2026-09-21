@@ -1,8 +1,17 @@
+/**
+ * Auth middleware — JWT gate + admin gate
+ *
+ * Validates Bearer token, checks tokenVersion (logout / password reset invalidate),
+ * and syncs role from ADMIN_EMAIL when configured.
+ */
+
 import type { RequestHandler } from 'express';
 import User from '../../modules/auth/user.model.js';
 import { verifyToken } from '../../modules/auth/token.util.js';
 import { getDBStatus } from '../../config/db.config.js';
 import { resolveRoleByEmail } from '../../modules/auth/authIdentity.util.js';
+
+// ___________________________________________ requireAuth ___________________________________________
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
@@ -17,18 +26,21 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     if (!header?.startsWith('Bearer ')) {
       return res.status(401).json({
         status: 'error',
-        message: 'Authentication required. Please sign in again.'
+        message: 'Authentication required. Please sign in again.',
       });
     }
 
     const token = header.slice(7);
     const payload = verifyToken(token);
 
-    const user = await User.findById(payload.userId).select('_id username email role tokenVersion').lean();
+    const user = await User.findById(payload.userId)
+      .select('_id username email role tokenVersion')
+      .lean();
+
     if (!user) {
       return res.status(401).json({
         status: 'error',
-        message: 'Session expired. Please sign in again.'
+        message: 'Session expired. Please sign in again.',
       });
     }
 
@@ -37,7 +49,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     if (claimed !== tokenVersion) {
       return res.status(401).json({
         status: 'error',
-        message: 'Session expired. Please sign in again.'
+        message: 'Session expired. Please sign in again.',
       });
     }
 
@@ -55,14 +67,17 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       email: user.email || undefined,
       role,
     };
+
     next();
   } catch {
     return res.status(401).json({
       status: 'error',
-      message: 'Invalid or expired session. Please sign in again.'
+      message: 'Invalid or expired session. Please sign in again.',
     });
   }
 };
+
+// ___________________________________________ requireAdmin ___________________________________________
 
 export const requireAdmin: RequestHandler = (req, res, next) => {
   if (req.user?.role !== 'admin') {

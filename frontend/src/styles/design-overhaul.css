@@ -84,7 +84,15 @@ body, html {
 .lms-container,
 .auth-page {
   background: var(--mesh-bg) center/cover no-repeat !important;
+}
+
+/* Fixed backgrounds fight mobile overflow locking and cause rubber-band scroll. */
+.lms-container {
   background-attachment: fixed !important;
+}
+
+.auth-page {
+  background-attachment: scroll !important;
 }
 
 /* Enhanced Glass Sidebar */

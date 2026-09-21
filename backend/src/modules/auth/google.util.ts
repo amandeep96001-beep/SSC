@@ -1,6 +1,15 @@
+/**
+ * Google Identity Services helpers
+ *
+ * Prefer ID-token verification (no client secret).
+ * Auth-code exchange is optional and requires GOOGLE_CLIENT_SECRET.
+ */
+
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 
 let idClient: OAuth2Client | null = null;
+
+// ___________________________________________ config ___________________________________________
 
 function getClientId(): string {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
@@ -29,29 +38,34 @@ function profileFromPayload(payload: TokenPayload | undefined) {
   };
 }
 
-/**
- * Verify Google Identity Services ID token (credential from GIS button).
- */
+// ___________________________________________ id token ___________________________________________
+
+/** Verify GIS ID token (credential from One Tap / official button). */
 export async function verifyGoogleIdToken(credential: unknown) {
   if (!credential || typeof credential !== 'string') {
     throw new Error('Missing Google credential.');
   }
+
   const clientId = getClientId();
   const ticket = await getIdClient().verifyIdToken({
     idToken: credential,
     audience: clientId,
   });
+
   return profileFromPayload(ticket.getPayload());
 }
 
+// ___________________________________________ auth code ___________________________________________
+
 /**
- * Exchange GIS popup auth code for profile.
- * redirect_uri must be 'postmessage' for @react-oauth/google popup code flow.
+ * Exchange GIS popup auth code for a profile.
+ * redirect_uri must be `postmessage` for the popup code flow.
  */
 export async function exchangeGoogleAuthCode(code: unknown) {
   if (!code || typeof code !== 'string') {
     throw new Error('Missing Google auth code.');
   }
+
   const clientId = getClientId();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   if (!clientSecret) {
@@ -60,6 +74,7 @@ export async function exchangeGoogleAuthCode(code: unknown) {
 
   const client = new OAuth2Client(clientId, clientSecret, 'postmessage');
   const { tokens } = await client.getToken(code);
+
   if (!tokens.id_token) {
     throw new Error('Google did not return an ID token.');
   }
@@ -68,5 +83,6 @@ export async function exchangeGoogleAuthCode(code: unknown) {
     idToken: tokens.id_token,
     audience: clientId,
   });
+
   return profileFromPayload(ticket.getPayload());
 }

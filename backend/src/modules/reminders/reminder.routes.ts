@@ -1,3 +1,7 @@
+/**
+ * Reminder routes — schedules + in-app notifications
+ */
+
 import express from 'express';
 import {
   listReminders,
@@ -11,9 +15,13 @@ import {
 
 const router = express.Router();
 
+// ___________________________________________ notifications ___________________________________________
+
 router.get('/notifications/list', listNotifications);
 router.post('/notifications/read', markNotificationsRead);
 router.post('/notifications/test', testNotify);
+
+// ___________________________________________ reminders ___________________________________________
 
 router.get('/', listReminders);
 router.post('/', createReminder);

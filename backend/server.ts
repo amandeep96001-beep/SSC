@@ -1,3 +1,10 @@
+/**
+ * ExamPrep API — process entry
+ *
+ * Loads env (local only), connects Mongo, mounts Express, starts reminder cron.
+ * Hosted (Render): env comes from the dashboard — never override with a .env file.
+ */
+
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -8,7 +15,8 @@ import { createApp } from './src/app.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.basename(here) === 'dist' ? path.resolve(here, '..') : here;
 
-// Local only — Render uses dashboard env vars.
+// ___________________________________________ boot ___________________________________________
+
 if (!process.env.RENDER) {
   dotenv.config({
     path: path.resolve(rootDir, '.env'),
@@ -21,15 +29,19 @@ const PORT = process.env.PORT || 5000;
 async function start() {
   validateEnv();
 
+  // ___________________________________________ database ___________________________________________
+
   try {
     await connectDB();
   } catch (err) {
     console.error('MongoDB connection failed:', err instanceof Error ? err.message : err);
-    // Hosted: do not serve traffic without a database (auth/progress would 503/401).
+    // Hosted: refuse to serve without DB (auth / progress would be half-broken).
     if (isHostedRuntime()) {
       process.exit(1);
     }
   }
+
+  // ___________________________________________ http + jobs ___________________________________________
 
   const app = createApp();
 

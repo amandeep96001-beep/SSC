@@ -1,6 +1,15 @@
+/**
+ * Competition controller
+ *
+ * Keeps battle attempts bounded (score / counts / time) so a bad client
+ * cannot write nonsense into the leaderboard.
+ */
+
 import type { RequestHandler } from 'express';
 import TCSQuestion from '../questions/tcs-question.model.js';
 import CompetitionScore from './competition.model.js';
+
+// ___________________________________________ questions ___________________________________________
 
 export const getQuestions: RequestHandler = async (req, res, next) => {
   try {
@@ -22,27 +31,29 @@ export const getQuestions: RequestHandler = async (req, res, next) => {
           correctAnswer: 1,
           subject: 1,
           category: 1,
-          explanation: 1
-        }
-      }
+          explanation: 1,
+        },
+      },
     ]);
 
     if (!questions || questions.length === 0) {
       return res.status(404).json({
         status: 'error',
-        message: `No questions found for subject: ${subject}. Please seed the database first.`
+        message: `No questions found for subject: ${subject}. Please seed the database first.`,
       });
     }
 
     res.json({
       status: 'success',
       data: questions,
-      meta: { total: questions.length, subject }
+      meta: { total: questions.length, subject },
     });
   } catch (error) {
     next(error);
   }
 };
+
+// ___________________________________________ submit score ___________________________________________
 
 export const submitScore: RequestHandler = async (req, res, next) => {
   try {
@@ -56,10 +67,11 @@ export const submitScore: RequestHandler = async (req, res, next) => {
     if (score === undefined || correct === undefined || wrong === undefined) {
       return res.status(400).json({
         status: 'error',
-        message: 'score, correct, and wrong are required fields.'
+        message: 'score, correct, and wrong are required fields.',
       });
     }
 
+    // Clamp every numeric field — never trust the client for leaderboard math.
     const resolvedSubject = String(subject || 'Mixed').slice(0, 32);
     const scoreN = Math.min(20, Math.max(0, Number(score) || 0));
     const correctN = Math.min(20, Math.max(0, Number(correct) || 0));
@@ -76,21 +88,21 @@ export const submitScore: RequestHandler = async (req, res, next) => {
       wrong: wrongN,
       skipped: skippedN,
       accuracy: accuracyN,
-      timeTaken: timeTakenN
+      timeTaken: timeTakenN,
     });
 
     const personalBest = await CompetitionScore.findOne(
       { username, subject: resolvedSubject },
       null,
-      { sort: { score: -1, timeTaken: 1 } }
+      { sort: { score: -1, timeTaken: 1 } },
     ).lean();
 
     const betterScores = await CompetitionScore.countDocuments({
       subject: resolvedSubject,
       $or: [
         { score: { $gt: scoreN } },
-        { score: scoreN, timeTaken: { $lt: timeTakenN } }
-      ]
+        { score: scoreN, timeTaken: { $lt: timeTakenN } },
+      ],
     });
 
     res.json({
@@ -98,13 +110,15 @@ export const submitScore: RequestHandler = async (req, res, next) => {
       data: {
         savedScore: newScore,
         personalBest,
-        rank: betterScores + 1
-      }
+        rank: betterScores + 1,
+      },
     });
   } catch (error) {
     next(error);
   }
 };
+
+// ___________________________________________ leaderboard ___________________________________________
 
 export const getLeaderboard: RequestHandler = async (req, res, next) => {
   try {
@@ -121,8 +135,8 @@ export const getLeaderboard: RequestHandler = async (req, res, next) => {
           bestTimeTaken: { $first: '$timeTaken' },
           correct: { $first: '$correct' },
           wrong: { $first: '$wrong' },
-          timestamp: { $first: '$timestamp' }
-        }
+          timestamp: { $first: '$timestamp' },
+        },
       },
       { $sort: { bestScore: -1, bestTimeTaken: 1 } },
       { $limit: 10 },
@@ -135,15 +149,15 @@ export const getLeaderboard: RequestHandler = async (req, res, next) => {
           correct: 1,
           wrong: 1,
           timestamp: 1,
-          _id: 0
-        }
-      }
+          _id: 0,
+        },
+      },
     ]);
 
     res.json({
       status: 'success',
       data: leaderboard,
-      meta: { subject, total: leaderboard.length }
+      meta: { subject, total: leaderboard.length },
     });
   } catch (error) {
     next(error);

@@ -1,7 +1,13 @@
+/**
+ * Strip Mongo operator / prototype-pollution keys from body, params, query.
+ */
+
 import type { RequestHandler } from 'express';
 
 const PROHIBITED_KEY = /^\$|\./;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+// ___________________________________________ helpers ___________________________________________
 
 function isDangerousKey(key: string): boolean {
   return FORBIDDEN_KEYS.has(key) || PROHIBITED_KEY.test(key);
@@ -46,6 +52,8 @@ function sanitizeInPlace(obj: Record<string, unknown>): void {
     }
   }
 }
+
+// ___________________________________________ middleware ___________________________________________
 
 export const mongoSanitize: RequestHandler = (req, _res, next) => {
   if (req.body && isPlainObject(req.body)) {

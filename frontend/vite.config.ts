@@ -51,6 +51,11 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: true,
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+        'Permissions-Policy':
+          'camera=(), microphone=(), geolocation=(), identity-credentials-get=(self "https://accounts.google.com")',
+      },
       proxy: {
         '/api': {
           target: 'http://127.0.0.1:5000',

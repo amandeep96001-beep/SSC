@@ -319,6 +319,9 @@ export function Dashboard() {
       return undefined;
     }
 
+    // AuthPanel unmounts on login — make sure its scroll lock is gone.
+    document.documentElement.classList.remove('auth-mounted');
+
     const fullscreen =
       activeView === 'test' ||
       activeView === 'results' ||

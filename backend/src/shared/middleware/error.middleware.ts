@@ -1,3 +1,10 @@
+/**
+ * Central error handler
+ *
+ * Never leak stack traces in production. Map known Mongo / JWT failures to
+ * stable client messages so the UI stays calm under outages.
+ */
+
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { errorMessage, isRecord, mongoErrorCode } from '../../types/domain.js';
 
@@ -13,9 +20,12 @@ function asAppError(err: unknown): AppError {
   return wrapped;
 }
 
+// ___________________________________________ errorHandler ___________________________________________
+
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   void req;
   void next;
+
   const error = asAppError(err);
   let statusCode = res.statusCode === 200 ? 500 : res.statusCode;
 
@@ -55,11 +65,13 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     message: statusCode === 400 && error.message && !isProd
       ? error.message
       : clientMessage,
-    stack: isProd ? undefined : error.stack
+    stack: isProd ? undefined : error.stack,
   });
 };
 
-export const notFound: RequestHandler = (req, res, next) => {
+// ___________________________________________ notFound ___________________________________________
+
+export const notFound: RequestHandler = (_req, res, next) => {
   const error = new Error('Not found.');
   res.status(404);
   next(error);

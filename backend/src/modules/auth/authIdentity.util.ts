@@ -1,7 +1,16 @@
+/**
+ * Auth identity helpers
+ *
+ * Email normalization, Gmail alias matching, OTP hashing, username allocation,
+ * and upsert-from-Google / verified-email flows.
+ */
+
 import crypto from 'crypto';
 import User from './user.model.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ___________________________________________ email ___________________________________________
 
 export function normalizeEmail(raw: unknown): string {
   return String(raw || '').trim().toLowerCase();
@@ -44,6 +53,9 @@ export function resolveRoleByEmail(email: string): 'user' | 'admin' {
   return 'user';
 }
 
+// ___________________________________________ username ___________________________________________
+
+
 function slugFromEmail(email: string): string {
   const local = String(email).split('@')[0] || 'user';
   const cleaned = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20) || 'user';
@@ -75,6 +87,8 @@ export async function allocateUsername(seed: unknown): Promise<string> {
   }
   return candidate;
 }
+
+// ___________________________________________ upsert user ___________________________________________
 
 export async function upsertUserFromEmail({
   email,
@@ -135,6 +149,8 @@ export async function upsertUserFromEmail({
 
   return user;
 }
+
+// ___________________________________________ otp crypto ___________________________________________
 
 export function hashOtpCode(code: string): string {
   const pepper = process.env.OTP_PEPPER || process.env.JWT_SECRET || 'dev-otp-pepper';

@@ -1,8 +1,19 @@
+/**
+ * Environment checks
+ *
+ * Local: permissive — missing vars are fine while iterating.
+ * Hosted: fail fast on secrets / FRONTEND_URL, warn on common misconfig.
+ */
+
+// ___________________________________________ runtime ___________________________________________
+
 const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL'] as const;
 
 export function isHostedRuntime(): boolean {
   return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
 }
+
+// ___________________________________________ validate ___________________________________________
 
 export function validateEnv(): void {
   if (!isHostedRuntime()) return;
@@ -22,7 +33,7 @@ export function validateEnv(): void {
   const frontend = (process.env.FRONTEND_URL ?? '').trim();
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(frontend)) {
     console.warn(
-      '[env] FRONTEND_URL points at localhost on a hosted runtime — CORS/email links will break for real users.'
+      '[env] FRONTEND_URL points at localhost on a hosted runtime — CORS/email links will break for real users.',
     );
   }
 

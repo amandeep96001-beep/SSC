@@ -1,4 +1,4 @@
-/** Google Identity Services — preload once; ID-token (mobile-friendly) + auth-code popup. */
+/** Google Identity Services — preload once; ID-token first (no client secret), code popup fallback. */
 
 type CredentialHandlers = {
   resolve: (credential: string) => void;
@@ -32,6 +32,10 @@ export interface MountGoogleButtonOptions {
 
 export function isCancelledError(err: unknown): err is GooglePromptError {
   return typeof err === 'object' && err !== null && 'cancelled' in err && Boolean((err as GooglePromptError).cancelled);
+}
+
+export function isPromptUnavailableError(err: unknown): err is GooglePromptError {
+  return typeof err === 'object' && err !== null && 'promptUnavailable' in err && Boolean((err as GooglePromptError).promptUnavailable);
 }
 
 export function loadGsiScript(): Promise<GoogleIdClient> {
@@ -106,20 +110,20 @@ function wireIdCallback(clientId: string): GoogleIdClient {
     },
     auto_select: false,
     cancel_on_tap_outside: true,
+    // FedCM is the modern path; if the browser blocks it, prompt() reports skipped.
     use_fedcm_for_prompt: true,
   });
   return gsi;
 }
 
 /**
- * ID-token via One Tap / FedCM prompt — works better than popups on many phones.
+ * ID-token via One Tap / FedCM prompt — no client secret required on the server.
  */
 export async function requestGoogleCredential(clientId: string): Promise<string> {
   await loadGsiScript();
   const gsi = wireIdCallback(clientId);
 
   return new Promise((resolve, reject) => {
-    credentialHandlers.current = { resolve, reject };
     let settled = false;
 
     const fail = (err: unknown) => {
@@ -161,7 +165,7 @@ export async function requestGoogleCredential(clientId: string): Promise<string>
 }
 
 /**
- * Render official GIS button into `el` (most reliable on mobile).
+ * Render official GIS button into `el` (most reliable across desktop + mobile).
  * Returns a cleanup function.
  */
 export async function mountGoogleButton(
@@ -205,8 +209,7 @@ export async function mountGoogleButton(
 
 /**
  * Open Google's auth-code popup and resolve with the authorization code.
- * Backend exchanges it via redirect_uri=postmessage.
- * Prefer calling after preloadGsi() so the click gesture is preserved.
+ * Backend exchanges it via redirect_uri=postmessage (needs GOOGLE_CLIENT_SECRET).
  */
 const codeHandlers: { current: CodeHandlers | null } = { current: null };
 
@@ -256,33 +259,31 @@ export async function requestGoogleAuthCode(clientId: string): Promise<string> {
   });
 }
 
-/**
- * Mobile-safe sign-in: try ID credential prompt, then auth-code popup.
- */
-export async function signInWithGoogle(clientId: string): Promise<GoogleSignInResult> {
-  const mobile = typeof navigator !== 'undefined'
-    && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-      || (navigator.maxTouchPoints > 1 && window.innerWidth < 900));
+export interface SignInWithGoogleOptions {
+  /** When false, skip auth-code popup (no server client secret). Default true. */
+  allowCodeFlow?: boolean;
+}
 
-  if (mobile) {
-    try {
-      const credential = await requestGoogleCredential(clientId);
-      return { credential };
-    } catch (err) {
-      if (isCancelledError(err)) throw err;
-      // Fall through to code popup / button
-    }
-  }
+/**
+ * Prefer ID credential (works without client secret).
+ * Fall back to auth-code popup only when allowed and One Tap was blocked.
+ */
+export async function signInWithGoogle(
+  clientId: string,
+  options: SignInWithGoogleOptions = {},
+): Promise<GoogleSignInResult> {
+  const allowCodeFlow = options.allowCodeFlow !== false;
 
   try {
-    const code = await requestGoogleAuthCode(clientId);
-    return { code };
-  } catch (err) {
-    if (!mobile) throw err;
-    // Last resort on mobile: credential prompt again after popup fail
     const credential = await requestGoogleCredential(clientId);
     return { credential };
+  } catch (err) {
+    if (isCancelledError(err) && !isPromptUnavailableError(err)) throw err;
+    if (!allowCodeFlow) throw err;
   }
+
+  const code = await requestGoogleAuthCode(clientId);
+  return { code };
 }
 
 export function disableGsiAutoSelect(): void {

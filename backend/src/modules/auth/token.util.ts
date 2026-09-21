@@ -1,3 +1,10 @@
+/**
+ * JWT sign / verify
+ *
+ * Hosted: JWT_SECRET required.
+ * Local: ephemeral secret so the API can boot without .env (sessions die on restart).
+ */
+
 import crypto from 'crypto';
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { isHostedRuntime } from '../../config/env.config.js';
@@ -15,6 +22,8 @@ export interface AuthTokenPayload extends JwtPayload {
 
 let ephemeralDevSecret: string | null = null;
 
+// ___________________________________________ secret ___________________________________________
+
 function getSecret(): string {
   const secret = process.env.JWT_SECRET?.trim();
   if (secret) return secret;
@@ -29,6 +38,8 @@ function getSecret(): string {
   }
   return ephemeralDevSecret;
 }
+
+// ___________________________________________ sign / verify ___________________________________________
 
 export function signToken(user: {
   _id: { toString(): string };
@@ -46,7 +57,7 @@ export function signToken(user: {
       tv: user.tokenVersion ?? 0,
     },
     getSecret(),
-    { expiresIn: JWT_EXPIRES_IN, algorithm: JWT_ALG }
+    { expiresIn: JWT_EXPIRES_IN, algorithm: JWT_ALG },
   );
 }
 

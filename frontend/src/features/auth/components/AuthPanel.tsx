@@ -38,12 +38,19 @@ function GoogleMark({ className }: { className?: string }) {
 
 interface GoogleSignInButtonProps {
   clientId: string;
+  allowCodeFlow?: boolean;
   disabled?: boolean;
   onAuth?: (payload: { credential?: string; code?: string }) => void | Promise<void>;
   onError?: () => void;
 }
 
-function GoogleSignInButton({ clientId, disabled, onAuth, onError }: GoogleSignInButtonProps) {
+function GoogleSignInButton({
+  clientId,
+  allowCodeFlow = true,
+  disabled,
+  onAuth,
+  onError,
+}: GoogleSignInButtonProps) {
   const [busy, setBusy] = useState(false);
   const [useOfficialBtn, setUseOfficialBtn] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -55,15 +62,16 @@ function GoogleSignInButton({ clientId, disabled, onAuth, onError }: GoogleSignI
     onErrorRef.current = onError;
   }, [onAuth, onError]);
 
-  const preferOfficial = typeof navigator !== 'undefined'
-    && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-      || (navigator.maxTouchPoints > 1 && window.innerWidth < 900));
+  // Official GIS button when code popup can't run or touch devices block popups.
+  const preferOfficial = !allowCodeFlow
+    || (typeof navigator !== 'undefined'
+      && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+        || (navigator.maxTouchPoints > 1 && window.innerWidth < 900)));
 
   useEffect(() => {
     preloadGsi();
   }, []);
 
-  // Official Google button on mobile — popups are unreliable there
   useEffect(() => {
     if (!preferOfficial || !clientId) return undefined;
     let cleanup = () => {};
@@ -112,7 +120,7 @@ function GoogleSignInButton({ clientId, disabled, onAuth, onError }: GoogleSignI
     }
     setBusy(true);
     try {
-      const payload = await signInWithGoogle(clientId);
+      const payload = await signInWithGoogle(clientId, { allowCodeFlow });
       await onAuth?.(payload);
     } catch (err) {
       if (!isCancelledError(err)) onError?.();
@@ -206,6 +214,7 @@ export function AuthPanel({
   const [googleClientId, setGoogleClientId] = useState(
     () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
   );
+  const [allowCodeFlow, setAllowCodeFlow] = useState(true);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const pageRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -217,6 +226,16 @@ export function AuthPanel({
   const isOtpMode = mode === 'verify' || mode === 'reset';
   const showAuthTabs = mode === 'login' || mode === 'register' || mode === 'register-step-2';
   const showGoogle = mode === 'login' || mode === 'register';
+
+  // Lock document scroll while auth is mounted (pairs with .auth-mounted CSS).
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('auth-mounted');
+    window.scrollTo(0, 0);
+    return () => {
+      root.classList.remove('auth-mounted');
+    };
+  }, []);
 
   // Premium entrance — shell, showcase copy, form (respects reduced motion)
   useGSAP(() => {
@@ -358,22 +377,21 @@ export function AuthPanel({
   };
 
   useEffect(() => {
-    if (googleClientId) return undefined;
     let cancelled = false;
 
-    const applyId = (id: unknown) => {
-      const value = String(id || '').trim();
-      if (!cancelled && value) setGoogleClientId(value);
-    };
-
     apiService.get('/auth/google-config').then((data) => {
-      applyId(data?.clientId);
+      if (cancelled) return;
+      const id = String(data?.clientId || '').trim();
+      if (id) setGoogleClientId(id);
+      if (typeof data?.codeFlowEnabled === 'boolean') {
+        setAllowCodeFlow(data.codeFlowEnabled);
+      }
     }).catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [googleClientId]);
+  }, []);
 
   useEffect(() => {
     if (resendIn <= 0) return undefined;
@@ -708,6 +726,10 @@ export function AuthPanel({
       <div className="auth-page__orb auth-page__orb--b" aria-hidden="true" />
       <Helmet>
         <title>{pageTitle(pageHeading)}</title>
+        <meta
+          httpEquiv="Permissions-Policy"
+          content={'camera=(), microphone=(), geolocation=(), identity-credentials-get=(self "https://accounts.google.com")'}
+        />
       </Helmet>
 
       <button type="button" className="auth-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
@@ -1184,6 +1206,7 @@ export function AuthPanel({
             <div className="auth-divider"><span>or</span></div>
             <GoogleSignInButton
               clientId={googleClientId}
+              allowCodeFlow={allowCodeFlow}
               disabled={isSubmitting}
               onAuth={handleGoogleAuth}
               onError={handleGoogleError}

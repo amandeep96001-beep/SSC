@@ -1,3 +1,10 @@
+/**
+ * Auth controller
+ *
+ * Owns register / login / OTP / password reset / Google / progress / admin summary.
+ * Helpers stay private at the top; HTTP handlers below, grouped by feature.
+ */
+
 import type { RequestHandler, Response } from 'express';
 import type { HydratedDocument } from 'mongoose';
 import User from './user.model.js';
@@ -30,6 +37,8 @@ import {
   type PublicUserPayload,
 } from '../../types/domain.js';
 
+// ___________________________________________ constants ___________________________________________
+
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
@@ -41,6 +50,8 @@ interface PublicUserSource {
   role?: string;
   lastStudyAt?: Date | string | null;
 }
+
+// ___________________________________________ helpers: user payload ___________________________________________
 
 function rowTimestamp(row: unknown): number {
   if (!isRecord(row)) return 0;
@@ -88,7 +99,7 @@ function publicUserPayload(
     role: user.role || 'user',
     lastStudyAt: deriveLastStudyAt(progress, mockProgress, user.lastStudyAt ?? null),
     progress,
-    mockProgress
+    mockProgress,
   };
   if (token) payload.token = token;
   return payload;
@@ -99,12 +110,15 @@ async function touchLastStudyAt(userId: string | undefined) {
   try {
     await User.updateOne({ _id: userId }, { $set: { lastStudyAt: new Date() } });
   } catch {
-    /* non-critical */
+    /* non-critical activity stamp */
   }
 }
 
+// ___________________________________________ helpers: csv export ___________________________________________
+
 function csvEscape(v: unknown): string {
   let s = v == null ? '' : String(v);
+  // Neutralize formula injection when opened in Excel / Sheets.
   if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
@@ -142,10 +156,12 @@ function syllabusProgressToCsv(rows: object[]) {
   return `${header}\n${lines.join('\n')}\n`;
 }
 
-/** Admin only via ADMIN_EMAIL — no username/code shortcuts (those were privilege-escalation vectors). */
+/** Admin only via ADMIN_EMAIL — never trust client-supplied role hints. */
 function resolveRole(email: string | null | undefined): 'user' | 'admin' {
   return email ? resolveRoleByEmail(normalizeEmail(email)) : 'user';
 }
+
+// ___________________________________________ helpers: otp ___________________________________________
 
 async function createAndStoreOtp(
   email: string,
@@ -156,34 +172,43 @@ async function createAndStoreOtp(
   const codeHash = hashOtpCode(code);
   const expiresAt = new Date(Date.now() + OTP_TTL_MS);
   const aliases = emailAliases(email);
+
   await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
   await OtpChallenge.create({ email, purpose, codeHash, expiresAt, attempts: 0, pendingData });
+
   const mail = await sendOtpEmail(email, code, { purpose });
   const debugOtp =
     process.env.SMTP_DEBUG === '1' && process.env.NODE_ENV !== 'production' && !mail.sent
       ? code
       : undefined;
+
   return { code, mail, debugOtp };
 }
 
 async function consumeOtpChallenge(email: string, code: string, purpose: OtpPurpose) {
   const aliases = emailAliases(email);
   const challenge = await OtpChallenge.findOne({ email: { $in: aliases }, purpose }).sort({ expiresAt: -1 });
+
   if (!challenge || challenge.expiresAt.getTime() < Date.now()) {
     return { ok: false as const, status: 401, message: 'OTP expired. Request a new code.' };
   }
+
   if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
     await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
     return { ok: false as const, status: 429, message: 'Too many incorrect attempts. Request a new code.' };
   }
+
   if (!otpHashesMatch(challenge.codeHash, hashOtpCode(code))) {
     challenge.attempts += 1;
     await challenge.save();
     return { ok: false as const, status: 401, message: 'Incorrect OTP. Try again.' };
   }
+
   await OtpChallenge.deleteMany({ email: { $in: aliases }, purpose });
   return { ok: true as const, pendingData: challenge.pendingData };
 }
+
+// ___________________________________________ register / login ___________________________________________
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
@@ -245,6 +270,8 @@ export const register: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+// ___________________________________________ login ___________________________________________
 
 export const login: RequestHandler = async (req, res, next) => {
   try {
@@ -311,6 +338,8 @@ export const login: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+// ___________________________________________ progress ___________________________________________
 
 export const saveProgress: RequestHandler = async (req, res, next) => {
   try {
@@ -403,6 +432,8 @@ export const saveMockProgress: RequestHandler = async (req, res, next) => {
   }
 };
 
+// ___________________________________________ session ___________________________________________
+
 export const getMe: RequestHandler = async (req, res, next) => {
   try {
     const username = req.user!.username;
@@ -460,6 +491,8 @@ export const logout: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+// ___________________________________________ otp ___________________________________________
 
 /** POST /auth/otp/request — resend verification code (pending register or existing user) */
 export const requestOtp: RequestHandler = async (req, res, next) => {
@@ -567,6 +600,8 @@ export const verifyOtp: RequestHandler = async (req, res, next) => {
   }
 };
 
+// ___________________________________________ password ___________________________________________
+
 /**
  * POST /auth/password/forgot
  * Always returns a generic success message (no email enumeration).
@@ -655,10 +690,12 @@ export const resetPassword: RequestHandler = async (req, res, next) => {
   }
 };
 
+// ___________________________________________ google ___________________________________________
+
 /**
  * POST /auth/google
- * Body: { code } — GIS popup auth code (preferred)
- *    or { credential } — GIS ID token (legacy button)
+ * Body: { credential } — GIS ID token (preferred; no client secret)
+ *    or { code } — GIS popup auth code (needs GOOGLE_CLIENT_SECRET)
  */
 export const loginWithGoogle: RequestHandler = async (req, res, next) => {
   try {
@@ -677,12 +714,33 @@ export const loginWithGoogle: RequestHandler = async (req, res, next) => {
       });
     }
 
+    if (code && !process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+      return res.status(503).json({
+        status: 'error',
+        message: 'Google code sign-in is unavailable. Use the Google button (ID token) instead.',
+      });
+    }
+
     let profile;
     try {
-      profile = code
-        ? await exchangeGoogleAuthCode(String(code))
-        : await verifyGoogleIdToken(String(credential));
-    } catch {
+      // Prefer credential when both are sent — cheaper and secret-free.
+      profile = credential
+        ? await verifyGoogleIdToken(String(credential))
+        : await exchangeGoogleAuthCode(String(code));
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : '';
+      if (detail.includes('GOOGLE_CLIENT_SECRET')) {
+        return res.status(503).json({
+          status: 'error',
+          message: 'Google code sign-in is unavailable on this server.',
+        });
+      }
+      if (detail.includes('not verified')) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Your Google email is not verified. Verify it with Google, then try again.',
+        });
+      }
       return res.status(401).json({
         status: 'error',
         message: 'Google sign-in failed. Try again.',
@@ -700,6 +758,8 @@ export const loginWithGoogle: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+// ___________________________________________ exports ___________________________________________
 
 /** CSV export — self by default; admin can pass scope=all */
 export const exportMockProgressCsv: RequestHandler = async (req, res, next) => {
@@ -753,6 +813,8 @@ export const exportSyllabusProgressCsv: RequestHandler = async (req, res, next) 
     next(error);
   }
 };
+
+// ___________________________________________ admin ___________________________________________
 
 /** Institute snapshot for admin console */
 export const getAdminSummary: RequestHandler = async (req, res, next) => {

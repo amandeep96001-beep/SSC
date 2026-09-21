@@ -1,4 +1,12 @@
+/**
+ * Auth request validation (express-validator)
+ *
+ * Keep rules strict at the edge — controllers assume validated shapes.
+ */
+
 import { body } from 'express-validator';
+
+// ___________________________________________ shared rules ___________________________________________
 
 const usernameRules = body('username')
   .optional({ values: 'falsy' })
@@ -15,6 +23,8 @@ const passwordRules = body('password')
   .withMessage('Password must include at least one letter.')
   .matches(/[0-9]/)
   .withMessage('Password must include at least one number.');
+
+// ___________________________________________ register / login ___________________________________________
 
 // Do not use express-validator normalizeEmail() — it strips Gmail dots/plus tags and
 // diverges from Google-stored addresses and our trim+lowercase normalizeEmail().
@@ -43,6 +53,8 @@ export const loginValidation = [
   }),
   body('password').notEmpty().withMessage('Password is required.'),
 ];
+
+// ___________________________________________ otp + password ___________________________________________
 
 export const otpRequestValidation = [
   body('email')
@@ -81,6 +93,8 @@ export const resetPasswordValidation = [
   passwordRules,
 ];
 
+// ___________________________________________ google ___________________________________________
+
 export const googleAuthValidation = [
   body('code').optional({ values: 'falsy' }).trim().isString(),
   body('credential').optional({ values: 'falsy' }).trim().isString(),
@@ -91,6 +105,8 @@ export const googleAuthValidation = [
     return true;
   }),
 ];
+
+// ___________________________________________ progress ___________________________________________
 
 export const progressValidation = [
   body('topicId').trim().notEmpty().isLength({ max: 128 }).withMessage('Topic ID is required.'),

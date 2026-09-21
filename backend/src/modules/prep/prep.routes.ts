@@ -1,8 +1,14 @@
+/**
+ * Prep routes — status + sticky notes
+ */
+
 import express from 'express';
 import { getStatus, getNotes, createNote, deleteNote } from './prep.controller.js';
 import { requireAdmin } from '../../shared/middleware/auth.middleware.js';
 
 const router = express.Router();
+
+// ___________________________________________ prep ___________________________________________
 
 router.get('/status', getStatus);
 

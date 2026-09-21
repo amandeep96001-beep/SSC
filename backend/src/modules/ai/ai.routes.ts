@@ -1,8 +1,14 @@
+/**
+ * AI routes — concept explain (Gemini)
+ */
+
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { explainConcept } from './ai.controller.js';
 
 const router = express.Router();
+
+// ___________________________________________ ai ___________________________________________
 
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

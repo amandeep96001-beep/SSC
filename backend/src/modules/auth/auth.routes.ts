@@ -1,5 +1,13 @@
+/**
+ * Auth routes — /api/auth/*
+ *
+ * Public endpoints are rate-limited tightly.
+ * Session endpoints expect requireAuth from the parent router where noted.
+ */
+
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+
 import {
   register,
   login,
@@ -16,6 +24,7 @@ import {
   resetPassword,
   loginWithGoogle,
 } from './auth.controller.js';
+
 import {
   registerValidation,
   loginValidation,
@@ -27,11 +36,14 @@ import {
   resetPasswordValidation,
   googleAuthValidation,
 } from './auth.validation.js';
+
 import { validateRequest } from '../../shared/middleware/validate.middleware.js';
 import { requireAuth, requireAdmin } from '../../shared/middleware/auth.middleware.js';
 import { requireDb } from '../../shared/middleware/db.middleware.js';
 
 const router = express.Router();
+
+// ___________________________________________ limiters ___________________________________________
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -49,24 +61,37 @@ const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Password + OTP + Google (google-config lives on the parent /api router)
+// ___________________________________________ register / login ___________________________________________
+
 router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, register);
 router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, login);
+
+// ___________________________________________ otp + password ___________________________________________
 
 router.post('/otp/request', otpLimiter, requireDb, otpRequestValidation, validateRequest, requestOtp);
 router.post('/otp/verify', authLimiter, requireDb, otpVerifyValidation, validateRequest, verifyOtp);
 router.post('/password/forgot', otpLimiter, requireDb, forgotPasswordValidation, validateRequest, forgotPassword);
 router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, validateRequest, resetPassword);
 
-// Google Identity Services — frontend sends ID token, backend verifies
+// ___________________________________________ google ___________________________________________
+
+// Frontend prefers ID token; auth-code popup is optional when GOOGLE_CLIENT_SECRET is set.
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);
+
+// ___________________________________________ session ___________________________________________
 
 router.get('/me', requireAuth, getMe);
 router.post('/logout', requireAuth, logout);
+
+// ___________________________________________ progress ___________________________________________
+
 router.post('/progress', requireAuth, progressValidation, validateRequest, saveProgress);
 router.post('/mock-progress', requireAuth, mockProgressValidation, validateRequest, saveMockProgress);
 router.get('/mock-progress/export', requireAuth, exportMockProgressCsv);
 router.get('/progress/export', requireAuth, exportSyllabusProgressCsv);
+
+// ___________________________________________ admin ___________________________________________
+
 router.get('/admin/summary', requireAuth, requireAdmin, getAdminSummary);
 
 export default router;

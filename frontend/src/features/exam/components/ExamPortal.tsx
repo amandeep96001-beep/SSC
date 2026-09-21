@@ -2,7 +2,7 @@ import { useRef, useState, type Dispatch, type SetStateAction, type TouchEvent }
 import { Helmet } from 'react-helmet-async';
 import { pageTitle } from '@/shared/brand';
 import { useEffect, useCallback } from 'react';
-import { Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ChevronLeft } from 'lucide-react';
+import { Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ChevronLeft, RefreshCw } from 'lucide-react';
 import { ExamLoader } from '@/features/exam/components/ExamLoader';
 import { McqText } from '@/shared/components/ui/McqText';
 import type { AppUser, McqQuestion, TopicNotesPayload } from '@/types/app';
