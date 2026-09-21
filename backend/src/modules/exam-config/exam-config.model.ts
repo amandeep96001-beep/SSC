@@ -1,9 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface IExamConfig {
-  examId: string;
-  subjects: string[];
-}
+import type { IExamConfig } from './exam-config.interface.js';
 
 const ExamConfigSchema = new Schema<IExamConfig>(
   {

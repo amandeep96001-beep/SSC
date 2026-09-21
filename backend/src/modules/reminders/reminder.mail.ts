@@ -1,4 +1,4 @@
-import { sendMail, logoImgHtml } from '../../modules/auth/mail.util.js';
+import { sendMail, logoImgHtml } from '../../utils/mail.js';
 
 export async function sendReminderEmail({
   email,

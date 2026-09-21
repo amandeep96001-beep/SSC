@@ -1,9 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface ISubject {
-  name: string;
-  ownerId?: string | null;
-}
+import type { ISubject } from './study.interface.js';
 
 const SubjectSchema = new Schema<ISubject>({
   name: { type: String, required: true },

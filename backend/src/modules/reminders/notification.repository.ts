@@ -1,5 +1,5 @@
 import AppNotification from './notification.model.js';
-import type { IAppNotification } from './notification.model.js';
+import type { IAppNotification } from './reminder.interface.js';
 
 class NotificationRepository {
   async findByUser(

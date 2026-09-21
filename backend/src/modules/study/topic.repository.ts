@@ -1,5 +1,5 @@
 import Topic from './topic.model.js';
-import type { ITopic } from './topic.model.js';
+import type { ITopic } from './study.interface.js';
 
 const globalOwnerFilter = {
   $or: [{ ownerId: null }, { ownerId: { $exists: false } }]

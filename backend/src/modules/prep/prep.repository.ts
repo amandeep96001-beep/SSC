@@ -1,5 +1,5 @@
 import PrepModel from './prep.model.js';
-import type { IPrepNote } from './prep.model.js';
+import type { IPrepNote } from './prep.interface.js';
 
 class PrepRepository {
   async getAllNotes() {

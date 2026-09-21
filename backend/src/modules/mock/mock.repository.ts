@@ -1,17 +1,8 @@
 import MockTest from './mock-test.model.js';
-import type { IMockQuestion, IMockTest } from './mock-test.model.js';
 import type { HydratedDocument } from 'mongoose';
+import type { CreateMockTestData, IMockQuestion, IMockTest } from './mock.interface.js';
 
 export type MockTestDoc = HydratedDocument<IMockTest>;
-
-export interface CreateMockTestData {
-  title: string;
-  examId: string;
-  year: string;
-  date: string;
-  shift: string;
-  questions: IMockQuestion[];
-}
 
 function examFilter(examId: unknown) {
   const id = String(examId || 'ssc').trim() || 'ssc';

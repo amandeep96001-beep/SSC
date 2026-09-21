@@ -1,16 +1,16 @@
 import express from 'express';
-import { getStatus, getNotes, createNote, deleteNote } from './prep.controller.js';
-import { requireAdmin } from '../../shared/middleware/auth.middleware.js';
+import { prepController } from './prep.controller.js';
+import { requireAdmin } from '../../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-router.get('/status', getStatus);
+router.get('/status', prepController.getStatus);
 
 router.route('/notes')
-  .get(getNotes)
-  .post(requireAdmin, createNote);
+  .get(prepController.getNotes)
+  .post(requireAdmin, prepController.createNote);
 
 router.route('/notes/:id')
-  .delete(requireAdmin, deleteNote);
+  .delete(requireAdmin, prepController.deleteNote);
 
 export default router;

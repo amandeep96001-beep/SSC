@@ -1,37 +1,14 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-
-import { register, login, logout, getMe, loginWithGoogle } from './controllers/auth.controller.js';
-import { requestOtp, verifyOtp } from './controllers/otp.controller.js';
-import {
-  forgotPassword,
-  verifyPasswordResetOtp,
-  resetPassword,
-} from './controllers/password.controller.js';
-import {
-  saveProgress,
-  saveMockProgress,
-  exportMockProgressCsv,
-  exportSyllabusProgressCsv,
-} from './controllers/progress.controller.js';
-import { getAdminSummary } from './controllers/admin.controller.js';
-
+import { authController } from './auth.controller.js';
 import {
   registerValidation,
   loginValidation,
-  progressValidation,
-  mockProgressValidation,
-  otpRequestValidation,
-  otpVerifyValidation,
-  forgotPasswordValidation,
-  verifyPasswordResetOtpValidation,
-  resetPasswordValidation,
   googleAuthValidation,
 } from './auth.validation.js';
-
-import { validateRequest } from '../../shared/middleware/validate.middleware.js';
-import { requireAuth, requireAdmin } from '../../shared/middleware/auth.middleware.js';
-import { requireDb } from '../../shared/middleware/db.middleware.js';
+import { validateRequest } from '../../middleware/validate.middleware.js';
+import { requireAuth } from '../../middleware/auth.middleware.js';
+import { requireDb } from '../../middleware/db.middleware.js';
 
 const router = express.Router();
 
@@ -43,33 +20,11 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const otpLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { status: 'error', message: 'Too many OTP requests. Try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, authController.register);
+router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, authController.login);
+router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, authController.loginWithGoogle);
 
-router.post('/register', authLimiter, requireDb, registerValidation, validateRequest, register);
-router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, login);
-
-router.post('/otp/request', otpLimiter, requireDb, otpRequestValidation, validateRequest, requestOtp);
-router.post('/otp/verify', authLimiter, requireDb, otpVerifyValidation, validateRequest, verifyOtp);
-router.post('/password/forgot', otpLimiter, requireDb, forgotPasswordValidation, validateRequest, forgotPassword);
-router.post('/password/verify-otp', authLimiter, requireDb, verifyPasswordResetOtpValidation, validateRequest, verifyPasswordResetOtp);
-router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, validateRequest, resetPassword);
-
-router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, loginWithGoogle);
-
-router.get('/me', requireAuth, getMe);
-router.post('/logout', requireAuth, logout);
-
-router.post('/progress', requireAuth, progressValidation, validateRequest, saveProgress);
-router.post('/mock-progress', requireAuth, mockProgressValidation, validateRequest, saveMockProgress);
-router.get('/mock-progress/export', requireAuth, exportMockProgressCsv);
-router.get('/progress/export', requireAuth, exportSyllabusProgressCsv);
-
-router.get('/admin/summary', requireAuth, requireAdmin, getAdminSummary);
+router.get('/me', requireAuth, authController.getMe);
+router.post('/logout', requireAuth, authController.logout);
 
 export default router;

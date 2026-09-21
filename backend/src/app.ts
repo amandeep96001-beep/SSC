@@ -8,8 +8,8 @@ import morgan from 'morgan';
 import apiRouter from './routes/index.js';
 import { getDBStatus } from './config/db.config.js';
 import { isHostedRuntime } from './config/env.config.js';
-import { notFound, errorHandler } from './shared/middleware/error.middleware.js';
-import { mongoSanitize } from './shared/middleware/sanitize.middleware.js';
+import { notFound, errorHandler } from './middleware/error.middleware.js';
+import { mongoSanitize } from './middleware/sanitize.middleware.js';
 
 function normalizeOrigin(url: unknown): string {
   return String(url || '').trim().replace(/\/+$/, '');

@@ -1,5 +1,5 @@
 import { errorMessage, isRecord } from '../../types/domain.js';
-import { badRequest } from '../../shared/errors/http-error.js';
+import { badRequest } from '../../utils/app-errors.js';
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash';
 
@@ -144,46 +144,50 @@ AI services are temporarily unavailable, so we can't generate topic-specific fac
 - **10.** Discuss this topic with fellow aspirants for better retention.`;
 }
 
-export async function explainConcept(body: {
-  question?: unknown;
-  correctAnswer?: unknown;
-  explanation?: unknown;
-}) {
-  const { question, correctAnswer, explanation } = body;
-  if (!question || !correctAnswer) {
-    throw badRequest('question and correctAnswer are required.');
-  }
-  if (String(question).length > 4000 || String(correctAnswer).length > 500) {
-    throw badRequest('Question payload is too large.');
-  }
-
-  const prompt = buildPrompt(question, correctAnswer, explanation);
-  const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
-  let aiText: string | null = null;
-  let provider: string | null = null;
-
-  const chain: [string, (p: string) => Promise<string>][] = hasGemini
-    ? [
-        ['Gemini', tryGemini],
-        ['Pollinations', tryPollinations],
-      ]
-    : [['Pollinations', tryPollinations]];
-
-  for (const [name, fn] of chain) {
-    try {
-      aiText = await fn(prompt);
-      provider = name;
-      break;
-    } catch (err) {
-      console.warn(`[AI] ${name} failed:`, errorMessage(err));
+export class AiService {
+  async explainConcept(body: {
+    question?: unknown;
+    correctAnswer?: unknown;
+    explanation?: unknown;
+  }) {
+    const { question, correctAnswer, explanation } = body;
+    if (!question || !correctAnswer) {
+      throw badRequest('question and correctAnswer are required.');
     }
-  }
+    if (String(question).length > 4000 || String(correctAnswer).length > 500) {
+      throw badRequest('Question payload is too large.');
+    }
 
-  if (!aiText) {
-    console.warn('[AI] All AI services failed. Using local static fallback.');
-    aiText = staticFallback(correctAnswer, explanation);
-    provider = 'static';
-  }
+    const prompt = buildPrompt(question, correctAnswer, explanation);
+    const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
+    let aiText: string | null = null;
+    let provider: string | null = null;
 
-  return { data: { explanation: aiText, provider } };
+    const chain: [string, (p: string) => Promise<string>][] = hasGemini
+      ? [
+          ['Gemini', tryGemini],
+          ['Pollinations', tryPollinations],
+        ]
+      : [['Pollinations', tryPollinations]];
+
+    for (const [name, fn] of chain) {
+      try {
+        aiText = await fn(prompt);
+        provider = name;
+        break;
+      } catch (err) {
+        console.warn(`[AI] ${name} failed:`, errorMessage(err));
+      }
+    }
+
+    if (!aiText) {
+      console.warn('[AI] All AI services failed. Using local static fallback.');
+      aiText = staticFallback(correctAnswer, explanation);
+      provider = 'static';
+    }
+
+    return { data: { explanation: aiText, provider } };
+  }
 }
+
+export const aiService = new AiService();

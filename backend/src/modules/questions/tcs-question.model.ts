@@ -1,20 +1,10 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface ITCSQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation?: string;
-  subject: string;
-  category: string;
-  year?: number | null;
-  isImportant?: boolean;
-}
+import type { ITCSQuestion } from './tcs-question.interface.js';
 
 const TCSQuestionSchema = new Schema<ITCSQuestion>({
   question: { type: String, required: true },
-  options: [{ type: String, required: true }],       // always 4 options
-  correctAnswer: { type: Number, required: true },   // 0-indexed (0, 1, 2, 3)
+  options: [{ type: String, required: true }],
+  correctAnswer: { type: Number, required: true },
   explanation: { type: String, default: '' },
   subject: {
     type: String,
@@ -22,9 +12,9 @@ const TCSQuestionSchema = new Schema<ITCSQuestion>({
     trim: true,
     index: true,
   },
-  category: { type: String, required: true },        // e.g. 'History', 'Grammar', 'Idioms'
-  year: { type: Number, default: null },             // SSC shift year
-  isImportant: { type: Boolean, default: false }     // High-ROI / repeated question
+  category: { type: String, required: true },
+  year: { type: Number, default: null },
+  isImportant: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const TCSQuestion = mongoose.models.TCSQuestion || mongoose.model<ITCSQuestion>('TCSQuestion', TCSQuestionSchema);

@@ -1,29 +1,16 @@
 import mongoose from 'mongoose';
 import TCSQuestion from './tcs-question.model.js';
-import type { ITCSQuestion } from './tcs-question.model.js';
-import drillPerformanceRepository from '../drill/repositories/drill-performance.repository.js';
-
-// How many days before a correctly-answered question can reappear
-const CORRECT_COOLDOWN_DAYS = 3;
-// How many days a wrong answer stays in the "high priority" pool
-const WRONG_BOOST_DAYS = 7;
-// % chance of picking from the weak pool when it's non-empty (0–1)
-const WEAK_POOL_PROBABILITY = 0.70;
-// Max performance records to scan per request (keeps queries fast)
-const PERF_SCAN_LIMIT = 300;
-
-export type TCSQuestionInsert = Pick<
+import drillPerformanceRepository from '../drill/drill-performance.repository.js';
+import type {
   ITCSQuestion,
-  'question' | 'options' | 'correctAnswer' | 'explanation' | 'subject' | 'category' | 'year' | 'isImportant'
->;
+  RelatedQuestionsInput,
+  TCSQuestionInsert,
+} from './tcs-question.interface.js';
 
-export interface RelatedQuestionsInput {
-  subject: string;
-  category?: string | null;
-  excludeIds?: Array<string | mongoose.Types.ObjectId>;
-  excludeQuestion?: string | null;
-  limit?: number;
-}
+const CORRECT_COOLDOWN_DAYS = 3;
+const WRONG_BOOST_DAYS = 7;
+const WEAK_POOL_PROBABILITY = 0.70;
+const PERF_SCAN_LIMIT = 300;
 
 class TCSQuestionRepository {
   static async findAllQuestionTexts(): Promise<{ question: string }[]> {

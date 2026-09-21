@@ -1,7 +1,15 @@
-import { badRequest } from '../../shared/errors/http-error.js';
+import { badRequest } from '../../utils/app-errors.js';
 import { isRecord, mongoErrorCode } from '../../types/domain.js';
 import { normalizeMcqField } from './mcqText.js';
-import TCSQuestionRepository, { type TCSQuestionInsert } from './tcs-question.repository.js';
+import TCSQuestionRepository from './tcs-question.repository.js';
+import type {
+  BulkUploadResult,
+  SubjectUploadRow,
+  TcsStatsData,
+  TCSQuestionInsert,
+  UploadStats,
+  UserAddResult,
+} from './tcs-question.interface.js';
 
 const DEFAULT_SUBJECTS = ['GK', 'English', 'Maths', 'Reasoning'];
 
@@ -135,61 +143,6 @@ function normalizeItem(raw: unknown): TCSQuestionInsert | null {
 
 type SubjectUploadField = 'inserted' | 'duplicates' | 'invalid';
 
-interface SubjectUploadRow {
-  inserted: number;
-  duplicates: number;
-  invalid: number;
-  received: number;
-}
-
-interface UploadStats {
-  inserted: number;
-  duplicates: number;
-  invalid: number;
-  received: number;
-}
-
-export interface TcsStatsData {
-  total: number;
-  bySubject: Record<string, number>;
-  subjects: string[];
-  gk: number;
-  english: number;
-  maths: number;
-  reasoning: number;
-}
-
-export interface BulkUploadSuccess {
-  kind: 'success';
-  statusCode: 200 | 201;
-  message: string;
-  data: UploadStats & {
-    bySubject?: Record<string, SubjectUploadRow>;
-    stats: TcsStatsData;
-  };
-}
-
-export interface BulkUploadPartialSuccess {
-  kind: 'partial_success';
-  message: string;
-}
-
-export type BulkUploadResult = BulkUploadSuccess | BulkUploadPartialSuccess;
-
-export interface UserAddSuccess {
-  kind: 'success';
-  statusCode: 200 | 201;
-  message: string;
-  data: UploadStats & { stats: TcsStatsData };
-}
-
-export interface UserAddPartialSuccess {
-  kind: 'partial_success';
-  message: string;
-}
-
-export type UserAddResult = UserAddSuccess | UserAddPartialSuccess;
-
 function parseQuestionList(payload: unknown): unknown[] | null {
   if (Array.isArray(payload)) return payload;
   if (isRecord(payload) && Array.isArray(payload.questions)) return payload.questions;
@@ -267,11 +220,12 @@ function formatSubjectSummary(bySubject: Record<string, SubjectUploadRow>): stri
   return subjectLines.length ? ` ${subjectLines.join(' · ')}` : '';
 }
 
-export async function getTcsStats(): Promise<TcsStatsData> {
+export class TcsQuestionService {
+  async getTcsStats(): Promise<TcsStatsData> {
   return TCSQuestionRepository.getCountBySubject();
 }
 
-export async function bulkUploadTcsQuestions(payload: unknown): Promise<BulkUploadResult> {
+  async bulkUploadTcsQuestions(payload: unknown): Promise<BulkUploadResult> {
   const list = parseQuestionList(payload);
 
   if (!list) {
@@ -320,7 +274,7 @@ export async function bulkUploadTcsQuestions(payload: unknown): Promise<BulkUplo
   };
 }
 
-export async function addQuestionsFromUser(payload: unknown): Promise<UserAddResult> {
+  async addQuestionsFromUser(payload: unknown): Promise<UserAddResult> {
   const list = parseQuestionList(payload);
 
   if (!list || list.length === 0) {
@@ -363,3 +317,6 @@ export async function addQuestionsFromUser(payload: unknown): Promise<UserAddRes
     },
   };
 }
+}
+
+export const tcsQuestionService = new TcsQuestionService();

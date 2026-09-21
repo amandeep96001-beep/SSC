@@ -1,6 +1,7 @@
 import { Vocab } from './vocab.model.js';
 import { getRandomConversion } from '../drill/fraction-conversions.js';
-import { distractorsForEntry, fillStoredDistractors, type VocabLean } from './vocab.mcq.js';
+import { distractorsForEntry, fillStoredDistractors } from './vocab.mcq.js';
+import type { VocabLean } from './study.interface.js';
 
 class VocabRepository {
   async findAll(query: object = {}, skip = 0, limit = 30) {

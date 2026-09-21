@@ -1,22 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface IMockQuestion {
-  section: string;
-  q: string;
-  o: string[];
-  a: number;
-  e?: string;
-}
-
-export interface IMockTest {
-  title: string;
-  examId: string;
-  year: string;
-  date: string;
-  shift: string;
-  questions: IMockQuestion[];
-  createdAt: Date;
-}
+import type { IMockQuestion, IMockTest } from './mock.interface.js';
 
 const MockTestSchema = new Schema<IMockTest>({
   title: { type: String, required: true },

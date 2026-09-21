@@ -1,13 +1,5 @@
 import { isRecord } from '../../types/domain.js';
-
-export interface TopicQuestionInsert {
-  topicId: string;
-  q: string;
-  o: string[];
-  a: number;
-  e: string;
-  state?: string;
-}
+import type { TopicQuestionInsert } from './study.interface.js';
 
 export function normalizeQuestionText(text: unknown): string {
   if (!text) return '';

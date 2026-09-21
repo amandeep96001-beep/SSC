@@ -1,5 +1,5 @@
 import Question from './question.model.js';
-import type { IQuestion } from './question.model.js';
+import type { IQuestion } from './study.interface.js';
 import type { Types } from 'mongoose';
 
 class QuestionRepository {

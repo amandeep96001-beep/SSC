@@ -1,9 +1,9 @@
 import type { Request } from 'express';
 import vocabRepository from './vocab.repository.js';
 import VocabDto from './vocab.dto.js';
-import type { VocabLean } from './vocab.mcq.js';
+import type { VocabLean } from './study.interface.js';
 import { errorMessage, mongoErrorCode } from '../../types/domain.js';
-import { badRequest, conflict, HttpError, notFound } from '../../shared/errors/http-error.js';
+import { badRequest, conflict, HttpError, notFound } from '../../utils/app-errors.js';
 
 function paramStr(value: string | string[] | undefined): string {
   return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
@@ -13,7 +13,8 @@ function isRecordish(value: unknown): value is object {
   return Boolean(value) && typeof value === 'object';
 }
 
-export async function getVocab(req: Request) {
+export class VocabService {
+  async getVocab(req: Request) {
   const { category, search, page = 1, limit = 30 } = req.query;
 
   const query: { category?: string; $or?: Array<Record<string, RegExp>> } = {};
@@ -59,7 +60,7 @@ export async function getVocab(req: Request) {
   };
 }
 
-export async function addVocab(req: Request) {
+  async addVocab(req: Request) {
   const dto = new VocabDto(req.body);
   dto.createdBy = req.user?.username || 'user';
   const errors = dto.validate();
@@ -79,7 +80,7 @@ export async function addVocab(req: Request) {
   }
 }
 
-export async function updateVocab(req: Request) {
+  async updateVocab(req: Request) {
   const vocabId = paramStr(req.params.vocabId);
   const dto = new VocabDto(req.body);
   const errors = dto.validate();
@@ -104,7 +105,7 @@ export async function updateVocab(req: Request) {
   return { data: updated };
 }
 
-export async function addVocabBulk(req: Request) {
+  async addVocabBulk(req: Request) {
   const vocabArray = req.body;
   if (!Array.isArray(vocabArray)) {
     throw badRequest('Expected a JSON array of vocabulary objects.');
@@ -172,3 +173,6 @@ export async function addVocabBulk(req: Request) {
     throw badRequest(errorMessage(error));
   }
 }
+}
+
+export const vocabService = new VocabService();

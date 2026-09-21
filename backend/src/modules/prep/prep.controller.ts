@@ -1,26 +1,32 @@
-import { asyncHandler } from '../../shared/utils/async-handler.js';
-import { ok, created } from '../../shared/utils/api-response.js';
-import * as prepService from './prep.service.js';
+import { asyncHandler } from '../../utils/async-handler.js';
+import { ok, created } from '../../utils/api-response.js';
+import { PrepService } from './prep.service.js';
 
 function paramStr(value: string | string[] | undefined): string {
   return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
 }
 
-export const getStatus = asyncHandler(async (_req, res) => {
-  return ok(res, prepService.getStatus());
-});
+export class PrepController {
+  constructor(private readonly prepService = new PrepService()) {}
 
-export const getNotes = asyncHandler(async (req, res) => {
-  const result = await prepService.getNotes(req.query.subject);
-  return ok(res, result);
-});
+  getStatus = asyncHandler(async (_req, res) => {
+    return ok(res, this.prepService.getStatus());
+  });
 
-export const createNote = asyncHandler(async (req, res) => {
-  const result = await prepService.createNote(req.body);
-  return created(res, result);
-});
+  getNotes = asyncHandler(async (req, res) => {
+    const result = await this.prepService.getNotes(req.query.subject);
+    return ok(res, result);
+  });
 
-export const deleteNote = asyncHandler(async (req, res) => {
-  const result = await prepService.deleteNote(paramStr(req.params.id));
-  return ok(res, { message: result.message });
-});
+  createNote = asyncHandler(async (req, res) => {
+    const result = await this.prepService.createNote(req.body);
+    return created(res, result);
+  });
+
+  deleteNote = asyncHandler(async (req, res) => {
+    const result = await this.prepService.deleteNote(paramStr(req.params.id));
+    return ok(res, { message: result.message });
+  });
+}
+
+export const prepController = new PrepController();

@@ -1,15 +1,15 @@
 import express from 'express';
-import { createMockTest, getMockTests, getMockTestById, deleteMockTest } from './mock.controller.js';
-import { requireAdmin } from '../../shared/middleware/auth.middleware.js';
+import { mockController } from './mock.controller.js';
+import { requireAdmin } from '../../middleware/auth.middleware.js';
 
 const router = express.Router();
 
 router.route('/')
-  .get(getMockTests)
-  .post(requireAdmin, createMockTest);
+  .get(mockController.getMockTests)
+  .post(requireAdmin, mockController.createMockTest);
 
 router.route('/:id')
-  .get(getMockTestById)
-  .delete(requireAdmin, deleteMockTest);
+  .get(mockController.getMockTestById)
+  .delete(requireAdmin, mockController.deleteMockTest);
 
 export default router;

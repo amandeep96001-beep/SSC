@@ -1,10 +1,4 @@
-/** Default exam → subjects (admin can override in DB). These are safe fallbacks for SSC while admin-managed data is still allowed to take precedence. */
-export interface ExamDefault {
-  name: string;
-  fullName: string;
-  subjects: string[];
-}
-
+import type { ExamDefault } from './exam-config.interface.js';
 export const EXAM_DEFAULTS: Record<string, ExamDefault> = {
   ssc: {
     name: 'SSC',

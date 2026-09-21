@@ -1,20 +1,26 @@
-import { asyncHandler } from '../../shared/utils/async-handler.js';
-import { ok } from '../../shared/utils/api-response.js';
-import * as examConfigService from './exam-config.service.js';
+import { asyncHandler } from '../../utils/async-handler.js';
+import { ok } from '../../utils/api-response.js';
+import { ExamConfigService } from './exam-config.service.js';
 
 function paramStr(value: string | string[] | undefined): string {
   return Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '');
 }
 
-export const listExamConfigs = asyncHandler(async (_req, res) => {
-  const result = await examConfigService.listExamConfigs();
-  return ok(res, result);
-});
+export class ExamConfigController {
+  constructor(private readonly examConfigService = new ExamConfigService()) {}
 
-export const upsertExamConfig = asyncHandler(async (req, res) => {
-  const result = await examConfigService.upsertExamConfig(
-    paramStr(req.params.examId),
-    req.body.subjects,
-  );
-  return ok(res, result);
-});
+  listExamConfigs = asyncHandler(async (_req, res) => {
+    const result = await this.examConfigService.listExamConfigs();
+    return ok(res, result);
+  });
+
+  upsertExamConfig = asyncHandler(async (req, res) => {
+    const result = await this.examConfigService.upsertExamConfig(
+      paramStr(req.params.examId),
+      req.body.subjects,
+    );
+    return ok(res, result);
+  });
+}
+
+export const examConfigController = new ExamConfigController();

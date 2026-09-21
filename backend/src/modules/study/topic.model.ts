@@ -1,13 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface ITopic {
-  id: string;
-  subjectName: string;
-  name: string;
-  syllabus?: string;
-  notes?: string;
-  ownerId?: string | null;
-}
+import type { ITopic } from './study.interface.js';
 
 const TopicSchema = new Schema<ITopic>({
   id: { type: String, required: true, unique: true },

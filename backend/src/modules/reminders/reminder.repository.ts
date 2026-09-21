@@ -1,5 +1,5 @@
 import Reminder from './reminder.model.js';
-import type { IReminder } from './reminder.model.js';
+import type { IReminder } from './reminder.interface.js';
 import type { HydratedDocument } from 'mongoose';
 
 export type ReminderDoc = HydratedDocument<IReminder>;

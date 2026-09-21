@@ -1,30 +1,7 @@
 import mongoose from 'mongoose';
-import { Vocab, type IVocab } from './vocab.model.js';
-import { shuffle } from '../../shared/utils/shuffle.js';
-
-export type VocabPromptKind =
-  | 'idiom-meaning'
-  | 'ows-word'
-  | 'wp-meaning'
-  | 'wp-synonym'
-  | 'wp-antonym';
-
-export type VocabLean = IVocab & { _id: mongoose.Types.ObjectId };
-
-export interface VocabMcq {
-  _id: string;
-  promptKind: VocabPromptKind;
-  question: string;
-  options: string[];
-  correctAnswer: string;
-  isIdiom: boolean;
-  word: string;
-  revealDefinition: string;
-  revealSynonyms: string[];
-  revealAntonyms: string[];
-  pos?: string;
-  category: string;
-}
+import { Vocab } from './vocab.model.js';
+import { shuffle } from '../../utils/shuffle.js';
+import type { IVocab, VocabLean, VocabMcq, VocabPromptKind } from './study.interface.js';
 
 const SPELLING = 'Spelling Rules';
 const IDIOMS = 'Idioms & Phrases';

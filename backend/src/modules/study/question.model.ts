@@ -1,13 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
-
-export interface IQuestion {
-  topicId: string;
-  q: string;
-  o: string[];
-  a: number;
-  e: string;
-  state?: string;
-}
+import type { IQuestion } from './study.interface.js';
 
 const QuestionSchema = new Schema<IQuestion>({
   topicId: { type: String, required: true, index: true },

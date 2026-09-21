@@ -1,11 +1,4 @@
-export interface IPrepNote {
-  id: number;
-  subject: string;
-  topic: string;
-  difficulty: string;
-  content: string;
-  createdAt: Date;
-}
+import type { IPrepNote, CreatePrepNoteInput } from './prep.interface.js';
 
 let notesDb: IPrepNote[] = [];
 
@@ -22,12 +15,7 @@ class PrepModel {
     return notesDb.find(n => n.id === id);
   }
 
-  static async createNote(noteData: {
-    subject: unknown;
-    topic: unknown;
-    difficulty?: unknown;
-    content: unknown;
-  }) {
+  static async createNote(noteData: CreatePrepNoteInput) {
     const { subject, topic, difficulty, content } = noteData;
     const newNote: IPrepNote = {
       id: notesDb.length ? Math.max(...notesDb.map(n => n.id)) + 1 : 1,

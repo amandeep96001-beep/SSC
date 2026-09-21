@@ -1,45 +1,51 @@
-import { asyncHandler } from '../../shared/utils/async-handler.js';
-import { ok } from '../../shared/utils/api-response.js';
-import * as drillService from './drill.service.js';
+import { asyncHandler } from '../../utils/async-handler.js';
+import { ok } from '../../utils/api-response.js';
+import { DrillService } from './drill.service.js';
 
-export const getNextDrill = asyncHandler(async (req, res) => {
-  const type = String(req.query.type || 'table');
-  const userId = (req.user as { _id?: unknown } | undefined)?._id ?? null;
+export class DrillController {
+  constructor(private readonly drillService = new DrillService()) {}
 
-  const data = await drillService.getNextDrill({
-    type,
-    maxBase: req.query.maxBase,
-    userId,
+  getNextDrill = asyncHandler(async (req, res) => {
+    const type = String(req.query.type || 'table');
+    const userId = (req.user as { _id?: unknown } | undefined)?._id ?? null;
+
+    const data = await this.drillService.getNextDrill({
+      type,
+      maxBase: req.query.maxBase,
+      userId,
+    });
+
+    return ok(res, { data });
   });
 
-  return ok(res, { data });
-});
+  verifyDrill = asyncHandler(async (req, res) => {
+    const { type, userAnswer, correctAnswer, questionId, question } = req.body;
+    const userId = req.user?.id ?? null;
 
-export const verifyDrill = asyncHandler(async (req, res) => {
-  const { type, userAnswer, correctAnswer, questionId, question } = req.body;
-  const userId = req.user?.id ?? null;
+    const data = await this.drillService.verifyDrill({
+      type,
+      userAnswer,
+      correctAnswer,
+      questionId,
+      question,
+      userId,
+    });
 
-  const data = await drillService.verifyDrill({
-    type,
-    userAnswer,
-    correctAnswer,
-    questionId,
-    question,
-    userId,
+    return ok(res, { data });
   });
 
-  return ok(res, { data });
-});
+  getRelatedQuestions = asyncHandler(async (req, res) => {
+    const { category, type, excludeQuestion, excludeIds } = req.query;
 
-export const getRelatedQuestions = asyncHandler(async (req, res) => {
-  const { category, type, excludeQuestion, excludeIds } = req.query;
+    const data = await this.drillService.getRelatedQuestions({
+      category,
+      type,
+      excludeQuestion,
+      excludeIds,
+    });
 
-  const data = await drillService.getRelatedQuestions({
-    category,
-    type,
-    excludeQuestion,
-    excludeIds,
+    return ok(res, { data });
   });
+}
 
-  return ok(res, { data });
-});
+export const drillController = new DrillController();

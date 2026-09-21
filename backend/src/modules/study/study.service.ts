@@ -3,9 +3,9 @@ import subjectRepository from './subject.repository.js';
 import topicRepository from './topic.repository.js';
 import questionRepository from './question.repository.js';
 import TopicDto from './topic.dto.js';
-import { shuffle } from '../../shared/utils/shuffle.js';
+import { shuffle } from '../../utils/shuffle.js';
 import { filterNewTopicQuestions } from './questionDedupe.js';
-import type { TopicQuestionInsert } from './questionDedupe.js';
+import type { TopicQuestionInsert } from './study.interface.js';
 import { appendSubjectToExamConfigs } from '../exam-config/exam-config.sync.js';
 import { mongoErrorCode } from '../../types/domain.js';
 import {
@@ -13,7 +13,7 @@ import {
   conflict,
   forbidden,
   notFound,
-} from '../../shared/errors/http-error.js';
+} from '../../utils/app-errors.js';
 
 function parseSource(req: Request): 'mine' | 'global' {
   const source = String(req.query.source || 'global').toLowerCase();
@@ -69,7 +69,8 @@ function buildSeedQuestions(dto: TopicDto, topicId: string, topicName: string, o
   return [placeholderQuestion(topicId, topicName, official)];
 }
 
-export async function getSubjects(req: Request) {
+export class StudyService {
+  async getSubjects(req: Request) {
   const source = parseSource(req);
   const subjects = source === 'mine'
     ? await subjectRepository.findByOwner(req.user!.id, 'name ownerId')
@@ -85,7 +86,7 @@ export async function getSubjects(req: Request) {
   };
 }
 
-export async function addSubject(req: Request) {
+  async addSubject(req: Request) {
   const name = String(req.body?.name || '').trim();
   if (!name) throw badRequest('Subject name is required.');
 
@@ -140,7 +141,7 @@ export async function addSubject(req: Request) {
   }
 }
 
-export async function deleteSubject(req: Request) {
+  async deleteSubject(req: Request) {
   const subjectName = paramStr(req.params.subjectName);
   const scope = String(req.query.scope || req.body?.scope || req.query.source || '').toLowerCase();
 
@@ -168,7 +169,7 @@ export async function deleteSubject(req: Request) {
   return { message: 'Subject and related topics deleted.' };
 }
 
-export async function getTopics(req: Request) {
+  async getTopics(req: Request) {
   const subjectName = paramStr(req.params.subjectName);
   const ownerId = ownerScope(req);
   const subject = await subjectRepository.resolveByName(subjectName, ownerId);
@@ -188,7 +189,7 @@ export async function getTopics(req: Request) {
   };
 }
 
-export async function getTopicNotes(req: Request) {
+  async getTopicNotes(req: Request) {
   const topicId = paramStr(req.params.topicId);
   const topic = await topicRepository.findById(topicId);
   if (!topic) throw notFound('Topic not found.');
@@ -210,7 +211,7 @@ export async function getTopicNotes(req: Request) {
   };
 }
 
-export async function getTopicTest(req: Request) {
+  async getTopicTest(req: Request) {
   const topicId = paramStr(req.params.topicId);
   const topic = await topicRepository.findById(topicId);
   if (!topic) throw notFound('Topic not found.');
@@ -251,7 +252,7 @@ export async function getTopicTest(req: Request) {
   return { data: testQuestions };
 }
 
-export async function addTopic(req: Request) {
+  async addTopic(req: Request) {
   const subjectName = paramStr(req.params.subjectName);
   const userId = req.user!.id;
   const wantGlobal = String(req.body?.scope || '').toLowerCase() === 'global';
@@ -339,7 +340,7 @@ export async function addTopic(req: Request) {
   };
 }
 
-export async function updateTopic(req: Request) {
+  async updateTopic(req: Request) {
   const topicId = paramStr(req.params.topicId);
   const dto = new TopicDto(req.body);
   const errors = dto.validate();
@@ -401,7 +402,7 @@ export async function updateTopic(req: Request) {
   };
 }
 
-export async function deleteTopic(req: Request) {
+  async deleteTopic(req: Request) {
   const topicId = paramStr(req.params.topicId);
   const topic = await topicRepository.findById(topicId);
   if (!topic) throw notFound('Topic not found.');
@@ -414,3 +415,6 @@ export async function deleteTopic(req: Request) {
   await questionRepository.deleteByTopicId(topicId);
   return { message: 'Topic deleted successfully.' };
 }
+}
+
+export const studyService = new StudyService();

@@ -1,23 +1,15 @@
 import express from 'express';
-import {
-  listReminders,
-  createReminder,
-  updateReminder,
-  deleteReminder,
-  listNotifications,
-  markNotificationsRead,
-  testNotify,
-} from './reminder.controller.js';
+import { reminderController } from './reminder.controller.js';
 
 const router = express.Router();
 
-router.get('/notifications/list', listNotifications);
-router.post('/notifications/read', markNotificationsRead);
-router.post('/notifications/test', testNotify);
+router.get('/notifications/list', reminderController.listNotifications);
+router.post('/notifications/read', reminderController.markNotificationsRead);
+router.post('/notifications/test', reminderController.testNotify);
 
-router.get('/', listReminders);
-router.post('/', createReminder);
-router.patch('/:id', updateReminder);
-router.delete('/:id', deleteReminder);
+router.get('/', reminderController.listReminders);
+router.post('/', reminderController.createReminder);
+router.patch('/:id', reminderController.updateReminder);
+router.delete('/:id', reminderController.deleteReminder);
 
 export default router;

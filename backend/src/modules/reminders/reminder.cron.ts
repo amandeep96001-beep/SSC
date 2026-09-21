@@ -1,7 +1,7 @@
 import Reminder from './reminder.model.js';
-import type { IReminder } from './reminder.model.js';
+import type { IReminder } from './reminder.interface.js';
 import AppNotification from './notification.model.js';
-import User from '../auth/user.model.js';
+import User from '../auth/auth.model.js';
 import { getZonedParts, isReminderDue, fireKeyFor } from './reminder.time.js';
 import { sendReminderEmail } from './reminder.mail.js';
 import { getDBStatus } from '../../config/db.config.js';

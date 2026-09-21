@@ -1,10 +1,10 @@
 import express from 'express';
-import { getNextDrill, verifyDrill, getRelatedQuestions } from './drill.controller.js';
+import { drillController } from './drill.controller.js';
 
 const router = express.Router();
 
-router.get('/next', getNextDrill);
-router.post('/verify', verifyDrill);
-router.get('/related', getRelatedQuestions);
+router.get('/next', drillController.getNextDrill);
+router.post('/verify', drillController.verifyDrill);
+router.get('/related', drillController.getRelatedQuestions);
 
 export default router;

@@ -1,6 +1,6 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import { explainConcept } from './ai.controller.js';
+import { aiController } from './ai.controller.js';
 
 const router = express.Router();
 
@@ -12,6 +12,6 @@ const aiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-router.post('/explain', aiLimiter, explainConcept);
+router.post('/explain', aiLimiter, aiController.explainConcept);
 
 export default router;

@@ -1,5 +1,5 @@
 import Subject from './subject.model.js';
-import type { ISubject } from './subject.model.js';
+import type { ISubject } from './study.interface.js';
 import { normalizeSubjectKey } from './subject-names.js';
 import type { HydratedDocument } from 'mongoose';
 

@@ -1,15 +1,5 @@
 import mongoose, { Schema, Types } from 'mongoose';
-
-export interface IAppNotification {
-  userId: Types.ObjectId;
-  title: string;
-  body?: string;
-  kind?: string;
-  reminderId?: Types.ObjectId;
-  read: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+import type { IAppNotification } from './reminder.interface.js';
 
 const AppNotificationSchema = new Schema<IAppNotification>(
   {
