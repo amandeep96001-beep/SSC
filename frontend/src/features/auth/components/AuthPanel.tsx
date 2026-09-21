@@ -505,6 +505,7 @@ export function AuthPanel({
           mailSent: res.mailSent,
           debugOtp: res.debugOtp,
         });
+        setPassword('');
         showAppToast(
           res.mailSent
             ? 'Please verify your email to continue.'
@@ -526,7 +527,10 @@ export function AuthPanel({
         } else {
           toastAuthError('Invalid email or password.');
         }
+        return;
       }
+      setPassword('');
+      setConfirmPassword('');
     } finally {
       setIsSubmitting(false);
     }
@@ -565,6 +569,8 @@ export function AuthPanel({
           mailSent: res.mailSent,
           debugOtp: res.debugOtp,
         });
+        setPassword('');
+        setConfirmPassword('');
         showAppToast(
           res.mailSent
             ? 'A verification code has been sent to your email.'

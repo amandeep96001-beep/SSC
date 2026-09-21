@@ -18,10 +18,20 @@ class AuthRepository {
     return User.findOne({ username });
   }
 
+  async findByUsernameWithPassword(username: string) {
+    return User.findOne({ username }).select('+password');
+  }
+
   async findByEmail(raw: unknown) {
     const aliases = emailAliases(raw);
     if (!aliases.length) return null;
     return User.findOne({ email: { $in: aliases } });
+  }
+
+  async findByEmailWithPassword(raw: unknown) {
+    const aliases = emailAliases(raw);
+    if (!aliases.length) return null;
+    return User.findOne({ email: { $in: aliases } }).select('+password');
   }
 
   async findByEmailOrGoogleId(email: string, googleId?: string | null) {

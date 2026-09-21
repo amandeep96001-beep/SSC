@@ -56,7 +56,10 @@ function readStoredUser(): AppUser | null {
       return null;
     }
     const parsed: unknown = JSON.parse(stored);
-    return isRecord(parsed) ? parsed as unknown as AppUser : null;
+    if (!isRecord(parsed)) return null;
+    const { password: _password, ...profile } = parsed;
+    void _password;
+    return profile as unknown as AppUser;
   } catch {
     return null;
   }
@@ -108,9 +111,13 @@ export function useStudy() {
         const res = await apiService.get('/auth/me');
         const profile = asAuthPayload(res?.data);
         if (!cancelled && profile?.username) {
+          const { password: _password, ...safeUser } = user as AppUser & { password?: unknown };
+          void _password;
+          const { password: _p2, ...safeProfile } = profile as AuthApiPayload & { password?: unknown };
+          void _p2;
           const next: AppUser = {
-            ...user,
-            ...profile,
+            ...safeUser,
+            ...safeProfile,
             username: profile.username,
             role: profile.role || user.role || 'user'
           };
@@ -223,7 +230,8 @@ export function useStudy() {
 
   const persistUser = (userData: unknown) => {
     if (!isRecord(userData)) return;
-    const { token, ...profile } = userData;
+    const { token, password: _password, ...profile } = userData;
+    void _password;
     if (typeof token === 'string') localStorage.setItem('ssc_token', token);
     localStorage.setItem('ssc_user', JSON.stringify(profile));
     setUser(profile as unknown as AppUser);

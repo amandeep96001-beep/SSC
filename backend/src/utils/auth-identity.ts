@@ -49,6 +49,10 @@ export async function findUserByEmail(raw: unknown) {
   return userRepository.findByEmail(raw);
 }
 
+export async function findUserByEmailWithPassword(raw: unknown) {
+  return userRepository.findByEmailWithPassword(raw);
+}
+
 export async function upsertUserFromEmail({
   email,
   googleId,

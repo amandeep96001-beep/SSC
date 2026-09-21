@@ -38,7 +38,7 @@ const UserSchema = new Schema<IUser>({
     trim: true,
     maxlength: 80,
   },
-  password: { type: String, required: false, select: true },
+  password: { type: String, required: false, select: false },
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -55,6 +55,15 @@ const UserSchema = new Schema<IUser>({
     default: 0,
   },
 });
+
+function stripSecrets(_doc: unknown, ret: { password?: string; __v?: number }) {
+  delete ret.password;
+  delete ret.__v;
+  return ret;
+}
+
+UserSchema.set('toJSON', { transform: stripSecrets });
+UserSchema.set('toObject', { transform: stripSecrets });
 
 const User = mongoose.model<IUser>('User', UserSchema);
 

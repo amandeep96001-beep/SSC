@@ -7,6 +7,7 @@ import {
   normalizeEmail,
   isValidEmail,
   findUserByEmail,
+  findUserByEmailWithPassword,
   allocateUsername,
   resolveRoleByEmail,
   upsertUserFromEmail,
@@ -103,8 +104,8 @@ export class AuthService {
     }
 
     const user = isValidEmail(identifier)
-      ? await findUserByEmail(identifier)
-      : await authRepository.findByUsername(identifier);
+      ? await findUserByEmailWithPassword(identifier)
+      : await authRepository.findByUsernameWithPassword(identifier);
 
     if (!user || !user.password) {
       throw unauthorized('Invalid email/username or password.');
