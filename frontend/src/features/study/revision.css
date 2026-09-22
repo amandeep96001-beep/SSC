@@ -790,7 +790,7 @@ button.fraction-row:not(:disabled) {
 .vocab-bulk-pre {
   margin: 0;
   padding: 10px 12px;
-  max-height: 160px;
+  max-height: min(22vh, 140px);
   overflow: auto;
   font-size: 11px;
   line-height: 1.45;
@@ -798,15 +798,17 @@ button.fraction-row:not(:disabled) {
   color: var(--text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
 }
 .vocab-bulk-textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
   background: var(--bg-input);
-  min-height: 160px;
-  max-height: min(36vh, 280px);
+  min-height: 120px;
+  max-height: min(28vh, 220px);
   overflow-y: auto;
   resize: vertical;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   box-sizing: border-box;
   width: 100%;

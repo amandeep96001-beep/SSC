@@ -256,6 +256,39 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
     onSubmit(mockData, selectedAnswers, timer, sectionTimes);
   }, [mockData, onSubmit, selectedAnswers, timer, sectionTimes]);
 
+  const requestCancel = useCallback(() => {
+    setPaletteOpen(false);
+    setCancelConfirmOpen(true);
+  }, []);
+
+  const confirmCancel = useCallback(() => {
+    setCancelConfirmOpen(false);
+    onCancel();
+  }, [onCancel]);
+
+  // Phone back / browser back → Are you sure?
+  useEffect(() => {
+    if (loading || !mockData) return;
+
+    window.history.pushState({ fullMockGuard: true }, '');
+    const onPopState = () => {
+      window.history.pushState({ fullMockGuard: true }, '');
+      setCancelConfirmOpen(true);
+    };
+    window.addEventListener('popstate', onPopState);
+
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [loading, mockData]);
+
   useEffect(() => {
     if (loading || !mockData || cancelConfirmOpen || submitConfirmOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -340,10 +373,21 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
           <span className="exam-nav-title__full">{mockData.title}</span>
           <span className="exam-nav-title__meta">{qCount} Q · {exam.name}</span>
         </div>
-        <div id="timer-box" className={timer < 300 ? 'timer-urgent' : ''} style={{ color: timer < 300 ? '#ef4444' : 'inherit' }}>
-          <Timer size={16} strokeWidth={2} />
+        <div className="exam-nav-actions">
+          <button
+            type="button"
+            className="exam-nav-exit"
+            onClick={requestCancel}
+            aria-label="Exit mock"
+          >
+            <X size={14} strokeWidth={2.5} />
+            Exit
+          </button>
+          <div id="timer-box" className={timer < 300 ? 'timer-urgent' : ''} style={{ color: timer < 300 ? '#ef4444' : 'inherit' }}>
+            <Timer size={16} strokeWidth={2} />
             <span className="timer-label-full">Time remaining </span>
-          <strong>{formatTimer(timer)}</strong>
+            <strong>{formatTimer(timer)}</strong>
+          </div>
         </div>
       </div>
 
@@ -517,10 +561,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
             <button 
               type="button"
               className="btn btn-cancel-test" 
-              onClick={() => {
-                setPaletteOpen(false);
-                setCancelConfirmOpen(true);
-              }}
+              onClick={requestCancel}
             >
               <Ban size={15} strokeWidth={2} /> Exit
             </button>
@@ -544,7 +585,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
             <div className="modal-header">
               <h3 className="modal-title-warning">
                 <Activity size={20} color="#f59e0b" />
-                Leave this mock?
+                Are you sure?
               </h3>
               <button className="btn-close-modal" onClick={() => setCancelConfirmOpen(false)}>
                 <X size={18} />
@@ -552,7 +593,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
             </div>
             
             <div className="modal-body-cancel">
-              <p className="modal-body-bold">Exit without submitting?</p>
+              <p className="modal-body-bold">Leave this mock without submitting?</p>
               <p className="modal-body-sub">Your answers will not be saved. This cannot be undone.</p>
             </div>
 
@@ -567,10 +608,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
               <button 
                 type="button" 
                 className="btn-save-topic btn-confirm-flex" 
-                onClick={() => {
-                  setCancelConfirmOpen(false);
-                  onCancel();
-                }}
+                onClick={confirmCancel}
               >
                 <XCircle size={16} /> Exit
               </button>

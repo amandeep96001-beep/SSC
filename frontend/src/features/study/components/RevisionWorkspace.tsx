@@ -798,7 +798,7 @@ function BulkImportVocabModal({
           <div className="form-group">
             <label>Paste JSON Array</label>
             <textarea
-              rows={12}
+              rows={8}
               value={vocabBulkJson}
               onChange={(e) => setVocabBulkJson(e.target.value)}
               placeholder="Paste or click Use this template…"
