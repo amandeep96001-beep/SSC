@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, APP_TAGLINE, pageTitle } from '@/shared/brand';
-import { preloadGsi, mountGoogleButton, signInWithGoogle, isCancelledError } from '@/shared/utils/gsi';
+import { preloadGsi, signInWithGoogle, isCancelledError } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
 import { apiService } from '@/shared/services/apiService';
 import '../auth.css';
@@ -52,8 +52,6 @@ function GoogleSignInButton({
   onError,
 }: GoogleSignInButtonProps) {
   const [busy, setBusy] = useState(false);
-  const [useOfficialBtn, setUseOfficialBtn] = useState(false);
-  const hostRef = useRef<HTMLDivElement>(null);
   const onAuthRef = useRef(onAuth);
   const onErrorRef = useRef(onError);
 
@@ -62,55 +60,9 @@ function GoogleSignInButton({
     onErrorRef.current = onError;
   }, [onAuth, onError]);
 
-  // Official GIS button when code popup can't run or touch devices block popups.
-  const preferOfficial = !allowCodeFlow
-    || (typeof navigator !== 'undefined'
-      && (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-        || (navigator.maxTouchPoints > 1 && window.innerWidth < 900)));
-
   useEffect(() => {
     preloadGsi();
   }, []);
-
-  useEffect(() => {
-    if (!preferOfficial || !clientId) return undefined;
-    let cleanup = () => {};
-    let cancelled = false;
-
-    const tryMount = async () => {
-      setUseOfficialBtn(true);
-      await new Promise((r) => requestAnimationFrame(r));
-      if (cancelled || !hostRef.current) {
-        if (!cancelled) setUseOfficialBtn(false);
-        return;
-      }
-      try {
-        cleanup = await mountGoogleButton(hostRef.current, clientId, {
-          width: hostRef.current?.clientWidth || 320,
-          onCredential: async (credential) => {
-            setBusy(true);
-            try {
-              await onAuthRef.current?.({ credential });
-            } finally {
-              setBusy(false);
-            }
-          },
-          onError: (err) => {
-            if (!isCancelledError(err)) onErrorRef.current?.();
-          },
-        });
-      } catch {
-        if (!cancelled) setUseOfficialBtn(false);
-      }
-    };
-
-    tryMount();
-
-    return () => {
-      cancelled = true;
-      cleanup?.();
-    };
-  }, [preferOfficial, clientId]);
 
   const handleClick = async () => {
     if (disabled || busy) return;
@@ -128,20 +80,6 @@ function GoogleSignInButton({
       setBusy(false);
     }
   };
-
-  if (useOfficialBtn) {
-    return (
-      <div className={`auth-google-host${busy || disabled ? ' is-busy' : ''}`}>
-        {busy && (
-          <div className="auth-google-host__busy">
-            <Loader2 size={18} className="spin-icon" />
-            <span>Connecting…</span>
-          </div>
-        )}
-        <div ref={hostRef} className="auth-google-host__btn" aria-hidden={busy} />
-      </div>
-    );
-  }
 
   return (
     <button

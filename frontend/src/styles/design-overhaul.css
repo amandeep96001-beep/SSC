@@ -191,6 +191,7 @@ button {
 .btn-drill-next {
   background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in srgb, var(--color-primary) 72%, #4338ca) 100%) !important;
   box-shadow: var(--btn-shadow-primary) !important;
+  border-radius: 14px !important;
 }
 
 .btn-auth-submit:hover:not(:disabled),

@@ -55,11 +55,11 @@
     left: 0 !important;
     top: 0 !important;
     bottom: 0 !important;
-    z-index: 1050;
+    z-index: 1060;
     transform: translateX(calc(-100% - 60px));
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     margin: 0 !important;
     flex: none !important;
     width: min(300px, 86vw) !important;
@@ -78,13 +78,30 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       inset 0 -2px 16px rgba(0, 0, 0, 0.18),
       inset 4px 0 18px rgba(0, 0, 0, 0.12);
-    pointer-events: none;
   }
 
   .lms-sidebar.mobile-open {
     transform: translateX(0);
     opacity: 1;
-    pointer-events: auto;
+    pointer-events: auto !important;
+  }
+
+  .lms-sidebar.mobile-open .sidebar-nav,
+  .lms-sidebar.mobile-open .nav-item,
+  .lms-sidebar.mobile-open .user-profile-card,
+  .lms-sidebar.mobile-open .btn-logout,
+  .lms-sidebar.mobile-open .sidebar-footer,
+  .lms-sidebar.mobile-open .sidebar-brand {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
+
+  .lms-sidebar.mobile-open .nav-item {
+    /* Kill leftover GSAP transforms that steal taps */
+    transform: none !important;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
   }
 
   .lms-sidebar .sidebar-nav {
@@ -95,6 +112,7 @@
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
     padding-bottom: 8px;
+    pointer-events: auto;
   }
 
   .lms-sidebar .sidebar-footer {
@@ -130,10 +148,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.55);
     z-index: 1040;
     backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     animation: fadeInOverlay 0.3s ease-out forwards;
+    touch-action: manipulation;
   }
 
   .lms-workspace {

@@ -61,6 +61,10 @@ export function Sidebar({
   }, [isMobileOpen]);
 
   useGSAP(() => {
+    // Mobile drawer: skip entrance GSAP — opacity/transform leftover breaks taps
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+      return;
+    }
     gsap.fromTo('.sidebar-brand',
       { y: -16, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.55, ease: 'power3.out', clearProps: 'all' }
@@ -78,6 +82,15 @@ export function Sidebar({
       { opacity: 1, y: 0, duration: 0.5, delay: 0.55, ease: 'power2.out', clearProps: 'all' }
     );
   }, { scope: sidebarRef });
+
+  useEffect(() => {
+    if (!isMobileOpen || !sidebarRef.current) return;
+    // Ensure drawer contents are tappable after open
+    gsap.set(
+      sidebarRef.current.querySelectorAll('.nav-item, .sidebar-brand, .user-profile-card, .sidebar-footer, .btn-logout'),
+      { clearProps: 'all' },
+    );
+  }, [isMobileOpen]);
 
   const go = (view: string) => {
     setActiveView(view);
