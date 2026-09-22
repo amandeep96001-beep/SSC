@@ -1,4 +1,5 @@
 import { notifyReminder } from '@/shared/utils/appToast';
+import { APP_NAME } from '@/shared/brand';
 import {
   loadReminders,
   markReminderFired,
@@ -51,7 +52,7 @@ function fireReminder(reminder: StudyReminder, key: string): void {
   markReminderFired(reminder.id, key);
   notifyReminder({
     title: reminder.title || 'Study session',
-    body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
+    body: reminder.message || `Your study time is here. Open ${APP_NAME} and start.`,
     tag: `ssc-reminder-${reminder.id}`,
   });
   window.dispatchEvent(

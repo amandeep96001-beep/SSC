@@ -1,14 +1,19 @@
 services:
-  # Backend API — deployed on Render
+  # Backend API — use at least "standard" for production scale (not free sleep tier).
   - type: web
     name: ssc-backend
     runtime: node
-    plan: free
+    plan: standard
     rootDir: backend
     # typescript lives in dependencies + postinstall builds dist/; this stays explicit.
     buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /health
+    scaling:
+      minInstances: 2
+      maxInstances: 10
+      targetMemoryPercent: 70
+      targetCPUPercent: 70
     envVars:
       - key: PORT
         value: 5000
@@ -24,9 +29,18 @@ services:
       # Optional: comma-separated extra origins (preview deployments, custom domains)
       - key: FRONTEND_URLS
         sync: false
-      # Public URL used by Render cron/pinger to keep the free instance awake.
-      - key: KEEPALIVE_URL
-        value: https://ssc-0p96.onrender.com
+      # Shared Redis for rate limits + auth/AI caches across instances
+      - key: REDIS_URL
+        fromService:
+          name: ssc-redis
+          type: redis
+          property: connectionString
+      - key: MONGODB_MAX_POOL
+        value: "50"
+      - key: AUTH_CACHE_TTL_SEC
+        value: "45"
+      - key: RATE_LIMIT_API_MAX
+        value: "1200"
       # Required for OTP / forgot-password emails (set in Render dashboard).
       - key: SMTP_HOST
         sync: false
@@ -38,16 +52,11 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      - key: REMINDER_CRON
+        value: "1"
 
-  # Ping the API every 5 minutes to prevent Render free-tier sleep.
-  - type: cron
-    name: ssc-backend-keepalive
-    runtime: node
-    schedule: "*/5 * * * *"
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: >
-      node -e "const url = (process.env.KEEPALIVE_URL || 'https://ssc-0p96.onrender.com') + '/keepalive'; fetch(url).then(async (res) => { if (!res.ok) { throw new Error('keepalive failed: ' + res.status); } const data = await res.text(); console.log('keepalive ok', res.status, data.slice(0, 80)); }).catch((err) => { console.error(err); process.exit(1); });"
-    envVars:
-      - key: KEEPALIVE_URL
-        value: https://ssc-0p96.onrender.com
+  # Optional managed Redis on Render — set REDIS_URL on the web service to this instance.
+  - type: redis
+    name: ssc-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru

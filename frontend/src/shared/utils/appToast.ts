@@ -48,7 +48,7 @@ function notificationIconUrl(): string {
 function formatReminderBody(title: unknown, body: unknown): string {
   const name = String(title || '').trim();
   const detail = String(body || '').trim();
-  const fallback = 'Your study time is here. Open ExamPrep and start.';
+  const fallback = `Your study time is here. Open ${APP_NAME} and start.`;
   if (name && detail && name.toLowerCase() !== detail.toLowerCase()) {
     return `${name}\n${detail}`;
   }
@@ -148,7 +148,7 @@ export function showBrowserNotification({ title, body, tag }: BrowserNotificatio
 export function notifyReminder({ title, body, tag }: BrowserNotificationPayload = {}): boolean {
   const toastTitle = String(title || '').trim() || 'Study reminder';
   const toastBody = String(body || '').trim()
-    || 'Your study time is here. Open ExamPrep and start.';
+    || `Your study time is here. Open ${APP_NAME} and start.`;
   const shown = showBrowserNotification({
     title: APP_NAME,
     body: formatReminderBody(toastTitle, toastBody),

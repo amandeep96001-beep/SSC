@@ -130,8 +130,13 @@ export function useDrills(isAuthenticated = false) {
   const loadNextDrill = useCallback(async (typeToLoad = drillType, baseLimit = maxTableBase) => {
     setUserAnswer('');
     setFeedback({ isChecked: false, isCorrect: false, showAnswer: false, selectedAnswer: '' });
-    
-    const result = await fetchNextDrill({ type: typeToLoad, maxBase: baseLimit });
+
+    // Jumping tables always start at base 12 (never 1–11)
+    const cappedBase = typeToLoad === 'table'
+      ? Math.min(50, Math.max(12, Number(baseLimit) || 20))
+      : Math.min(50, Math.max(2, Number(baseLimit) || 20));
+
+    const result = await fetchNextDrill({ type: typeToLoad, maxBase: cappedBase });
     if (result.success) {
       const drill = asDrill(result.data.data);
       if (drill) setCurrentDrill(drill);
@@ -245,8 +250,13 @@ export function useDrills(isAuthenticated = false) {
   // Select another Category
   const changeDrillType = useCallback((newType: string) => {
     setDrillType(newType);
+    if (newType === 'table') {
+      setMaxTableBase((prev) => Math.max(12, prev));
+      loadNextDrill(newType, Math.max(12, maxTableBase));
+      return;
+    }
     loadNextDrill(newType);
-  }, [loadNextDrill]);
+  }, [loadNextDrill, maxTableBase]);
 
   const initialDrillLoadedRef = useRef(false);
 

@@ -294,11 +294,18 @@
 
   .fraction-list {
     grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 
   .fraction-row {
-    border-radius: 12px !important;
-    padding: 12px 14px !important;
+    border-radius: 14px !important;
+    padding: 14px 14px !important;
+    min-height: 54px !important;
+  }
+
+  .fraction-row .frac-lhs,
+  .fraction-row .frac-rhs {
+    font-size: 1.1rem !important;
   }
 
   /* Subjects / Topics list scroll inside white card */

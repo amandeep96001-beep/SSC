@@ -7,7 +7,7 @@ import {
   ArrowRight, ArrowLeft, ShieldCheck, LogIn, UserPlus, KeyRound, Copy, Link2,
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
-import { APP_NAME, pageTitle } from '@/shared/brand';
+import { APP_NAME, APP_TAGLINE, pageTitle } from '@/shared/brand';
 import { preloadGsi, mountGoogleButton, signInWithGoogle, isCancelledError } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
 import { apiService } from '@/shared/services/apiService';
@@ -289,8 +289,8 @@ export function AuthPanel({
       )
       .fromTo(
         stageBits,
-        { opacity: 0, y: 16 },
-        { opacity: 1, y: 0, duration: 0.42, stagger: 0.055, clearProps: 'transform' },
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: 0.36, stagger: 0.04, clearProps: 'transform,opacity' },
         '-=0.3',
       );
 
@@ -314,14 +314,14 @@ export function AuthPanel({
     if (!nodes?.length) return;
     gsap.fromTo(
       nodes,
-      { opacity: 0, y: 14 },
+      { opacity: 0, y: 8 },
       {
         opacity: 1,
         y: 0,
-        duration: 0.42,
-        stagger: 0.045,
+        duration: 0.32,
+        stagger: 0.03,
         ease: 'power2.out',
-        clearProps: 'transform',
+        clearProps: 'transform,opacity',
       },
     );
   }, { dependencies: [mode], scope: formStageRef });
@@ -851,7 +851,7 @@ export function AuthPanel({
             </svg>
           </div>
           <div className="auth-showcase__copyblock">
-            <p className="auth-showcase__eyebrow">Exam prep</p>
+            <p className="auth-showcase__eyebrow">{APP_NAME}</p>
             <h2 className="auth-showcase__title">
               Study calm.
               <span>Sit for the exam ready.</span>
@@ -872,15 +872,21 @@ export function AuthPanel({
           <div className="auth-form-stage" ref={formStageRef}>
           <div className={`auth-brand${isOtpMode || mode === 'forgot' || mode === 'reset-link' || mode === 'reset' ? ' auth-brand--compact' : ''}`}>
             {mode !== 'reset' && (
-              <div className={`auth-brand-icon ${isOtpMode || mode === 'reset-link' ? 'auth-brand-icon--otp' : ''}`} style={(!isOtpMode && mode !== 'forgot' && mode !== 'reset-link') ? { background: 'transparent', border: 'none', boxShadow: 'none' } : {}}>
+              <div className={`auth-brand-icon ${isOtpMode || mode === 'reset-link' ? 'auth-brand-icon--otp' : ''}`}>
                 {mode === 'forgot' || mode === 'reset-otp' || mode === 'reset-link'
                   ? <KeyRound size={26} />
                   : mode === 'verify'
                     ? <ShieldCheck size={26} />
-                    : <img src="/logo.png" alt="App Logo" className="auth-brand-logo" />}
+                    : <img src="/logo.svg" alt="CrackuEx" className="auth-brand-logo" />}
               </div>
             )}
-            {mode !== 'reset' && <p className="auth-brand-tagline">{APP_NAME}</p>}
+            {mode !== 'reset' && !showAuthTabs && <p className="auth-brand-tagline">{APP_TAGLINE}</p>}
+            {mode !== 'reset' && (
+              <p className="auth-brand-name brand-wordmark" aria-label={APP_NAME}>
+                <span className="brand-wordmark__cracku">Cracku</span>
+                <span className="brand-wordmark__ex">Ex</span>
+              </p>
+            )}
             <h1>
               {mode === 'login' && 'Welcome back'}
               {mode === 'register' && 'Create account'}
@@ -891,11 +897,8 @@ export function AuthPanel({
               {mode === 'reset-link' && 'Secure reset link'}
               {mode === 'reset' && 'Set new password'}
             </h1>
-            {mode !== 'reset' && (
+            {!showAuthTabs && mode !== 'reset' && (
               <p className="auth-brand-action">
-                {mode === 'login' && 'Sign in to continue your prep.'}
-                {mode === 'register' && 'Start your exam prep in a minute.'}
-                {mode === 'register-step-2' && 'Almost there, secure your account.'}
                 {mode === 'verify' && 'Confirm your email address to continue.'}
                 {mode === 'forgot' && 'Enter your email and we will send a verification code.'}
                 {mode === 'reset-otp' && 'Enter the 6-digit code from your email.'}
@@ -1405,7 +1408,7 @@ export function AuthPanel({
         )}
 
         {showGoogle && (
-          <>
+          <div className="auth-alt">
             <div className="auth-divider"><span>or</span></div>
             <GoogleSignInButton
               clientId={googleClientId}
@@ -1414,7 +1417,7 @@ export function AuthPanel({
               onAuth={handleGoogleAuth}
               onError={handleGoogleError}
             />
-          </>
+          </div>
         )}
           </div>
         </div>

@@ -7,6 +7,7 @@ export interface IUser {
   emailVerified: boolean;
   googleId?: string;
   displayName?: string;
+  avatarUrl?: string;
   password?: string;
   role: 'user' | 'admin';
   lastStudyAt?: Date;
@@ -17,6 +18,7 @@ export interface PublicUserSource {
   username: string;
   email?: string | null;
   displayName?: string | null;
+  avatarUrl?: string | null;
   emailVerified?: boolean;
   role?: string;
   lastStudyAt?: Date | string | null;

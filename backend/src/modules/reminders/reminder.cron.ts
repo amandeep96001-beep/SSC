@@ -6,12 +6,15 @@ import { getZonedParts, isReminderDue, fireKeyFor } from './reminder.time.js';
 import { sendReminderEmail } from './reminder.mail.js';
 import { getDBStatus } from '../../config/db.config.js';
 import { errorMessage } from '../../types/domain.js';
+import type { Types } from 'mongoose';
 
-type ReminderDoc = IReminder & { _id: unknown };
+type ReminderDoc = IReminder & { _id: Types.ObjectId };
 
 let started = false;
 let timerId: ReturnType<typeof setInterval> | null = null;
 let tickInFlight = false;
+
+const BATCH_SIZE = Number(process.env.REMINDER_CRON_BATCH || 1000);
 
 async function resolveReminderEmail(reminder: ReminderDoc) {
   if (reminder.email) return reminder.email;
@@ -50,7 +53,7 @@ async function fireOneReminder(reminder: ReminderDoc, now: Date, key: string) {
     await AppNotification.create({
       userId: reminder.userId,
       title: reminder.title,
-      body: reminder.message || 'Your study time is here. Open ExamPrep and start.',
+      body: reminder.message || 'Your study time is here. Open CrackuEx and start.',
       kind: 'reminder',
       reminderId: reminder._id as typeof reminder.userId,
     });
@@ -59,7 +62,7 @@ async function fireOneReminder(reminder: ReminderDoc, now: Date, key: string) {
   }
 
   try {
-    const email = await resolveReminderEmail(claimed);
+    const email = await resolveReminderEmail(claimed as ReminderDoc);
     const mail = await sendReminderEmail({
       email,
       title: reminder.title,
@@ -80,14 +83,35 @@ async function fireOneReminder(reminder: ReminderDoc, now: Date, key: string) {
   return true;
 }
 
+async function* iterateEnabledReminders() {
+  let lastId: Types.ObjectId | null = null;
+  const batch = Math.min(Math.max(100, BATCH_SIZE), 5000);
+
+  for (;;) {
+    const filter: { enabled: true; _id?: { $gt: Types.ObjectId } } = { enabled: true };
+    if (lastId) filter._id = { $gt: lastId };
+
+    const rows = await Reminder.find(filter)
+      .sort({ _id: 1 })
+      .limit(batch)
+      .lean() as ReminderDoc[];
+
+    if (!rows.length) break;
+    for (const row of rows) yield row;
+    lastId = rows[rows.length - 1]._id;
+    if (rows.length < batch) break;
+  }
+}
+
 async function processDueReminders() {
   if (!getDBStatus()) return;
 
   const now = new Date();
-  const enabled = await Reminder.find({ enabled: true }).limit(500).lean();
   let fired = 0;
+  let scanned = 0;
 
-  for (const reminder of enabled) {
+  for await (const reminder of iterateEnabledReminders()) {
+    scanned += 1;
     try {
       const tz = reminder.timezone || 'Asia/Kolkata';
       const parts = getZonedParts(now, tz);
@@ -108,7 +132,9 @@ async function processDueReminders() {
   }
 
   if (fired > 0) {
-    console.info(`[reminders:cron] fired ${fired} reminder(s) at ${now.toISOString()}`);
+    console.info(
+      `[reminders:cron] scanned ${scanned}, fired ${fired} at ${now.toISOString()}`,
+    );
   }
 }
 
@@ -138,5 +164,11 @@ export function startReminderCron() {
   }, Math.min(msToNextMinute, 60_000));
 
   started = true;
-  console.info('[reminders:cron] scheduled (every 60s) — study reminders');
+  console.info('[reminders:cron] scheduled (every 60s, cursor batches) — study reminders');
+}
+
+export function stopReminderCron() {
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+  started = false;
 }

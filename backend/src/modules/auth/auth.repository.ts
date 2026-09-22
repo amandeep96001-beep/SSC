@@ -65,8 +65,15 @@ class AuthRepository {
     }
   }
 
-  async bumpTokenVersion(userId: string) {
-    return User.updateOne({ _id: userId }, { $inc: { tokenVersion: 1 } });
+  async bumpTokenVersion(userId: string): Promise<number> {
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { tokenVersion: 1 } },
+      { new: true, select: 'tokenVersion' },
+    ).lean();
+    const { invalidateAuthUser } = await import('../../infra/auth-cache.js');
+    await invalidateAuthUser(userId);
+    return updated?.tokenVersion ?? 0;
   }
 
   async setLastStudyAtIfMissing(userId: string, lastStudyAt: string) {

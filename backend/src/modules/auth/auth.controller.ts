@@ -31,6 +31,15 @@ export class AuthController {
     return ok(res, { message: result.message });
   });
 
+  updateProfile = asyncHandler(async (req, res) => {
+    const data = await this.authService.updateProfile(
+      req.user!.id,
+      req.user!.username,
+      req.body || {},
+    );
+    return ok(res, { message: 'Profile updated.', data });
+  });
+
   loginWithGoogle = asyncHandler(async (req, res) => {
     const result = await this.authService.loginWithGoogle(req.body || {});
     return ok(res, { data: result.data });

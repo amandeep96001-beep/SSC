@@ -1,5 +1,6 @@
 import { errorMessage, isRecord } from '../../types/domain.js';
 import { badRequest } from '../../utils/app-errors.js';
+import { cacheGetJson, cacheHash, cacheSetJson } from '../../infra/cache.js';
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash';
 
@@ -163,6 +164,16 @@ export class AiService {
       throw badRequest('Question payload is too large.');
     }
 
+    const cacheKey = `ai:explain:${cacheHash([
+      String(question).trim(),
+      String(correctAnswer).trim(),
+      String(explanation || '').trim().slice(0, 500),
+    ])}`;
+    const cached = await cacheGetJson<{ explanation: string; provider: string }>(cacheKey);
+    if (cached?.explanation) {
+      return { data: { ...cached, cached: true } };
+    }
+
     const prompt = buildPrompt(question, correctAnswer, explanation);
     const hasGemini = Boolean(process.env.GEMINI_API_KEY?.trim());
     let aiText: string | null = null;
@@ -191,7 +202,14 @@ export class AiService {
       provider = 'static';
     }
 
-    return { data: { explanation: aiText, provider } };
+    const payload = { explanation: aiText, provider: provider || 'static' };
+    // Cache real AI answers (not static fallback) for 7 days — same wrong question hits often.
+    if (provider !== 'static') {
+      const ttl = Number(process.env.AI_EXPLAIN_CACHE_TTL_SEC || 7 * 24 * 3600);
+      await cacheSetJson(cacheKey, payload, ttl);
+    }
+
+    return { data: { ...payload, cached: false } };
   }
 }
 

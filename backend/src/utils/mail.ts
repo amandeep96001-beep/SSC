@@ -7,7 +7,7 @@ import { isHostedRuntime } from '../config/env.config.js';
 import { errorMessage } from '../types/domain.js';
 import type { OtpPurpose } from '../types/domain.js';
 
-const LOGO_CID = 'examprep-logo';
+const LOGO_CID = 'crackuex-logo';
 const LOGO_FILE = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../../assets/logo.png',
@@ -75,13 +75,13 @@ function publicLogoUrl() {
 
 function logoImgHtml({ size = 44, radius = 12 }: { size?: number; radius?: number } = {}) {
   const src = fs.existsSync(LOGO_FILE) ? `cid:${LOGO_CID}` : publicLogoUrl();
-  return `<img src="${src}" width="${size}" height="${size}" alt="ExamPrep" style="display:block;width:${size}px;height:${size}px;border-radius:${radius}px;border:0;outline:none;" />`;
+  return `<img src="${src}" width="${size}" height="${size}" alt="CrackuEx" style="display:block;width:${size}px;height:${size}px;border-radius:${radius}px;border:0;outline:none;" />`;
 }
 
 function logoAttachment() {
   if (!fs.existsSync(LOGO_FILE)) return [];
   return [{
-    filename: 'examprep-logo.png',
+    filename: 'crackuex-logo.png',
     path: LOGO_FILE,
     cid: LOGO_CID,
     contentType: 'image/png',
@@ -105,7 +105,7 @@ export async function sendMail({
   html: string;
   attachments?: Attachment[];
 }): Promise<{ sent: boolean; reason?: string }> {
-  const from = String(process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@examprep.local')
+  const from = String(process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@crackuex.local')
     .trim()
     .replace(/^["']+|["']+$/g, '');
   if (!to) return { sent: false, reason: 'no_recipient' };
@@ -170,8 +170,8 @@ function buildOtpEmailHtml(code: unknown, { title, subtitle, lead }: { title: st
                     ${logoImgHtml({ size: 44, radius: 12 })}
                   </td>
                   <td style="padding-left:12px;vertical-align:middle;">
-                    <div style="font-size:18px;font-weight:800;color:#14182a;letter-spacing:-0.02em;">ExamPrep</div>
-                    <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#6366f1;">${subtitle}</div>
+                    <div style="font-size:18px;font-weight:800;letter-spacing:-0.02em;"><span style="color:#2a3148;">Cracku</span><span style="color:#696af2;">Ex</span></div>
+                    <div style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#0A2744;">${subtitle}</div>
                   </td>
                 </tr>
               </table>
@@ -186,7 +186,7 @@ function buildOtpEmailHtml(code: unknown, { title, subtitle, lead }: { title: st
               <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 8px;">
                 <tr>${digits}</tr>
               </table>
-              <p style="margin:18px 0 0;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:800;letter-spacing:10px;color:#6366f1;">
+              <p style="margin:18px 0 0;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:28px;font-weight:800;letter-spacing:10px;color:#0A2744;">
                 ${code}
               </p>
             </td>
@@ -202,7 +202,7 @@ function buildOtpEmailHtml(code: unknown, { title, subtitle, lead }: { title: st
           </tr>
           <tr>
             <td style="padding:0 28px 24px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#9aa3b8;">ExamPrep · SSC preparation</p>
+              <p style="margin:0;font-size:11px;color:#9aa3b8;">CrackuEx · Crack every exam</p>
             </td>
           </tr>
         </table>
@@ -229,20 +229,20 @@ export async function sendOtpEmail(
   const purpose = options.purpose || 'email_verify';
   const isReset = purpose === 'password_reset';
   const subject = isReset
-    ? 'Your ExamPrep password reset code'
-    : 'Your ExamPrep verification code';
+    ? 'Your CrackuEx password reset code'
+    : 'Your CrackuEx verification code';
   const copy = isReset
     ? {
-      title: 'ExamPrep password reset',
+      title: 'CrackuEx password reset',
       subtitle: 'Password reset',
       lead: 'Enter this 6-digit code to verify your identity. After verification you will receive a secure link to set a new password.',
-      text: `Your ExamPrep password reset code is ${code}. It expires in 10 minutes.\n\nAfter verifying the code, use the secure reset link shown in the app to choose a new password.\n\nIf you did not request this, ignore this email.`,
+      text: `Your CrackuEx password reset code is ${code}. It expires in 10 minutes.\n\nAfter verifying the code, use the secure reset link shown in the app to choose a new password.\n\nIf you did not request this, ignore this email.`,
     }
     : {
-      title: 'ExamPrep login code',
+      title: 'CrackuEx login code',
       subtitle: 'Email verification',
       lead: 'Enter this 6-digit code to verify your email.',
-      text: `Your ExamPrep email verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+      text: `Your CrackuEx email verification code is ${code}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
     };
   const html = buildOtpEmailHtml(code, copy);
 

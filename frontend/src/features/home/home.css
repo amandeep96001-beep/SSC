@@ -172,18 +172,17 @@
   -webkit-overflow-scrolling: touch;
   padding-bottom: 24px;
   padding-right: 0;
-  /* Soft inset scrollbar — doesn't cut the rounded shell */
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--border-color) 80%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--border-color) 85%, transparent) transparent;
 }
 
 .today-focus::-webkit-scrollbar {
-  width: 5px;
+  width: 8px;
 }
 
 .today-focus::-webkit-scrollbar-track {
   background: transparent;
-  margin-block: 18px;
+  margin-block: 12px;
 }
 
 .today-focus::-webkit-scrollbar-thumb {

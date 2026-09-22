@@ -23,9 +23,13 @@
 */
 
 :root {
-  /* Classy smooth typography — Outfit (display) + Manrope (UI) */
-  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Outfit', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* UI: Apple system stack (SF Pro). Brand wordmark only: Syne */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-brand: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
   --mobile-header-h: 52px;
   --mobile-menu-clear: 56px;
 
@@ -63,12 +67,15 @@
 
   --border-color: rgba(255, 255, 255, 0.07);
   --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-focus: rgba(129, 140, 248, 0.55);
+  --border-focus: rgba(165, 173, 255, 0.55);
 
-  --color-primary: #8b93f8;
-  --color-primary-hover: #a5b0fc;
-  --color-primary-muted: rgba(139, 147, 248, 0.16);
-  --color-primary-glow: rgba(139, 147, 248, 0.28);
+  --color-primary: #7b7cf5;
+  --color-primary-hover: #a8a9ff;
+  --color-primary-muted: rgba(105, 106, 242, 0.16);
+  --color-primary-glow: rgba(105, 106, 242, 0.32);
+  --color-primary-rgb: 105, 106, 242;
+  --color-brand-ex: #a8a9ff;
+  --color-brand-mark: #696af2;
   --color-accent: #f5c76a;
   --color-accent-muted: rgba(245, 199, 106, 0.12);
 
@@ -108,13 +115,13 @@
   --glass-border: rgba(255, 255, 255, 0.07);
   --glass-border-subtle: rgba(255, 255, 255, 0.04);
 
-  --gradient-primary: linear-gradient(135deg, #8b93f8 0%, #6d78f0 100%);
+  --gradient-primary: linear-gradient(135deg, #a8a9ff 0%, #696af2 48%, #4d4ed5 100%);
   --gradient-success: linear-gradient(135deg, #5eead4 0%, #2dd4bf 100%);
   --gradient-warning: linear-gradient(135deg, #f5c76a 0%, #e8a838 100%);
 
   --bg-glow:
-    radial-gradient(circle at 12% 18%, rgba(99, 102, 241, 0.12), transparent 42%),
-    radial-gradient(circle at 88% 82%, rgba(167, 139, 250, 0.08), transparent 40%),
+    radial-gradient(circle at 12% 18%, rgba(105, 106, 242, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 82%, rgba(168, 169, 255, 0.1), transparent 40%),
     radial-gradient(circle at 50% 100%, rgba(94, 234, 212, 0.04), transparent 50%);
 }
 
@@ -137,12 +144,15 @@
 
   --border-color: rgba(99, 120, 200, 0.12);
   --border-subtle: rgba(99, 120, 200, 0.07);
-  --border-focus: rgba(99, 102, 241, 0.4);
+  --border-focus: rgba(139, 147, 248, 0.45);
 
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-muted: rgba(99, 102, 241, 0.1);
-  --color-primary-glow: rgba(99, 102, 241, 0.28);
+  --color-primary: #696af2;
+  --color-primary-hover: #5d5ee0;
+  --color-primary-muted: rgba(105, 106, 242, 0.12);
+  --color-primary-glow: rgba(105, 106, 242, 0.28);
+  --color-primary-rgb: 105, 106, 242;
+  --color-brand-ex: #696af2;
+  --color-brand-mark: #a8a9ff;
   --color-accent: #f59e0b;
   --color-accent-muted: rgba(245, 158, 11, 0.1);
 
@@ -150,14 +160,14 @@
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
 
-  --nav-hover-bg: rgba(99, 102, 241, 0.06);
-  --nav-active-bg: rgba(99, 102, 241, 0.1);
+  --nav-hover-bg: rgba(109, 117, 240, 0.06);
+  --nav-active-bg: rgba(109, 117, 240, 0.1);
 
   --shadow-sm: 0 2px 10px rgba(30, 50, 100, 0.05);
   --shadow-md: 0 12px 36px rgba(30, 50, 100, 0.08), 0 4px 12px rgba(30, 50, 100, 0.03);
   --shadow-lg: 0 22px 56px rgba(30, 50, 100, 0.1), 0 8px 20px rgba(30, 50, 100, 0.04);
   --shadow-card: 0 8px 28px rgba(30, 50, 100, 0.06), 0 2px 8px rgba(30, 50, 100, 0.02);
-  --shadow-premium: 0 24px 64px rgba(99, 102, 241, 0.1);
+  --shadow-premium: 0 24px 64px rgba(109, 117, 240, 0.12);
   --shadow-float: 0 20px 50px rgba(30, 50, 100, 0.08), 0 2px 10px rgba(30, 50, 100, 0.03);
 
   --card-tint-blue: #e8eefc;
@@ -171,24 +181,24 @@
   --sidebar-bg: rgba(255, 255, 255, 0.82);
   --sidebar-fg: #1a1d2e;
   --sidebar-fg-muted: #6b7289;
-  --sidebar-surface: rgba(99, 102, 241, 0.06);
-  --sidebar-border: rgba(99, 120, 200, 0.1);
-  --sidebar-nav-hover: rgba(99, 102, 241, 0.08);
+  --sidebar-surface: rgba(109, 117, 240, 0.06);
+  --sidebar-border: rgba(109, 117, 240, 0.12);
+  --sidebar-nav-hover: rgba(109, 117, 240, 0.08);
   --sidebar-nav-active-bg: #ffffff;
-  --sidebar-nav-active-fg: #4f46e5;
+  --sidebar-nav-active-fg: #696af2;
 
   --glass-blur: saturate(180%) blur(28px);
   --glass-bg: rgba(255, 255, 255, 0.82);
   --glass-border: rgba(99, 120, 200, 0.08);
   --glass-border-subtle: rgba(99, 120, 200, 0.05);
 
-  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --gradient-primary: linear-gradient(135deg, #a8a9ff 0%, #696af2 52%, #4d4ed5 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
   --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 
   --bg-glow:
-    radial-gradient(circle at 8% 12%, rgba(120, 150, 230, 0.18), transparent 46%),
-    radial-gradient(circle at 92% 88%, rgba(140, 160, 230, 0.12), transparent 44%),
+    radial-gradient(circle at 8% 12%, rgba(105, 106, 242, 0.18), transparent 46%),
+    radial-gradient(circle at 92% 88%, rgba(168, 169, 255, 0.14), transparent 44%),
     radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.75), transparent 55%);
 }
 
@@ -225,7 +235,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
-  font-weight: 500;
+  font-weight: 400;
   font-size: 15px;
   line-height: 1.55;
   background-color: var(--bg-main);
@@ -260,16 +270,21 @@ html.auth-mounted body {
 }
 
 h1, h2, h3, h4, h5, h6,
-.brand-text h2,
 .section-header h1,
 .syllabus-page-header h1,
 .page-header h1,
 .auth-brand h1 {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1.2;
+  letter-spacing: -0.022em;
+  line-height: 1.25;
   text-wrap: balance;
+}
+
+.brand-wordmark,
+.auth-brand-name.brand-wordmark {
+  font-family: var(--font-brand);
+  letter-spacing: -0.05em;
 }
 
 button,
@@ -277,7 +292,7 @@ input,
 select,
 textarea {
   font-family: var(--font-sans);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.011em;
 }
 
 body,
@@ -327,23 +342,25 @@ button {
   to { opacity: 1; transform: translateY(0); }
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent !important; }
-::-webkit-scrollbar-thumb { background: rgba(128, 128, 160, 0.25); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
-::-webkit-scrollbar-button { display: none !important; width: 0 !important; height: 0 !important; }
-::-webkit-scrollbar-corner { background: transparent !important; }
-
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); }
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+/* Default: no decorative global scrollbar chrome.
+   Intentional panes style their own thin classic bars (see design-overhaul / workspace). */
+html, body {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
-:root[data-theme="light"] * {
-  scrollbar-color: rgba(0, 0, 0, 0.16) transparent;
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
 button,

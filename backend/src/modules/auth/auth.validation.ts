@@ -54,3 +54,30 @@ export const googleAuthValidation = [
     return true;
   }),
 ];
+
+export const updateProfileValidation = [
+  body('displayName')
+    .optional({ values: 'null' })
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      const name = String(value).trim();
+      if (name.length > 80) throw new Error('Display name must be at most 80 characters.');
+      return true;
+    }),
+  body('avatarUrl')
+    .optional({ values: 'null' })
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') return true;
+      if (typeof value !== 'string') throw new Error('Invalid avatar.');
+      if (value.length > 200_000) throw new Error('Profile photo is too large.');
+      return true;
+    }),
+  body().custom((_, { req }) => {
+    const hasName = Object.prototype.hasOwnProperty.call(req.body || {}, 'displayName');
+    const hasAvatar = Object.prototype.hasOwnProperty.call(req.body || {}, 'avatarUrl');
+    if (!hasName && !hasAvatar) {
+      throw new Error('Nothing to update. Send displayName and/or avatarUrl.');
+    }
+    return true;
+  }),
+];

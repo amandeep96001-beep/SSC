@@ -1,6 +1,7 @@
 import competitionRepository from './competition.repository.js';
 import { badRequest, notFound, unauthorized } from '../../utils/app-errors.js';
 import type { CompetitionQuestionMeta, SubmitScoreInput } from './competition.interface.js';
+import { cacheDel, cacheGetJson, cacheSetJson } from '../../infra/cache.js';
 
 export class CompetitionService {
   async getQuestions(subjectRaw: unknown, limitRaw: unknown) {
@@ -50,6 +51,8 @@ export class CompetitionService {
       timeTaken: timeTakenN,
     });
 
+    await cacheDel(`competition:lb:${resolvedSubject}`);
+
     const personalBest = await competitionRepository.findPersonalBest(username, resolvedSubject);
     const betterScores = await competitionRepository.countBetterScores(
       resolvedSubject,
@@ -68,10 +71,21 @@ export class CompetitionService {
 
   async getLeaderboard(subjectRaw: unknown) {
     const subject = String(subjectRaw ?? 'Mixed');
+    const cacheKey = `competition:lb:${subject}`;
+    const cached = await cacheGetJson<unknown[]>(cacheKey);
+    if (cached) {
+      return {
+        data: cached,
+        meta: { subject, total: cached.length, cached: true },
+      };
+    }
+
     const leaderboard = await competitionRepository.leaderboard(subject);
+    const ttl = Number(process.env.LEADERBOARD_CACHE_TTL_SEC || 30);
+    await cacheSetJson(cacheKey, leaderboard, ttl);
     return {
       data: leaderboard,
-      meta: { subject, total: leaderboard.length },
+      meta: { subject, total: leaderboard.length, cached: false },
     };
   }
 }

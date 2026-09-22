@@ -41,13 +41,14 @@ export class DrillService {
 
     switch (type) {
       case 'table': {
-        const max = Math.max(12, parseInt(String(maxBase ?? ''), 10) || 20);
+        // Always 12–max (never push tables 1–11)
+        const max = Math.min(50, Math.max(12, parseInt(String(maxBase ?? ''), 10) || 20));
         let tableBase: number;
         do {
           tableBase = Math.floor(Math.random() * (max - 12 + 1)) + 12;
-        } while (tableBase % 10 === 0);
+        } while (tableBase % 10 === 0 && max > 12);
 
-        const multiplier = Math.floor(Math.random() * 8) + 2;
+        const multiplier = Math.floor(Math.random() * 8) + 2; // ×2–×9
         return {
           type,
           question: `${tableBase} × ${multiplier}`,

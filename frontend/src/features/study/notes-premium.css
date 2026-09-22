@@ -987,10 +987,18 @@
   }
   .fraction-list {
     grid-template-columns: 1fr !important;
-    gap: 6px !important;
+    gap: 10px !important;
   }
   .fraction-row {
-    padding: 10px 14px !important;
+    padding: 14px 14px !important;
+    min-height: 52px !important;
+  }
+  .fraction-row .frac-lhs,
+  .fraction-row .frac-rhs {
+    font-size: 1.08rem !important;
+  }
+  .revision-chunks {
+    gap: 18px !important;
   }
 }
 

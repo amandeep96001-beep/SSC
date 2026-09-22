@@ -38,6 +38,11 @@ const UserSchema = new Schema<IUser>({
     trim: true,
     maxlength: 80,
   },
+  avatarUrl: {
+    type: String,
+    required: false,
+    maxlength: 200_000,
+  },
   password: { type: String, required: false, select: false },
   role: {
     type: String,

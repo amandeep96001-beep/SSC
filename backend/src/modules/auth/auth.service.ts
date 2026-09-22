@@ -32,6 +32,7 @@ import {
   serviceUnavailable,
 } from '../../utils/app-errors.js';
 import type { PublicUserPayload } from '../../types/domain.js';
+import { validateAvatarDataUrl } from './avatar.util.js';
 
 function resolveRole(email: string | null | undefined): 'user' | 'admin' {
   return email ? resolveRoleByEmail(normalizeEmail(email)) : 'user';
@@ -41,12 +42,52 @@ export class AuthService {
   constructor(private readonly otpService = new OtpService()) {}
 
   async buildSessionPayload(user: UserDoc): Promise<PublicUserPayload> {
+    // Single active device: bump tokenVersion so every other session dies immediately.
+    const newTv = await authRepository.bumpTokenVersion(String(user._id));
+    user.tokenVersion = newTv;
+
     const [progress, mockProgress] = await Promise.all([
       progressRepository.findByUsername(user.username),
       mockProgressRepository.findByUsername(user.username),
     ]);
     const token = signToken(user);
     return publicUserPayload(user, progress, mockProgress, token);
+  }
+
+  async updateProfile(
+    userId: string,
+    username: string,
+    input: { displayName?: unknown; avatarUrl?: unknown },
+  ): Promise<PublicUserPayload> {
+    const user = await authRepository.findById(userId);
+    if (!user) throw unauthorized('Session expired. Please sign in again.');
+
+    if (Object.prototype.hasOwnProperty.call(input, 'displayName')) {
+      const raw = input.displayName;
+      if (raw === null || raw === undefined || String(raw).trim() === '') {
+        user.displayName = undefined;
+      } else {
+        const name = String(raw).trim().slice(0, 80);
+        user.displayName = name;
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, 'avatarUrl')) {
+      const checked = validateAvatarDataUrl(input.avatarUrl);
+      if (!checked.ok) throw badRequest(checked.message);
+      user.avatarUrl = checked.dataUrl || undefined;
+    }
+
+    await authRepository.save(user);
+    const { invalidateAuthUser } = await import('../../infra/auth-cache.js');
+    await invalidateAuthUser(userId);
+
+    const [progress, mockProgress] = await Promise.all([
+      progressRepository.findByUsername(username),
+      mockProgressRepository.findByUsername(username),
+    ]);
+
+    return publicUserPayload(user, progress, mockProgress);
   }
 
   async register(input: RegisterInput): Promise<RegisterResult> {
@@ -172,6 +213,7 @@ export class AuthService {
         username,
         email: dbUser?.email || fallback?.email || null,
         displayName: dbUser?.displayName || null,
+        avatarUrl: dbUser?.avatarUrl || null,
         emailVerified: Boolean(dbUser?.emailVerified),
         role: dbUser?.role || fallback?.role || 'user',
         lastStudyAt: dbUser?.lastStudyAt || lastStudyAt,

@@ -43,6 +43,7 @@ export function publicUserPayload(
     username: user.username,
     email: user.email || null,
     displayName: user.displayName || null,
+    avatarUrl: user.avatarUrl || null,
     emailVerified: Boolean(user.emailVerified),
     role: user.role || 'user',
     lastStudyAt: deriveLastStudyAt(progress, mockProgress, user.lastStudyAt ?? null),

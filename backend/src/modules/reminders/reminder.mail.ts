@@ -17,18 +17,18 @@ export async function sendReminderEmail({
   const note = String(message || '').trim();
   const timeLabel = String(time || '').trim();
 
-  const subject = `ExamPrep — ${reminderTitle}`;
-  const lead = note || 'Your study time is here. Open ExamPrep and start your session.';
+  const subject = `CrackuEx — ${reminderTitle}`;
+  const lead = note || 'Your study time is here. Open CrackuEx and start your session.';
 
   const bodyText = [
-    'ExamPrep',
+    'CrackuEx',
     '',
     reminderTitle,
     lead,
     ...(timeLabel ? [`Scheduled for ${timeLabel}`, ''] : ['']),
     'Open the app and stay on track.',
     '',
-    '— Team ExamPrep',
+    '— Team CrackuEx',
   ].join('\n');
 
   const html = `<!DOCTYPE html>
@@ -39,13 +39,13 @@ export async function sendReminderEmail({
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #d8deea;">
         <tr>
-          <td style="padding:22px 28px 18px;background:#4f46e5;">
+          <td style="padding:22px 28px 18px;background:#0A2744;">
             <table role="presentation" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width:40px;height:40px;vertical-align:middle;background:#ffffff;border-radius:12px;overflow:hidden;">
+                <td style="width:40px;height:40px;vertical-align:middle;">
                   ${logoImgHtml({ size: 40, radius: 12 })}
                 </td>
-                <td style="padding-left:12px;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#ffffff;vertical-align:middle;">ExamPrep</td>
+                <td style="padding-left:12px;font-size:18px;font-weight:800;letter-spacing:-0.02em;vertical-align:middle;"><span style="color:#c8ccd8;">Cracku</span><span style="color:#a8a9ff;">Ex</span></td>
               </tr>
             </table>
           </td>
@@ -66,8 +66,8 @@ export async function sendReminderEmail({
         </tr>` : ''}
         <tr>
           <td style="padding:20px 28px 28px;">
-            <p style="margin:0 0 18px;font-size:13px;line-height:1.5;color:#6b7280;">Open ExamPrep when you are ready and keep your streak going.</p>
-            <p style="margin:0;font-size:12px;color:#9aa3b8;">— Team ExamPrep</p>
+            <p style="margin:0 0 18px;font-size:13px;line-height:1.5;color:#6b7280;">Open CrackuEx when you are ready and keep your streak going.</p>
+            <p style="margin:0;font-size:12px;color:#9aa3b8;">— Team CrackuEx</p>
           </td>
         </tr>
       </table>

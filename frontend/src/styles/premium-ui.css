@@ -54,18 +54,15 @@
 }
 
 .lms-sidebar .brand-mark {
-  background: var(--sidebar-surface);
-  border-color: var(--sidebar-border);
-}
-
-:root[data-theme="light"] .lms-sidebar .brand-icon {
-  color: var(--color-primary);
-  filter: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  overflow: visible;
 }
 
 :root[data-theme="light"] .lms-sidebar .brand-mark {
-  background: var(--color-primary-muted);
-  border-color: rgba(99, 102, 241, 0.16);
+  background: transparent;
+  border: none;
 }
 
 .lms-sidebar .user-profile-card {
@@ -135,8 +132,7 @@
 /* ---- Main workspace shell ---- */
 .lms-workspace {
   padding: 32px 32px 32px 24px;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: hidden;
   min-width: 0;
   max-width: 100%;
 }
@@ -147,8 +143,7 @@
   border-radius: 36px;
   box-shadow: var(--shadow-float);
   padding: 32px 36px 36px;
-  overflow-x: hidden;
-  overflow-y: hidden;
+  overflow: hidden;
   min-width: 0;
   max-width: 100%;
 }
@@ -476,15 +471,15 @@
 
 /* ---- Pills & buttons ---- */
 .revision-sub-tab {
-  border: none;
-  background: var(--bg-surface-hover);
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-surface) 80%, transparent);
   border-radius: 999px;
-  padding: 8px 18px;
-  box-shadow: var(--shadow-sm);
+  padding: 7px 14px;
+  box-shadow: none;
 }
 
 .revision-sub-tab.active {
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 16px var(--color-primary-glow);
 }
 
 .btn-add,

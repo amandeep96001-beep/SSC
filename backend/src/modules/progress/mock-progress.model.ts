@@ -18,6 +18,7 @@ const MockProgressSchema = new Schema<IMockProgress>({
 });
 
 MockProgressSchema.index({ username: 1, examId: 1, mockTestId: 1 });
+MockProgressSchema.index({ username: 1, timestamp: -1 });
 
 const MockProgress = mongoose.model<IMockProgress>('MockProgress', MockProgressSchema);
 

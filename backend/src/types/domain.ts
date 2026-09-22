@@ -12,6 +12,7 @@ export interface PublicUserPayload {
   username: string;
   email: string | null;
   displayName: string | null;
+  avatarUrl: string | null;
   emailVerified: boolean;
   role: string;
   lastStudyAt: string | null;

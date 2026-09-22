@@ -3,6 +3,11 @@ import User from '../modules/auth/auth.model.js';
 import { verifyToken } from '../utils/token.js';
 import { getDBStatus } from '../config/db.config.js';
 import { resolveRoleByEmail } from '../utils/auth-identity.js';
+import {
+  getCachedAuthUser,
+  setCachedAuthUser,
+  type CachedAuthUser,
+} from '../infra/auth-cache.js';
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   try {
@@ -24,39 +29,51 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     const token = header.slice(7);
     const payload = verifyToken(token);
 
-    const user = await User.findById(payload.userId)
-      .select('_id username email role tokenVersion')
-      .lean();
+    let cached = await getCachedAuthUser(payload.userId);
+    if (!cached) {
+      const user = await User.findById(payload.userId)
+        .select('_id username email role tokenVersion')
+        .lean();
 
-    if (!user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Session expired. Please sign in again.',
-      });
-    }
-
-    const tokenVersion = user.tokenVersion ?? 0;
-    const claimed = typeof payload.tv === 'number' ? payload.tv : 0;
-    if (claimed !== tokenVersion) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Session expired. Please sign in again.',
-      });
-    }
-
-    let role: string = user.role || 'user';
-    if (process.env.ADMIN_EMAIL?.trim() && user.email) {
-      role = resolveRoleByEmail(user.email);
-      if (role !== user.role) {
-        User.updateOne({ _id: user._id }, { $set: { role } }).catch(() => {});
+      if (!user) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Session expired. Please sign in again.',
+        });
       }
+
+      let role: string = user.role || 'user';
+      if (process.env.ADMIN_EMAIL?.trim() && user.email) {
+        role = resolveRoleByEmail(user.email);
+        if (role !== user.role) {
+          User.updateOne({ _id: user._id }, { $set: { role } }).catch(() => {});
+        }
+      }
+
+      cached = {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email || undefined,
+        role,
+        tokenVersion: user.tokenVersion ?? 0,
+      } satisfies CachedAuthUser;
+      await setCachedAuthUser(cached);
+    }
+
+    const claimed = typeof payload.tv === 'number' ? payload.tv : 0;
+    if (claimed !== cached.tokenVersion) {
+      return res.status(401).json({
+        status: 'error',
+        code: 'SESSION_SUPERSEDED',
+        message: 'Signed in on another device. This session was signed out.',
+      });
     }
 
     req.user = {
-      id: user._id.toString(),
-      username: user.username,
-      email: user.email || undefined,
-      role,
+      id: cached.id,
+      username: cached.username,
+      email: cached.email,
+      role: cached.role,
     };
 
     next();

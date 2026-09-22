@@ -4,6 +4,7 @@ import {
   registerValidation,
   loginValidation,
   googleAuthValidation,
+  updateProfileValidation,
 } from './auth.validation.js';
 import { validateRequest } from '../../middleware/validate.middleware.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
@@ -17,6 +18,7 @@ router.post('/login', authLimiter, requireDb, loginValidation, validateRequest, 
 router.post('/google', authLimiter, requireDb, googleAuthValidation, validateRequest, authController.loginWithGoogle);
 
 router.get('/me', requireAuth, authController.getMe);
+router.patch('/me', requireAuth, updateProfileValidation, validateRequest, authController.updateProfile);
 router.post('/logout', requireAuth, authController.logout);
 
 export default router;

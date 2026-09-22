@@ -99,7 +99,39 @@ export function useStudy() {
   const [user, setUser] = useState<AppUser | null>(() => readStoredUser());
 
   // Keep React session in sync when apiService clears storage on 401
-  useEffect(() => apiService.onSessionCleared(() => setUser(null)), []);
+  useEffect(() => apiService.onSessionCleared((detail) => {
+    setUser(null);
+    if (detail?.code === 'SESSION_SUPERSEDED') {
+      showAppToast(
+        detail.message || 'Signed in on another device. This session was signed out.',
+        { variant: 'warn', durationMs: 6000, title: 'Single device login' },
+      );
+    }
+  }), []);
+
+  const updateProfile = useCallback(async (payload: {
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  }) => {
+    try {
+      const res = await apiService.patch('/auth/me', payload, { timeout: 30000 });
+      const profile = asAuthPayload(res?.data);
+      if (!profile?.username) {
+        return { success: false, message: res.message || 'Could not update profile.' };
+      }
+      const next: AppUser = {
+        ...(user || { username: profile.username }),
+        ...profile,
+        username: profile.username,
+        token: undefined,
+      };
+      localStorage.setItem('ssc_user', JSON.stringify(next));
+      setUser(next);
+      return { success: true, message: res.message };
+    } catch (err) {
+      return { success: false, message: errorMessage(err) || 'Could not update profile.' };
+    }
+  }, [user]);
 
   // Refresh role/profile from server so admin promotions apply without re-register
   useEffect(() => {
@@ -1022,6 +1054,7 @@ export function useStudy() {
     resetPassword,
     loginWithGoogle,
     logoutUser,
+    updateProfile,
     updateCustomTopic,
     deleteCustomTopic
   };

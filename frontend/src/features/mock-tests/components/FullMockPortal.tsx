@@ -4,6 +4,7 @@ import { pageTitle } from '@/shared/brand';
 import { Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ArrowLeft, Ban, ChevronLeft } from 'lucide-react';
 import { McqText } from '@/shared/components/ui/McqText';
 import { ExamLoader } from '@/features/exam/components/ExamLoader';
+import { UserAvatar } from '@/shared/components/UserAvatar';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
 import { apiService } from '@/shared/services/apiService';
@@ -455,9 +456,9 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
           </div>
           <div className="exam-palette-body">
             <div className="user-profile">
-              <div className="avatar">{user?.username ? user.username.slice(0, 2).toUpperCase() : 'US'}</div>
+              <UserAvatar user={user} size={40} className="avatar" />
               <div>
-                <div className="exam-user-name">{user?.username || 'Candidate'}</div>
+                <div className="exam-user-name">{user?.displayName?.trim() || user?.username || 'Candidate'}</div>
                 <div className="exam-user-meta">
                   {qCount} questions · {exam.mockMinutes} minutes · {exam.name}
                 </div>

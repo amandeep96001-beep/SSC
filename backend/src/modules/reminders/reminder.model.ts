@@ -29,6 +29,7 @@ const ReminderSchema = new Schema<IReminder>(
 );
 
 ReminderSchema.index({ enabled: 1, time: 1 });
+ReminderSchema.index({ enabled: 1, _id: 1 });
 
 const Reminder = mongoose.model<IReminder>('Reminder', ReminderSchema);
 export default Reminder;

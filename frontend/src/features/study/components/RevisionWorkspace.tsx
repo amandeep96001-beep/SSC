@@ -16,8 +16,9 @@ import {
   Layers,
   Copy,
   Check,
+  Brain,
 } from 'lucide-react';
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import type { VocabFormState, VocabItem } from '@/types/app';
 
 const VOCAB_BULK_TEMPLATES = {
@@ -68,6 +69,20 @@ const VOCAB_BULK_TEMPLATES = {
 } as const;
 
 type BulkTemplateKey = keyof typeof VOCAB_BULK_TEMPLATES;
+
+function chunkRange(start: number, end: number, size = 10) {
+  const chunks: { from: number; to: number }[] = [];
+  for (let i = start; i <= end; i += size) {
+    chunks.push({ from: i, to: Math.min(i + size - 1, end) });
+  }
+  return chunks;
+}
+
+function chunkList<T>(items: T[], size = 10): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
 
 // Fraction ↔ Percentage Reference Sheet
 const FRACTION_CONVERSIONS = [
@@ -199,6 +214,30 @@ export function RevisionWorkspace({
   vocabTotalPages,
   handleVocabPageChange
 }: RevisionWorkspaceProps) {
+  const [studyMode, setStudyMode] = useState(false);
+  const [revealed, setRevealed] = useState<Record<string, true>>({});
+
+  useEffect(() => {
+    setRevealed({});
+  }, [tableSubTab, deckTab]);
+
+  const toggleReveal = (key: string) => {
+    if (!studyMode) return;
+    setRevealed((prev) => {
+      if (prev[key]) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: true };
+    });
+  };
+
+  const rowClass = (key: string) => {
+    if (!studyMode) return 'fraction-row';
+    return `fraction-row fraction-row--study${revealed[key] ? ' is-revealed' : ''}`;
+  };
+
   return (
     <>
       {/* --- VIEW: REVISION DECK --- */}
@@ -209,42 +248,68 @@ export function RevisionWorkspace({
             <p>Quick sheets for tables, fractions, and vocabulary reference.</p>
           </div>
 
-          {/* TOP TABS: Tables | Vocab */}
-          <div className="tabs-header tabs-header--scroll">
-            <div className="drill-tabs">
-              <button
-                className={`drill-tab ${deckTab === 'tables' ? 'active' : ''}`}
-                onClick={() => setDeckTab('tables')}
-              >
-                <Layers size={14} strokeWidth={2} />
-                <span>Tables & Fractions</span>
-              </button>
-              <button
-                className={`drill-tab ${deckTab === 'vocab' ? 'active' : ''}`}
-                onClick={() => { setDeckTab('vocab'); loadVocabList(); }}
-              >
-                <Book size={14} strokeWidth={2} />
-                <span>Vocabulary</span>
-              </button>
-            </div>
+          {/* Compact deck switch — hugs content, not a full-width bar */}
+          <div className="revision-deck-toggle" role="tablist" aria-label="Revision deck">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={deckTab === 'tables'}
+              className={`revision-deck-toggle__btn${deckTab === 'tables' ? ' is-active' : ''}`}
+              onClick={() => setDeckTab('tables')}
+            >
+              <Layers size={15} strokeWidth={2} />
+              <span className="revision-deck-toggle__full">Tables & Fractions</span>
+              <span className="revision-deck-toggle__short">Tables</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={deckTab === 'vocab'}
+              className={`revision-deck-toggle__btn${deckTab === 'vocab' ? ' is-active' : ''}`}
+              onClick={() => { setDeckTab('vocab'); loadVocabList(); }}
+            >
+              <Book size={15} strokeWidth={2} />
+              <span>Vocabulary</span>
+            </button>
           </div>
 
           {deckTab === 'tables' && (
-            <div className="revision-sub-tabs">
-              {['tables','squares','cubes','fractions','percentages'].map(st => (
+            <div className="revision-toolbar">
+              <div className="revision-sub-tabs" role="tablist" aria-label="Sheet type">
+                {['tables','squares','cubes','fractions','percentages'].map(st => (
+                  <button
+                    key={st}
+                    type="button"
+                    role="tab"
+                    aria-selected={tableSubTab === st}
+                    className={`revision-sub-tab ${tableSubTab === st ? 'active' : ''}`}
+                    onClick={() => setTableSubTab(st)}
+                  >
+                    { st === 'tables' ? <><Grid3x3 size={13} strokeWidth={2} /> Tables</>
+                      : st === 'squares' ? <><Square size={13} strokeWidth={2} /> Squares</>
+                      : st === 'cubes' ? <><Box size={13} strokeWidth={2} /> Cubes</>
+                      : st === 'fractions' ? <><Percent size={13} strokeWidth={2} /> <span className="revision-sub-tab__full">Fraction → %</span><span className="revision-sub-tab__short">Frac→%</span></>
+                      : <><ArrowLeftRight size={13} strokeWidth={2} /> <span className="revision-sub-tab__full">% → Fraction</span><span className="revision-sub-tab__short">%→Frac</span></> }
+                  </button>
+                ))}
+              </div>
+              {tableSubTab !== 'tables' && (
                 <button
-                  key={st}
-                  className={`revision-sub-tab ${tableSubTab === st ? 'active' : ''}`}
-                  onClick={() => setTableSubTab(st)}
+                  type="button"
+                  className={`revision-study-toggle${studyMode ? ' is-on' : ''}`}
+                  onClick={() => { setStudyMode((v) => !v); setRevealed({}); }}
+                  title="Hide answers — tap a card to reveal (active recall)"
                 >
-                  { st === 'tables' ? <><Grid3x3 size={13} strokeWidth={2} /> Tables</>
-                    : st === 'squares' ? <><Square size={13} strokeWidth={2} /> Squares</>
-                    : st === 'cubes' ? <><Box size={13} strokeWidth={2} /> Cubes</>
-                    : st === 'fractions' ? <><Percent size={13} strokeWidth={2} /> Fraction → %</>
-                    : <><ArrowLeftRight size={13} strokeWidth={2} /> % → Fraction</> }
+                  <Brain size={14} strokeWidth={2} />
+                  <span>{studyMode ? 'Memorize on' : 'Memorize'}</span>
                 </button>
-              ))}
+              )}
             </div>
+          )}
+          {deckTab === 'tables' && studyMode && tableSubTab !== 'tables' && (
+            <p className="revision-study-hint">
+              Answers hidden — tap a card to check. Active recall sticks better than re-reading.
+            </p>
           )}
 
           {deckTab === 'vocab' && (
@@ -295,8 +360,8 @@ export function RevisionWorkspace({
             {/* Multiplication Tables — inline one-line-per-row */}
             {tableSubTab === 'tables' && (
               <div className="tables-deck-grid">
-                {Array(50).fill(null).map((_, idx) => {
-                  const num = idx + 1;
+                {Array.from({ length: 39 }, (_, idx) => {
+                  const num = idx + 12; // Always 12 → 50 (never push 1–11)
                   const isExpanded = expandedTable === num;
                   return (
                     <div key={num} className={`table-card ${isExpanded ? 'expanded' : ''}`}>
@@ -326,86 +391,134 @@ export function RevisionWorkspace({
               </div>
             )}
 
-            {/* Squares */}
+            {/* Squares — chunked for quicker memorisation */}
             {tableSubTab === 'squares' && (
-              <div className="tables-deck-grid">
-                {Array(50).fill(null).map((_, idx) => {
-                  const num = idx + 1;
-                  const isImportant = num <= 30;
-                  return (
-                    <div key={num} className="table-card">
-                      <div className="table-card-header" style={{ cursor: 'default' }}>
-                        <h3>
-                          {num}² = {num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Star size={10} fill="currentColor" /> IMP</span>}
-                        </h3>
-                      </div>
-                      <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
-                        <div className="multipliers-grid">
-                          <div className="multiplier-row">
-                            <span>√{num * num}</span>
-                            <span>=</span>
-                            <strong>{num}</strong>
-                          </div>
-                        </div>
-                      </div>
+              <div className="revision-chunks">
+                {chunkRange(1, 50).map(({ from, to }) => (
+                  <section key={`sq-${from}`} className="revision-chunk" aria-label={`Squares ${from} to ${to}`}>
+                    <h4 className="revision-chunk__label">
+                      Squares {from}–{to}
+                      {to <= 30 ? ' · priority' : ''}
+                    </h4>
+                    <div className="fraction-list">
+                      {Array.from({ length: to - from + 1 }, (_, i) => {
+                        const num = from + i;
+                        const isImportant = num <= 30;
+                        const key = `sq-${num}`;
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            className={`${rowClass(key)} fraction-row--power${isImportant ? ' is-imp' : ''}`}
+                            onClick={() => toggleReveal(key)}
+                            disabled={!studyMode}
+                          >
+                            <span className="frac-lhs">{num}²</span>
+                            <span className="frac-arrow" aria-hidden>=</span>
+                            <span className="frac-rhs">{num * num}</span>
+                            {isImportant && <span className="frac-imp" title="Important"><Star size={12} fill="currentColor" /></span>}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
               </div>
             )}
 
-            {/* Cubes */}
+            {/* Cubes — chunked for quicker memorisation */}
             {tableSubTab === 'cubes' && (
-              <div className="tables-deck-grid">
-                {Array(50).fill(null).map((_, idx) => {
-                  const num = idx + 1;
-                  const isImportant = num <= 20;
-                  return (
-                    <div key={num} className="table-card">
-                      <div className="table-card-header" style={{ cursor: 'default' }}>
-                        <h3>
-                          {num}³ = {num * num * num}
-                          {isImportant && <span className="pos-badge" style={{ marginLeft: '8px', fontSize: '0.65rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}><Star size={10} fill="currentColor" /> IMP</span>}
-                        </h3>
-                      </div>
-                      <div className="table-card-body" style={{ position: 'relative', borderTop: '1px solid var(--border-color)', borderRadius: 0, padding: '8px 18px' }}>
-                        <div className="multipliers-grid">
-                          <div className="multiplier-row">
-                            <span>∛{num * num * num}</span>
-                            <span>=</span>
-                            <strong>{num}</strong>
-                          </div>
-                        </div>
-                      </div>
+              <div className="revision-chunks">
+                {chunkRange(1, 50).map(({ from, to }) => (
+                  <section key={`cu-${from}`} className="revision-chunk" aria-label={`Cubes ${from} to ${to}`}>
+                    <h4 className="revision-chunk__label">
+                      Cubes {from}–{to}
+                      {to <= 20 ? ' · priority' : ''}
+                    </h4>
+                    <div className="fraction-list">
+                      {Array.from({ length: to - from + 1 }, (_, i) => {
+                        const num = from + i;
+                        const isImportant = num <= 20;
+                        const key = `cu-${num}`;
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            className={`${rowClass(key)} fraction-row--power${isImportant ? ' is-imp' : ''}`}
+                            onClick={() => toggleReveal(key)}
+                            disabled={!studyMode}
+                          >
+                            <span className="frac-lhs">{num}³</span>
+                            <span className="frac-arrow" aria-hidden>=</span>
+                            <span className="frac-rhs">{num * num * num}</span>
+                            {isImportant && <span className="frac-imp" title="Important"><Star size={12} fill="currentColor" /></span>}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </section>
+                ))}
               </div>
             )}
 
             {/* Fraction → Percentage */}
             {tableSubTab === 'fractions' && (
-              <div className="fraction-list">
-                {FRACTION_CONVERSIONS.map(fc => (
-                  <div key={fc.fraction} className="fraction-row">
-                    <span className="frac-lhs">{fc.fraction}</span>
-                    <span className="frac-arrow">→</span>
-                    <span className="frac-rhs">{fc.percentage}</span>
-                  </div>
+              <div className="revision-chunks">
+                {chunkList(FRACTION_CONVERSIONS, 8).map((group, gi) => (
+                  <section key={`fr-${gi}`} className="revision-chunk">
+                    <h4 className="revision-chunk__label">
+                      {gi === 0 ? 'Unit fractions' : `Set ${gi + 1}`}
+                    </h4>
+                    <div className="fraction-list">
+                      {group.map(fc => {
+                        const key = `fr-${fc.fraction}`;
+                        return (
+                          <button
+                            key={fc.fraction}
+                            type="button"
+                            className={rowClass(key)}
+                            onClick={() => toggleReveal(key)}
+                            disabled={!studyMode}
+                          >
+                            <span className="frac-lhs">{fc.fraction}</span>
+                            <span className="frac-arrow" aria-hidden>→</span>
+                            <span className="frac-rhs">{fc.percentage}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}
 
             {/* Percentage → Fraction */}
             {tableSubTab === 'percentages' && (
-              <div className="fraction-list">
-                {FRACTION_CONVERSIONS.map(fc => (
-                  <div key={fc.percentage} className="fraction-row">
-                    <span className="frac-lhs">{fc.percentage}</span>
-                    <span className="frac-arrow">→</span>
-                    <span className="frac-rhs">{fc.fraction}</span>
-                  </div>
+              <div className="revision-chunks">
+                {chunkList(FRACTION_CONVERSIONS, 8).map((group, gi) => (
+                  <section key={`pc-${gi}`} className="revision-chunk">
+                    <h4 className="revision-chunk__label">
+                      {gi === 0 ? 'Core percentages' : `Set ${gi + 1}`}
+                    </h4>
+                    <div className="fraction-list">
+                      {group.map(fc => {
+                        const key = `pc-${fc.percentage}`;
+                        return (
+                          <button
+                            key={fc.percentage}
+                            type="button"
+                            className={rowClass(key)}
+                            onClick={() => toggleReveal(key)}
+                            disabled={!studyMode}
+                          >
+                            <span className="frac-lhs">{fc.percentage}</span>
+                            <span className="frac-arrow" aria-hidden>→</span>
+                            <span className="frac-rhs">{fc.fraction}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
                 ))}
               </div>
             )}

@@ -15,6 +15,7 @@ const ProgressSchema = new Schema<IProgress>({
 });
 
 ProgressSchema.index({ username: 1, examId: 1, topicId: 1 });
+ProgressSchema.index({ username: 1, timestamp: -1 });
 
 const Progress = mongoose.model<IProgress>('Progress', ProgressSchema);
 

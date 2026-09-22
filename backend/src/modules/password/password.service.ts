@@ -128,6 +128,8 @@ export class PasswordService {
     user.tokenVersion = (user.tokenVersion ?? 0) + 1;
     if (resolveRoleByEmail(user.email) === 'admin') user.role = 'admin';
     await authRepository.save(user);
+    const { invalidateAuthUser } = await import('../../infra/auth-cache.js');
+    await invalidateAuthUser(String(user._id));
     await otpRepository.deleteByEmailPurpose(user.email, 'password_reset');
 
     return {

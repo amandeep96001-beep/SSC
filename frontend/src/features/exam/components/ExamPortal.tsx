@@ -5,6 +5,7 @@ import { useEffect, useCallback } from 'react';
 import { Activity, X, XCircle, Flag, Eraser, Save, Send, Timer, ChevronLeft, RefreshCw } from 'lucide-react';
 import { ExamLoader } from '@/features/exam/components/ExamLoader';
 import { McqText } from '@/shared/components/ui/McqText';
+import { UserAvatar } from '@/shared/components/UserAvatar';
 import type { AppUser, McqQuestion, TopicNotesPayload } from '@/types/app';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
@@ -196,9 +197,9 @@ export function ExamPortal({
           </div>
           <div className="exam-palette-body">
             <div className="user-profile">
-              <div className="avatar">{user?.username ? user.username.slice(0, 2).toUpperCase() : 'US'}</div>
+              <UserAvatar user={user} size={40} className="avatar" />
               <div>
-                <div className="exam-user-name">{user?.username || 'Guest User'}</div>
+                <div className="exam-user-name">{user?.displayName?.trim() || user?.username || 'Guest User'}</div>
                 <div className="exam-user-meta">
                   {qCount} Q · {Math.round(timer / 60)} min · Topic Wise
                 </div>

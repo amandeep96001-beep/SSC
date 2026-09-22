@@ -5,8 +5,17 @@ import { errorMessage, mongoErrorCode, mongoErrorCodeName } from '../types/domai
 
 dns.setDefaultResultOrder('ipv4first');
 
+function intEnv(name: string, fallback: number, min: number, max: number): number {
+  const raw = Number(process.env[name]);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(raw)));
+}
+
+/** Pool sized for multi-instance / high-concurrency (override via env). */
 const CONNECT_OPTS: ConnectOptions = {
-  maxPoolSize: 10,
+  maxPoolSize: intEnv('MONGODB_MAX_POOL', 50, 5, 200),
+  minPoolSize: intEnv('MONGODB_MIN_POOL', 5, 0, 50),
+  maxIdleTimeMS: intEnv('MONGODB_MAX_IDLE_MS', 60_000, 10_000, 600_000),
   serverSelectionTimeoutMS: 30000,
   connectTimeoutMS: 30000,
   socketTimeoutMS: 45000,

@@ -66,6 +66,7 @@ export interface AppUser {
   username: string;
   email?: string | null;
   displayName?: string | null;
+  avatarUrl?: string | null;
   emailVerified?: boolean;
   role?: UserRole | string;
   lastStudyAt?: string | null;
@@ -247,6 +248,7 @@ export interface AuthApiPayload {
   username?: string;
   email?: string | null;
   displayName?: string | null;
+  avatarUrl?: string | null;
   emailVerified?: boolean;
   role?: UserRole | string;
   lastStudyAt?: string | null;

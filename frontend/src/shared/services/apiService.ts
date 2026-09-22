@@ -14,6 +14,7 @@ const PUBLIC_AUTH_401 = [
 export interface ApiJson {
   status?: string;
   message?: string;
+  code?: string;
   data?: unknown;
   mailSent?: boolean;
   debugOtp?: string;
@@ -64,13 +65,13 @@ function getAuthHeaders(): Record<string, string> {
   }
 }
 
-function clearClientSession(): void {
+function clearClientSession(detail?: { code?: string; message?: string }): void {
   try {
     localStorage.removeItem('ssc_token');
     localStorage.removeItem('ssc_user');
   } catch { /* ignore */ }
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(SESSION_CLEARED_EVENT));
+    window.dispatchEvent(new CustomEvent(SESSION_CLEARED_EVENT, { detail: detail || {} }));
   }
 }
 
@@ -79,9 +80,12 @@ function shouldClearSessionOn401(endpoint: string): boolean {
   return !PUBLIC_AUTH_401.some((prefix) => path.startsWith(prefix));
 }
 
-function handleUnauthorized(endpoint: string): void {
+function handleUnauthorized(endpoint: string, result?: ApiJson): void {
   if (shouldClearSessionOn401(endpoint)) {
-    clearClientSession();
+    clearClientSession({
+      code: typeof result?.code === 'string' ? result.code : undefined,
+      message: typeof result?.message === 'string' ? result.message : undefined,
+    });
   }
 }
 
@@ -140,7 +144,7 @@ async function request(endpoint: string, options: RequestOptions = {}): Promise<
     }
 
     if (response.status === 401) {
-      handleUnauthorized(endpoint);
+      handleUnauthorized(endpoint, result);
     }
 
     if (!response.ok) {
@@ -181,9 +185,12 @@ export const apiService = {
 
   clearSession: clearClientSession,
 
-  onSessionCleared(handler: () => void) {
+  onSessionCleared(handler: (detail?: { code?: string; message?: string }) => void) {
     if (typeof window === 'undefined') return () => {};
-    const fn = () => handler();
+    const fn = (event: Event) => {
+      const detail = (event as CustomEvent<{ code?: string; message?: string }>).detail;
+      handler(detail);
+    };
     window.addEventListener(SESSION_CLEARED_EVENT, fn);
     return () => window.removeEventListener(SESSION_CLEARED_EVENT, fn);
   },
@@ -199,7 +206,11 @@ export const apiService = {
       cache: 'no-store',
     });
     if (response.status === 401) {
-      handleUnauthorized(endpoint);
+      let detail: ApiJson | undefined;
+      try {
+        detail = await response.clone().json() as ApiJson;
+      } catch { /* ignore */ }
+      handleUnauthorized(endpoint, detail);
     }
     if (!response.ok) {
       let message = `Download failed (${response.status})`;

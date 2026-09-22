@@ -10,6 +10,8 @@ import { getDBStatus } from './config/db.config.js';
 import { isHostedRuntime } from './config/env.config.js';
 import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { mongoSanitize } from './middleware/sanitize.middleware.js';
+import { createRateLimitStore } from './infra/rate-limit-store.js';
+import { getRedis, isRedisReady } from './infra/redis.js';
 
 function normalizeOrigin(url: unknown): string {
   return String(url || '').trim().replace(/\/+$/, '');
@@ -123,12 +125,14 @@ export function createApp() {
   app.use(morgan(hosted ? 'combined' : 'dev'));
 
   if (hosted) {
+    const max = Number(process.env.RATE_LIMIT_API_MAX || 1200);
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 600,
+      max: Number.isFinite(max) && max > 0 ? Math.floor(max) : 1200,
       message: { status: 'error', message: 'Too many requests. Please try again later.' },
       standardHeaders: true,
       legacyHeaders: false,
+      store: createRateLimitStore('api'),
     });
     app.use('/api', limiter);
   }
@@ -138,17 +142,22 @@ export function createApp() {
   app.get('/', (_req, res) => {
     res.json({
       status: 'ok',
-      message: 'SSC Exam Prep API',
-      version: '1.0.0',
+      message: 'CrackuEx API',
+      version: '1.1.0',
     });
   });
 
+  // Eager Redis client (no-op when REDIS_URL unset)
+  getRedis();
+
   app.get('/health', (_req, res) => {
     const dbOk = getDBStatus();
+    const redisConfigured = Boolean(process.env.REDIS_URL?.trim());
     res.status(dbOk ? 200 : 503).json({
       status: dbOk ? 'ok' : 'degraded',
       uptime: process.uptime(),
       db: dbOk ? 'connected' : 'disconnected',
+      redis: redisConfigured ? (isRedisReady() ? 'connected' : 'connecting') : 'disabled',
     });
   });
 

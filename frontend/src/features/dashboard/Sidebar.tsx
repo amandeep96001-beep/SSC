@@ -1,5 +1,4 @@
 import { 
-  UserCheck, 
   LogOut, 
   Zap, 
   BookMarked, 
@@ -13,18 +12,25 @@ import {
   Home,
   Shield,
   Bell,
-  Map
+  Map,
+  Pencil
 } from 'lucide-react';
-import { useRef, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useRef, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
-import { APP_NAME } from '@/shared/brand';
+import { APP_NAME, APP_TAGLINE } from '@/shared/brand';
+import { UserAvatar } from '@/shared/components/UserAvatar';
+import { ProfileModal } from '@/features/auth/components/ProfileModal';
 import type { AppUser } from '@/types/app';
 
 interface SidebarProps {
   user: AppUser | null;
   logoutUser: () => void;
+  updateProfile: (payload: {
+    displayName?: string | null;
+    avatarUrl?: string | null;
+  }) => Promise<{ success: boolean; message?: string }>;
   activeView: string;
   setActiveView: (view: string, options?: Record<string, unknown>) => void;
   skipToSubjects: () => void;
@@ -35,6 +41,7 @@ interface SidebarProps {
 export function Sidebar({
   user,
   logoutUser,
+  updateProfile,
   activeView,
   setActiveView,
   skipToSubjects,
@@ -43,6 +50,7 @@ export function Sidebar({
 }: SidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const { theme, toggleTheme } = useTheme();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
     if (!isMobileOpen) return undefined;
@@ -76,6 +84,8 @@ export function Sidebar({
     setIsMobileOpen(false);
   };
 
+  const displayLabel = user?.displayName?.trim() || user?.username || 'Account';
+
   return (
     <>
       {isMobileOpen && (
@@ -86,25 +96,40 @@ export function Sidebar({
       )}
       <aside ref={sidebarRef} className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-brand">
-        <div className="brand-mark" aria-hidden="true" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
-          <img src="/logo.png" alt="ExamPrep Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px' }} />
+        <div className="brand-mark" aria-hidden="true">
+          <img src="/logo.svg" alt="" />
         </div>
         <div className="brand-text">
-          <h2>{APP_NAME}</h2>
+          <h2 className="brand-wordmark" aria-label={APP_NAME}>
+            <span className="brand-wordmark__cracku">Cracku</span>
+            <span className="brand-wordmark__ex">Ex</span>
+          </h2>
+          <span>{APP_TAGLINE}</span>
         </div>
       </div>
 
       <div className="user-profile-card">
-        <div className="avatar-icon">
-          <UserCheck size={20} />
-        </div>
-        <div className="user-details">
-          <span className="username-label">{user?.username}</span>
-          <button className="btn-logout" onClick={logoutUser}>
-            <LogOut size={12} />
-            <span>Log Out</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          className="user-profile-card__main"
+          onClick={() => setProfileOpen(true)}
+          title="Edit profile"
+        >
+          <div className="avatar-icon">
+            <UserAvatar user={user} size={32} />
+          </div>
+          <div className="user-details">
+            <span className="username-label">{displayLabel}</span>
+            <span className="profile-edit-hint">
+              <Pencil size={11} />
+              Edit profile
+            </span>
+          </div>
+        </button>
+        <button className="btn-logout" onClick={logoutUser} type="button">
+          <LogOut size={12} />
+          <span>Log Out</span>
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -209,6 +234,15 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+
+    {user ? (
+      <ProfileModal
+        user={user}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onSave={updateProfile}
+      />
+    ) : null}
     </>
   );
 }

@@ -151,6 +151,7 @@ export function Dashboard() {
     resetPassword,
     loginWithGoogle,
     logoutUser,
+    updateProfile,
     updateCustomTopic,
     deleteCustomTopic,
     cancelTest
@@ -384,7 +385,7 @@ export function Dashboard() {
           seen.add(row.id);
           notifyReminder({
             title: row.title || 'Study reminder',
-            body: row.body || 'Your study time is here. Open ExamPrep and start.',
+            body: row.body || `Your study time is here. Open ${APP_NAME} and start.`,
             tag: `ssc-server-${row.id}`,
           });
         }
@@ -916,6 +917,7 @@ export function Dashboard() {
       <Sidebar 
         user={user}
         logoutUser={logoutUser}
+        updateProfile={updateProfile}
         activeView={activeView}
         setActiveView={setActiveView}
         skipToSubjects={skipToSubjects}
@@ -929,7 +931,10 @@ export function Dashboard() {
           <button className="btn-mobile-toggle" onClick={() => setIsMobileSidebarOpen(true)}>
             <Menu size={24} />
           </button>
-          <h2>{APP_NAME}</h2>
+          <h2 className="brand-wordmark" aria-label={APP_NAME}>
+            <span className="brand-wordmark__cracku">Cracku</span>
+            <span className="brand-wordmark__ex">Ex</span>
+          </h2>
         </div>
 
         <div className="workspace-card-enclosure" ref={workspaceRef}>
