@@ -1,0 +1,10 @@
+# CrackuEx — crawlers
+# After domain is live, confirm Sitemap URL matches your production host.
+
+User-agent: *
+Allow: /
+
+# App shells / auth flows — soft discourage thin duplicate URLs if you add routes later
+Disallow: /api/
+
+Sitemap: https://REPLACE_WITH_YOUR_DOMAIN/sitemap.xml

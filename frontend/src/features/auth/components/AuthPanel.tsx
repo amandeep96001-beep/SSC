@@ -804,6 +804,8 @@ export function AuthPanel({
       <div className="auth-page__orb auth-page__orb--b" aria-hidden="true" />
       <Helmet>
         <title>{pageTitle(pageHeading)}</title>
+        <meta name="description" content="Sign in to CrackuEx — SSC CGL, CHSL, GD, Banking and Railways exam prep with drills, mocks and revision decks." />
+        <meta name="robots" content="noindex, follow" />
         <meta
           httpEquiv="Permissions-Policy"
           content={'camera=(), microphone=(), geolocation=(), identity-credentials-get=(self "https://accounts.google.com")'}

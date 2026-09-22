@@ -1,0 +1,29 @@
+{
+  "name": "CrackuEx",
+  "short_name": "CrackuEx",
+  "description": "SSC CGL, CHSL, GD, Banking & Railways exam preparation — drills, mocks, notes, revision.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1118",
+  "theme_color": "#12162a",
+  "lang": "en-IN",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
