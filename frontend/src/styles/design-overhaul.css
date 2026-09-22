@@ -882,6 +882,49 @@ textarea:focus {
   line-height: 1.4 !important;
 }
 
+.app-toast--actions {
+  align-items: flex-start !important;
+}
+
+.app-toast__actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  margin-top: 10px !important;
+}
+
+.app-toast__action {
+  appearance: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: inherit !important;
+  font: inherit !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  padding: 0.4rem 0.75rem !important;
+  border-radius: 999px !important;
+  cursor: pointer !important;
+  line-height: 1.2 !important;
+}
+
+.app-toast__action--primary {
+  background: #0071e3 !important;
+  border-color: #0071e3 !important;
+  color: #fff !important;
+}
+
+:root[data-theme="light"] .app-toast__action {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #1a1d2e !important;
+}
+
+:root[data-theme="light"] .app-toast__action--primary {
+  background: #0071e3 !important;
+  border-color: #0071e3 !important;
+  color: #fff !important;
+}
+
 /* Close Button */
 .app-toast__close {
   flex-shrink: 0 !important;

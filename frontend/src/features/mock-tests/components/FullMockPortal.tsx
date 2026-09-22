@@ -7,6 +7,7 @@ import { ExamLoader } from '@/features/exam/components/ExamLoader';
 import { UserAvatar } from '@/shared/components/UserAvatar';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
+import '@/shared/components/guest-locked.css';
 import { apiService } from '@/shared/services/apiService';
 import { useExam } from '@/shared/context/useExam';
 import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
@@ -36,9 +37,19 @@ interface FullMockPortalProps {
     remainingTimer?: number,
     sectionTimes?: Record<string, number>
   ) => void;
+  /** Guest try-before-login: keep only this many random questions. */
+  guestPreviewLimit?: number | null;
+  onGuestNeedsAuth?: () => void;
 }
 
-export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMockPortalProps) {
+export function FullMockPortal({
+  mockTestId,
+  user,
+  onCancel,
+  onSubmit,
+  guestPreviewLimit = null,
+  onGuestNeedsAuth,
+}: FullMockPortalProps) {
   const { exam } = useExam();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -93,13 +104,31 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
         if (cancelled) return;
 
         if (testData && Array.isArray(testData.questions)) {
-          // Normalize answers (convert letter-based answers to numeric indices)
+          let questions = normalizeQuestions(testData.questions as McqQuestion[]) as McqQuestion[];
+          const isPreview = typeof guestPreviewLimit === 'number' && guestPreviewLimit > 0;
+          if (isPreview) {
+            // Fisher–Yates shuffle then take N
+            const shuffled = [...questions];
+            for (let i = shuffled.length - 1; i > 0; i -= 1) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            questions = shuffled.slice(0, Math.min(guestPreviewLimit, shuffled.length));
+          }
+
           const normalizedData = {
             ...testData,
-            questions: normalizeQuestions(testData.questions as McqQuestion[]) as McqQuestion[]
+            title: isPreview
+              ? `${String(testData.title || 'Mock')} · Free preview (${questions.length} Q)`
+              : testData.title,
+            questions,
           };
           setMockData(normalizedData as MockTestItem & { questions: McqQuestion[] });
-          setTimer((exam.mockMinutes || 60) * 60);
+          // Guest preview: ~1 min per question, capped
+          const previewMins = isPreview
+            ? Math.max(5, Math.min(15, questions.length))
+            : (exam.mockMinutes || 60);
+          setTimer(previewMins * 60);
 
           const secs = sectionsFromQuestions(normalizedData.questions);
           const times = Object.fromEntries(secs.map((s) => [s, 0]));
@@ -125,7 +154,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
 
     loadTest();
     return () => { cancelled = true; };
-  }, [mockTestId, exam.mockMinutes, reloadKey]);
+  }, [mockTestId, exam.mockMinutes, reloadKey, guestPreviewLimit]);
 
   // Timer logic
   useEffect(() => {
@@ -136,7 +165,14 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
         if (prev <= 1) {
           clearInterval(interval);
           const { mockData: md, selectedAnswers: sa, sectionTimes: st } = stateRef.current;
-          if (md) onSubmit(md, sa, 0, st);
+          if (md) {
+            if (guestPreviewLimit) {
+              onGuestNeedsAuth?.();
+              onCancel();
+            } else {
+              onSubmit(md, sa, 0, st);
+            }
+          }
           return 0;
         }
         return prev - 1;
@@ -149,7 +185,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [loading, onSubmit]);
+  }, [loading, onSubmit, guestPreviewLimit, onGuestNeedsAuth, onCancel]);
 
   const formatTimer = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -253,8 +289,13 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
   const confirmSubmit = useCallback(() => {
     if (!mockData) return;
     setSubmitConfirmOpen(false);
+    if (guestPreviewLimit) {
+      onGuestNeedsAuth?.();
+      onCancel();
+      return;
+    }
     onSubmit(mockData, selectedAnswers, timer, sectionTimes);
-  }, [mockData, onSubmit, selectedAnswers, timer, sectionTimes]);
+  }, [mockData, onSubmit, selectedAnswers, timer, sectionTimes, guestPreviewLimit, onGuestNeedsAuth, onCancel]);
 
   const requestCancel = useCallback(() => {
     setPaletteOpen(false);
@@ -365,13 +406,24 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
 
   return (
     <div id="exam-portal" className="no-select exam-portal--mock">
-      <Helmet><title>{pageTitle('Full Mock')}</title></Helmet>
+      <Helmet><title>{pageTitle(guestPreviewLimit ? 'Mock preview' : 'Full Mock')}</title></Helmet>
+
+      {guestPreviewLimit ? (
+        <div className="guest-banner" style={{ margin: 0, borderRadius: 0, borderLeft: 0, borderRight: 0 }}>
+          <p className="guest-banner__copy">
+            <strong>Free preview</strong> — {mockData.questions.length} random questions. Sign in for the full paper and saved scores.
+          </p>
+          <button type="button" className="guest-banner__cta" onClick={() => onGuestNeedsAuth?.()}>
+            Sign in
+          </button>
+        </div>
+      ) : null}
       
       {/* Top Navbar */}
       <div className="navbar">
         <div className="exam-nav-title">
           <span className="exam-nav-title__full">{mockData.title}</span>
-          <span className="exam-nav-title__meta">{qCount} Q · {exam.name}</span>
+          <span className="exam-nav-title__meta">{qCount} Q</span>
         </div>
         <div className="exam-nav-actions">
           <button
@@ -504,7 +556,7 @@ export function FullMockPortal({ mockTestId, user, onCancel, onSubmit }: FullMoc
               <div>
                 <div className="exam-user-name">{user?.displayName?.trim() || user?.username || 'Candidate'}</div>
                 <div className="exam-user-meta">
-                  {qCount} questions · {exam.mockMinutes} minutes · {exam.name}
+                  {qCount} questions · {exam.mockMinutes} minutes
                 </div>
               </div>
             </div>

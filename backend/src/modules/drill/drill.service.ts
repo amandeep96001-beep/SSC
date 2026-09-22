@@ -245,7 +245,7 @@ export class DrillService {
     const isCorrect =
       cleanDrillAnswer(userAnswer, type) === cleanDrillAnswer(authoritativeCorrect, type);
 
-    if (subject && challenge.questionId && userId) {
+    if (subject && challenge.questionId && mongoose.isValidObjectId(userId)) {
       void drillPerformanceRepository.createSafe(
         userId,
         challenge.questionId,

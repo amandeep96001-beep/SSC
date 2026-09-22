@@ -7,10 +7,17 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null;
 
 export type ToastVariant = 'success' | 'error' | 'warn' | 'info' | 'reminder';
 
+export interface AppToastAction {
+  label: string;
+  onClick?: () => void;
+  primary?: boolean;
+}
+
 export interface AppToastOptions {
   variant?: ToastVariant;
   durationMs?: number;
   title?: string;
+  actions?: AppToastAction[];
 }
 
 export interface BrowserNotificationPayload {
@@ -71,7 +78,7 @@ function dismissToast(el: HTMLElement | null): void {
  * Custom floating toast card matching the user's reference design.
  */
 export function showAppToast(message: string, opts: AppToastOptions = {}): void {
-  const { variant = 'info', durationMs = 4500, title } = opts;
+  const { variant = 'info', durationMs = 4500, title, actions } = opts;
   let el = document.getElementById(TOAST_ID);
   if (!el) {
     el = document.createElement('div');
@@ -84,7 +91,8 @@ export function showAppToast(message: string, opts: AppToastOptions = {}): void 
   if (toastTimer) clearTimeout(toastTimer);
   if (hideTimer) clearTimeout(hideTimer);
 
-  el.className = `app-toast app-toast--${variant} app-toast--in`;
+  const hasActions = Array.isArray(actions) && actions.length > 0;
+  el.className = `app-toast app-toast--${variant} app-toast--in${hasActions ? ' app-toast--actions' : ''}`;
   el.innerHTML = `
     <div class="app-toast__icon-box">
       ${ICONS[variant] || ICONS.info}
@@ -92,6 +100,7 @@ export function showAppToast(message: string, opts: AppToastOptions = {}): void 
     <div class="app-toast__content">
       <div class="app-toast__title">${title || LABELS[variant] || 'Notice'}</div>
       <div class="app-toast__msg"></div>
+      ${hasActions ? '<div class="app-toast__actions"></div>' : ''}
     </div>
     <button class="app-toast__close" aria-label="Close notification">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -109,9 +118,45 @@ export function showAppToast(message: string, opts: AppToastOptions = {}): void 
     };
   }
 
+  if (hasActions) {
+    const row = el.querySelector('.app-toast__actions');
+    if (row) {
+      for (const action of actions!) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `app-toast__action${action.primary ? ' app-toast__action--primary' : ''}`;
+        btn.textContent = action.label;
+        btn.onclick = (e: MouseEvent) => {
+          e.stopPropagation();
+          if (toastTimer) clearTimeout(toastTimer);
+          dismissToast(el);
+          action.onClick?.();
+        };
+        row.appendChild(btn);
+      }
+    }
+  }
+
   toastTimer = setTimeout(() => {
     dismissToast(el);
-  }, durationMs);
+  }, hasActions ? Math.max(durationMs, 7000) : durationMs);
+}
+
+/** Guest gate: please login + Login / Continue browsing actions. */
+export function showLoginPromptToast(opts: {
+  message?: string;
+  onLogin: () => void;
+  onContinue?: () => void;
+}): void {
+  showAppToast(opts.message || 'Please login to use this feature.', {
+    variant: 'warn',
+    title: 'Login required',
+    durationMs: 8000,
+    actions: [
+      { label: 'Continue browsing', onClick: opts.onContinue },
+      { label: 'Login', onClick: opts.onLogin, primary: true },
+    ],
+  });
 }
 
 /**

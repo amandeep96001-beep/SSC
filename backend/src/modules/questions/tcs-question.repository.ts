@@ -34,8 +34,10 @@ class TCSQuestionRepository {
   }
 
   static async getWeightedQuestion(subject: string, userId: mongoose.Types.ObjectId | string | null | undefined) {
-    // No userId → pure random (unauthenticated or first drill)
-    if (!userId) return this.getRandomBySubject(subject);
+    // No userId / guest → pure random
+    if (!userId || !mongoose.isValidObjectId(String(userId))) {
+      return this.getRandomBySubject(subject);
+    }
 
     const uid = new mongoose.Types.ObjectId(String(userId));
     const now = new Date();

@@ -3,6 +3,12 @@ import { drillApi } from '@/shared/api/drillApi';
 import { useApi } from '@/shared/hooks/useApi';
 import type { ApiJson } from '@/shared/services/apiService';
 import { isRecord } from '@/types/app';
+import {
+  consumeGuestDrill,
+  getGuestDrillRemaining,
+  hasGuestDrillQuota,
+  GUEST_DRILL_LIMIT,
+} from '@/shared/utils/guestQuota';
 
 export function sameDrillAnswer(a: unknown, b: unknown, type?: string): boolean {
   const fold = (value: unknown) => {
@@ -120,11 +126,14 @@ function mapServerWrong(row: unknown): WrongQuestion | null {
   };
 }
 
-export function useDrills(isAuthenticated = false) {
+export function useDrills(isAuthenticated = false, onGuestQuotaExhausted?: () => void) {
   const [drillType, setDrillType] = useState('table');
   const [currentDrill, setCurrentDrill] = useState<DrillItem | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [maxTableBase, setMaxTableBase] = useState(20);
+  const [guestRemaining, setGuestRemaining] = useState(() =>
+    isAuthenticated ? GUEST_DRILL_LIMIT : getGuestDrillRemaining(),
+  );
 
   const [stats, setStats] = useState<DrillStats>({
     score: 0,
@@ -141,19 +150,42 @@ export function useDrills(isAuthenticated = false) {
   });
 
   const syncedRef = useRef(false);
+  const guestMode = !isAuthenticated;
+  const onQuotaRef = useRef(onGuestQuotaExhausted);
+  useEffect(() => {
+    onQuotaRef.current = onGuestQuotaExhausted;
+  }, [onGuestQuotaExhausted]);
+
+  useEffect(() => {
+    setGuestRemaining(isAuthenticated ? GUEST_DRILL_LIMIT : getGuestDrillRemaining());
+  }, [isAuthenticated]);
 
   const { execute: fetchNextDrill, loading: nextDrillLoading, error: nextDrillError } = useApi<
     [{ type: string; maxBase: number }],
     ApiJson
   >(
-    useCallback(({ type, maxBase }: { type: string; maxBase: number }) => drillApi.next(type, maxBase), []),
+    useCallback(({ type, maxBase }: { type: string; maxBase: number }) => {
+      return drillApi.next(type, maxBase, { guest: !localStorage.getItem('ssc_token') });
+    }, []),
   );
   const { execute: verifyDrill, loading: verifyLoading, error: verifyError } = useApi<[unknown], ApiJson>(
     useCallback((body: unknown) => {
       const b = body as { challengeToken: string; userAnswer: string };
-      return drillApi.verify(b);
+      return drillApi.verify(b, { guest: !localStorage.getItem('ssc_token') });
     }, []),
   );
+
+  const bumpGuestUse = useCallback(() => {
+    if (isAuthenticated) return true;
+    if (!hasGuestDrillQuota()) {
+      onQuotaRef.current?.();
+      return false;
+    }
+    const left = consumeGuestDrill();
+    setGuestRemaining(left);
+    if (left <= 0) onQuotaRef.current?.();
+    return true;
+  }, [isAuthenticated]);
 
   // Load server wrong-log (and one-time migrate from localStorage).
   useEffect(() => {
@@ -219,6 +251,12 @@ export function useDrills(isAuthenticated = false) {
   }, [isAuthenticated]);
 
   const loadNextDrill = useCallback(async (typeToLoad = drillType, baseLimit = maxTableBase) => {
+    if (!isAuthenticated && !hasGuestDrillQuota()) {
+      onQuotaRef.current?.();
+      setCurrentDrill(null);
+      return;
+    }
+
     setUserAnswer('');
     setFeedback({ isChecked: false, isCorrect: false, showAnswer: false, selectedAnswer: '' });
 
@@ -231,7 +269,7 @@ export function useDrills(isAuthenticated = false) {
       const drill = asDrill(result.data.data);
       if (drill) setCurrentDrill(drill);
     }
-  }, [fetchNextDrill, drillType, maxTableBase]);
+  }, [fetchNextDrill, drillType, maxTableBase, isAuthenticated]);
 
   const submitAnswer = useCallback(async (
     e?: { preventDefault?: () => void } | null,
@@ -241,6 +279,8 @@ export function useDrills(isAuthenticated = false) {
 
     const finalAnswer = directAnswer !== null ? directAnswer : userAnswer;
     if (!currentDrill || !finalAnswer.trim()) return;
+
+    if (!bumpGuestUse()) return;
 
     const payload = {
       challengeToken: currentDrill.challengeToken,
@@ -273,7 +313,7 @@ export function useDrills(isAuthenticated = false) {
         streak: isCorrect ? prev.streak + 1 : 0,
       }));
 
-      if (!isCorrect && currentDrill) {
+      if (!isCorrect && currentDrill && isAuthenticated) {
         const entry = {
           question: currentDrill.question || '',
           correctAnswer: serverCorrect || currentDrill.correctAnswer,
@@ -290,7 +330,6 @@ export function useDrills(isAuthenticated = false) {
           pos: currentDrill.pos || null,
         };
 
-        // Optimistic local update
         setWrongQuestions((prev) => {
           const existingIdx = prev.findIndex((wq) => wq.question === entry.question);
           let updated: WrongQuestion[];
@@ -309,7 +348,6 @@ export function useDrills(isAuthenticated = false) {
           return updated.slice(0, 50);
         });
 
-        // Persist on server (fire-and-forget; reconcile from response)
         void drillApi.upsertWrongLog(entry).then((res) => {
           const mapped = mapServerWrong(res.data);
           if (!mapped) return;
@@ -326,10 +364,11 @@ export function useDrills(isAuthenticated = false) {
         }, 1200);
       }
     }
-  }, [currentDrill, userAnswer, verifyDrill, loadNextDrill, drillType]);
+  }, [currentDrill, userAnswer, verifyDrill, loadNextDrill, drillType, bumpGuestUse, isAuthenticated]);
 
   const skipQuestion = useCallback(() => {
     if (!currentDrill) return;
+    if (!bumpGuestUse()) return;
     setStats((prev) => ({
       ...prev,
       skips: prev.skips + 1,
@@ -337,7 +376,7 @@ export function useDrills(isAuthenticated = false) {
       streak: 0,
     }));
     loadNextDrill(drillType);
-  }, [currentDrill, loadNextDrill, drillType]);
+  }, [currentDrill, loadNextDrill, drillType, bumpGuestUse]);
 
   const changeDrillType = useCallback((newType: string) => {
     setDrillType(newType);
@@ -352,7 +391,13 @@ export function useDrills(isAuthenticated = false) {
   const initialDrillLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    initialDrillLoadedRef.current = false;
+    setCurrentDrill(null);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    const canLoad = isAuthenticated || hasGuestDrillQuota();
+    if (!canLoad) {
       initialDrillLoadedRef.current = false;
       return;
     }
@@ -362,20 +407,22 @@ export function useDrills(isAuthenticated = false) {
   }, [isAuthenticated, loadNextDrill]);
 
   const clearWrongLog = useCallback(() => {
+    if (!isAuthenticated) return;
     setWrongQuestions([]);
     void drillApi.clearWrongLog().catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   const removeWrongQuestion = useCallback((question: string | null | undefined) => {
-    if (!question) return;
+    if (!question || !isAuthenticated) return;
     setWrongQuestions((prev) => prev.filter((wq) => wq.question !== question));
     void drillApi.removeWrongLog(question).catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   const clearWrongVocab = useCallback(() => {
+    if (!isAuthenticated) return;
     setWrongQuestions((prev) => prev.filter((wq) => wq.type !== 'vocab'));
     void drillApi.clearWrongLog('vocab').catch(() => {});
-  }, []);
+  }, [isAuthenticated]);
 
   return {
     drillType,
@@ -396,6 +443,8 @@ export function useDrills(isAuthenticated = false) {
     submitAnswer,
     skipQuestion,
     loadNextDrill,
+    guestRemaining,
+    isGuestTrial: guestMode,
   };
 }
 

@@ -13,6 +13,7 @@ import {
   conflict,
   forbidden,
   notFound,
+  unauthorized,
 } from '../../utils/app-errors.js';
 
 function parseSource(req: Request): 'mine' | 'global' {
@@ -21,7 +22,9 @@ function parseSource(req: Request): 'mine' | 'global' {
 }
 
 function ownerScope(req: Request): string | null {
-  return parseSource(req) === 'mine' ? req.user!.id : null;
+  if (parseSource(req) !== 'mine') return null;
+  if (!req.user?.id) throw unauthorized('Sign in to view your notes.');
+  return req.user.id;
 }
 
 function isUserOwned(doc: { ownerId?: string | null } | null | undefined, userId: string) {
@@ -72,6 +75,9 @@ function buildSeedQuestions(dto: TopicDto, topicId: string, topicName: string, o
 export class StudyService {
   async getSubjects(req: Request) {
   const source = parseSource(req);
+  if (source === 'mine' && !req.user?.id) {
+    throw unauthorized('Sign in to view your notes.');
+  }
   const subjects = source === 'mine'
     ? await subjectRepository.findByOwner(req.user!.id, 'name ownerId')
     : await subjectRepository.findGlobal('name ownerId');

@@ -23,6 +23,8 @@ import {
 } from '../remindersStorage';
 import { requestNotificationPermission } from '../reminderScheduler';
 import { showAppToast } from '@/shared/utils/appToast';
+import { GuestPreviewBanner } from '@/shared/components/GuestPreviewBanner';
+import '@/shared/components/guest-preview.css';
 import '../reminders.css';
 
 const EMPTY_FORM = {
@@ -39,14 +41,48 @@ const REPEAT_OPTIONS = [
   { value: 'once', label: 'Once' },
 ];
 
-export function RemindersWorkspace() {
-  const [reminders, setReminders] = useState<StudyReminder[]>(() => loadRemindersLocal());
+const DEMO_REMINDERS: StudyReminder[] = [
+  {
+    id: 'demo-1',
+    title: 'Morning Quant',
+    message: '20 mins tables + percentage',
+    time: '07:00',
+    date: todayISO(),
+    repeat: 'daily',
+    enabled: true,
+  },
+  {
+    id: 'demo-2',
+    title: 'Evening Vocab',
+    message: '15 new words',
+    time: '20:30',
+    date: todayISO(),
+    repeat: 'weekdays',
+    enabled: true,
+  },
+];
+
+export function RemindersWorkspace({
+  isGuest = false,
+  onSignIn,
+}: {
+  isGuest?: boolean;
+  onSignIn?: () => void;
+} = {}) {
+  const [reminders, setReminders] = useState<StudyReminder[]>(() =>
+    isGuest ? DEMO_REMINDERS : loadRemindersLocal(),
+  );
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isGuest);
   const [saving, setSaving] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (isGuest) {
+      setReminders(DEMO_REMINDERS);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const rows = await fetchReminders();
@@ -54,10 +90,11 @@ export function RemindersWorkspace() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
     refresh();
+    if (isGuest) return undefined;
     const onChange = () => setReminders(loadRemindersLocal());
     window.addEventListener('ssc-reminders-changed', onChange);
     window.addEventListener('ssc-reminder-fired', onChange);
@@ -65,9 +102,13 @@ export function RemindersWorkspace() {
       window.removeEventListener('ssc-reminders-changed', onChange);
       window.removeEventListener('ssc-reminder-fired', onChange);
     };
-  }, [refresh]);
+  }, [refresh, isGuest]);
 
   const enableNotifications = async () => {
+    if (isGuest) {
+      onSignIn?.();
+      return;
+    }
     setPermissionPrompted();
     const result = await requestNotificationPermission();
     if (result === 'granted') {
@@ -85,6 +126,11 @@ export function RemindersWorkspace() {
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      showAppToast('Sign in to set your own reminders.', { variant: 'warn' });
+      onSignIn?.();
+      return;
+    }
     if (!form.title.trim()) {
       showAppToast('Give your reminder a short title.', { variant: 'warn' });
       return;
@@ -112,6 +158,10 @@ export function RemindersWorkspace() {
   };
 
   const handleToggle = async (id: string, enabled: boolean | undefined) => {
+    if (isGuest) {
+      onSignIn?.();
+      return;
+    }
     try {
       await toggleReminderApi(id, !enabled);
       setReminders(loadRemindersLocal());
@@ -121,6 +171,10 @@ export function RemindersWorkspace() {
   };
 
   const handleDelete = async (id: string) => {
+    if (isGuest) {
+      onSignIn?.();
+      return;
+    }
     try {
       await deleteReminderApi(id);
       setReminders(loadRemindersLocal());
@@ -134,7 +188,14 @@ export function RemindersWorkspace() {
   const isEmpty = !loading && reminders.length === 0 && !showForm;
 
   return (
-    <div className="study-workspace reminders-workspace">
+    <div className={`study-workspace reminders-workspace${isGuest ? ' guest-preview-shell__body' : ''}`}>
+      {isGuest && onSignIn && (
+        <GuestPreviewBanner
+          line="Sample alarms — we ping you at study time. Sign in to set your own."
+          onSignIn={onSignIn}
+          cta="Sign in to set reminders"
+        />
+      )}
       <div className="workspace-header-sticky">
         <div className="page-header reminders-page-header">
           <div className="page-header__title">
@@ -148,7 +209,13 @@ export function RemindersWorkspace() {
             <button
               type="button"
               className={`btn-add${showForm ? ' btn-add--ghost' : ''}`}
-              onClick={() => setShowForm((v) => !v)}
+              onClick={() => {
+                if (isGuest) {
+                  onSignIn?.();
+                  return;
+                }
+                setShowForm((v) => !v);
+              }}
             >
               {showForm ? <X size={16} /> : <Plus size={16} />}
               {showForm ? 'Cancel' : 'Add'}

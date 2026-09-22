@@ -32,12 +32,10 @@ function buildJsonLd() {
       },
       description: SEO_DEFAULT_DESCRIPTION,
       about: [
-        'SSC CGL',
-        'SSC CHSL',
-        'SSC GD',
-        'SSC CPO',
-        'Banking exams',
-        'Railways NTPC',
+        'Competitive exams',
+        'Mock tests',
+        'Speed drills',
+        'Revision decks',
       ],
       slogan: APP_TAGLINE,
       inLanguage: 'en-IN',
@@ -108,7 +106,7 @@ export function SeoHead({
       <meta property="og:description" content={description} />
       {SITE_URL ? <meta property="og:url" content={canonical} /> : null}
       <meta property="og:image" content={ogImage} />
-      <meta property="og:image:alt" content={`${APP_NAME} — SSC exam preparation`} />
+      <meta property="og:image:alt" content={`${APP_NAME} — competitive exam preparation`} />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

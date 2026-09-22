@@ -15,6 +15,14 @@ import examConfigRoutes from '../modules/exam-config/exam-config.routes.js';
 import tcsQuestionRoutes from '../modules/questions/tcs-question.routes.js';
 import reminderRoutes from '../modules/reminders/reminder.routes.js';
 
+import { studyController } from '../modules/study/study.controller.js';
+import { examConfigController } from '../modules/exam-config/exam-config.controller.js';
+import { mockController } from '../modules/mock/mock.controller.js';
+import { competitionController } from '../modules/competition/competition.controller.js';
+import { drillController } from '../modules/drill/drill.controller.js';
+import { verifyDrillSchema } from '../modules/drill/drill.schema.js';
+import { validate } from '../lib/validate.js';
+
 import { requireAuth } from '../middleware/auth.middleware.js';
 import { requireDb } from '../middleware/db.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
@@ -58,6 +66,23 @@ router.get('/auth/google-config', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/auth', otpRoutes);
 router.use('/auth', passwordRoutes);
+
+// ---------------------------------------------------------------------------
+// Public browse (guest preview) — read-only catalogue
+// ---------------------------------------------------------------------------
+
+router.get('/study/subjects', requireDb, studyController.getSubjects);
+router.get('/study/subjects/:subjectName/topics', requireDb, studyController.getTopics);
+router.get('/study/topics/:topicId/notes', requireDb, studyController.getTopicNotes);
+router.get('/study/vocab', requireDb, studyController.getVocab);
+router.get('/exam-config', requireDb, examConfigController.listExamConfigs);
+router.get('/mock', requireDb, mockController.getMockTests);
+router.get('/mock/:id', requireDb, mockController.getMockTestById);
+router.get('/competition/leaderboard', requireDb, competitionController.getLeaderboard);
+
+// Guest try-before-login drills (challenge signed as userId "guest")
+router.get('/drill/guest/next', requireDb, drillController.getNextDrillGuest);
+router.post('/drill/guest/verify', requireDb, validate(verifyDrillSchema), drillController.verifyDrillGuest);
 
 // ---------------------------------------------------------------------------
 // Protected routes (DB + auth per mount)

@@ -1,11 +1,19 @@
 import { apiService, type RequestOptions } from '@/shared/services/apiService';
 
 export const drillApi = {
-  next: (type: string, maxBase: number, opts?: RequestOptions) =>
-    apiService.get(`/drill/next?type=${encodeURIComponent(type)}&maxBase=${encodeURIComponent(maxBase)}`, opts),
+  next: (type: string, maxBase: number, opts?: RequestOptions & { guest?: boolean }) => {
+    const base = opts?.guest ? '/drill/guest/next' : '/drill/next';
+    return apiService.get(
+      `${base}?type=${encodeURIComponent(type)}&maxBase=${encodeURIComponent(maxBase)}`,
+      opts,
+    );
+  },
 
-  verify: (body: { challengeToken: string; userAnswer: string }, opts?: RequestOptions) =>
-    apiService.post('/drill/verify', body, opts),
+  verify: (
+    body: { challengeToken: string; userAnswer: string },
+    opts?: RequestOptions & { guest?: boolean },
+  ) =>
+    apiService.post(opts?.guest ? '/drill/guest/verify' : '/drill/verify', body, opts),
 
   related: (params: URLSearchParams, opts?: RequestOptions) =>
     apiService.get(`/drill/related?${params.toString()}`, opts),

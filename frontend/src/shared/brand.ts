@@ -7,32 +7,25 @@ export const APP_VERSION = '2.3';
 export const SITE_URL = String(import.meta.env.VITE_SITE_URL || '').replace(/\/$/, '');
 
 export const SEO_DEFAULT_TITLE =
-  'CrackuEx — SSC CGL, CHSL, GD, Banking & Railways Exam Prep';
+  'CrackuEx — Competitive Exam Prep';
 
 export const SEO_DEFAULT_DESCRIPTION =
-  'Free SSC exam preparation app for CGL, CHSL, GD, CPO, MTS, Banking and Railways. ' +
-  'Practice tables, fractions, vocabulary, PYQ mocks, notes, daily drills and revision decks — built for serious aspirants.';
+  'Free competitive exam preparation — drills, mocks, notes, vocabulary and revision decks. ' +
+  'Study calm, practice daily, and sit for the exam ready.';
 
 export const SEO_KEYWORDS = [
-  'SSC exam preparation',
-  'SSC CGL mock test',
-  'SSC CHSL practice',
-  'SSC GD Constable',
-  'SSC CPO',
-  'SSC MTS',
-  'banking exam prep',
-  'IBPS PO',
-  'SBI PO',
-  'railway NTPC',
+  'competitive exam preparation',
+  'exam mock test',
+  'exam practice app',
   'multiplication tables drill',
-  'SSC vocabulary',
+  'vocabulary practice',
   'fraction percentage conversion',
   'CrackuEx',
 ].join(', ');
 
 export function pageTitle(section?: string | null): string {
   if (!section) return SEO_DEFAULT_TITLE;
-  return `${section} | ${APP_NAME} — SSC Exam Prep`;
+  return `${section} | ${APP_NAME} — Exam Prep`;
 }
 
 export function absoluteUrl(path = '/'): string {

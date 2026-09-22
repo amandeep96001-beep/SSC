@@ -1,0 +1,113 @@
+@keyframes guestPreviewIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes guestPreviewPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+  }
+}
+
+@keyframes guestPreviewCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.guest-preview-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.guest-preview-shell__body {
+  animation: guestPreviewCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.guest-preview-banner {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(120deg, rgba(0, 113, 227, 0.12), rgba(52, 199, 89, 0.08));
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  animation: guestPreviewIn 0.4s ease-out both;
+}
+
+.guest-preview-banner__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #0071e3);
+  flex-shrink: 0;
+  animation: guestPreviewPulse 1.6s ease-in-out infinite;
+}
+
+.guest-preview-banner__line {
+  margin: 0;
+  flex: 1 1 12rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--text, inherit);
+}
+
+.guest-preview-banner__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent, #0071e3);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.guest-preview-banner__cta:hover {
+  filter: brightness(1.06);
+}
+
+/* Soft “demo” feel on preview workspaces */
+.guest-preview-shell__body .stats-row > *,
+.guest-preview-shell__body .perf-log-card,
+.guest-preview-shell__body .chart-container,
+.guest-preview-shell__body .competition-start-card,
+.guest-preview-shell__body .reminders-list > * {
+  animation: guestPreviewCardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.guest-preview-shell__body .stats-row > *:nth-child(1) { animation-delay: 0.05s; }
+.guest-preview-shell__body .stats-row > *:nth-child(2) { animation-delay: 0.1s; }
+.guest-preview-shell__body .stats-row > *:nth-child(3) { animation-delay: 0.15s; }
+.guest-preview-shell__body .stats-row > *:nth-child(4) { animation-delay: 0.2s; }
+.guest-preview-shell__body .stats-row > *:nth-child(5) { animation-delay: 0.25s; }
+.guest-preview-shell__body .perf-log-card:nth-child(1) { animation-delay: 0.12s; }
+.guest-preview-shell__body .perf-log-card:nth-child(2) { animation-delay: 0.18s; }
+.guest-preview-shell__body .perf-log-card:nth-child(3) { animation-delay: 0.24s; }
+.guest-preview-shell__body .chart-container:nth-child(1) { animation-delay: 0.12s; }
+.guest-preview-shell__body .chart-container:nth-child(2) { animation-delay: 0.2s; }

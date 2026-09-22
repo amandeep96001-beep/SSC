@@ -8,6 +8,9 @@ import { StatCard } from '@/shared/components/ui/StatCard';
 import { useExam } from '@/shared/context/useExam';
 import { filterProgressForExam, filterMockProgressForExam } from '@/shared/utils/examProgress';
 import type { AppUser } from '@/types/app';
+import { buildDemoUser } from '@/shared/utils/demoUser';
+import { GuestPreviewBanner } from '@/shared/components/GuestPreviewBanner';
+import '@/shared/components/guest-preview.css';
 
 const PIE_COLORS = ['#8b93f8', '#5eead4', '#f5c76a', '#f9a8d4', '#93c5fd'];
 
@@ -39,9 +42,22 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
-export function AnalyticsWorkspace({ user }: { user: AppUser | null }) {
+export function AnalyticsWorkspace({
+  user,
+  isPreview = false,
+  onSignIn,
+}: {
+  user: AppUser | null;
+  isPreview?: boolean;
+  onSignIn?: () => void;
+}) {
   const isMobile = useIsMobile();
   const { examId, examSubjects } = useExam();
+
+  const viewUser = useMemo(
+    () => (isPreview || !user ? buildDemoUser(examId || 'ssc') : user),
+    [isPreview, user, examId],
+  );
 
   const analyticsData = useMemo(() => {
     let totalMins = 0;
@@ -58,8 +74,8 @@ export function AnalyticsWorkspace({ user }: { user: AppUser | null }) {
       return m;
     };
 
-    const progress = filterProgressForExam(user?.progress || [], { examId, examSubjects });
-    const mockProgress = filterMockProgressForExam(user?.mockProgress || [], { examId });
+    const progress = filterProgressForExam(viewUser?.progress || [], { examId, examSubjects });
+    const mockProgress = filterMockProgressForExam(viewUser?.mockProgress || [], { examId });
 
     mockProgress.forEach((mock, index) => {
       totalMins += parseTime(mock.elapsedTime);
@@ -116,13 +132,20 @@ export function AnalyticsWorkspace({ user }: { user: AppUser | null }) {
       pieData,
       barData: Object.values(last7DaysMap)
     };
-  }, [user, examId, examSubjects]);
+  }, [viewUser, examId, examSubjects]);
 
   const pieOuter = isMobile ? 72 : 105;
   const pieInner = isMobile ? 44 : 70;
 
   return (
-    <div className="study-workspace">
+    <div className={`study-workspace${isPreview ? ' guest-preview-shell__body' : ''}`}>
+      {isPreview && onSignIn && (
+        <GuestPreviewBanner
+          line="Sample charts — time spent, mock scores, and which topics you touch most."
+          onSignIn={onSignIn}
+          cta="Sign in for your charts"
+        />
+      )}
       <div className="workspace-header-sticky">
         <div className="section-header">
           <div>

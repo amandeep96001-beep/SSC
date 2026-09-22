@@ -1,5 +1,5 @@
-import { useState, useMemo, type CSSProperties, type FormEvent } from 'react';
-import { Target, ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot, Bell, Clock } from 'lucide-react';
+import { useState, useMemo, type FormEvent } from 'react';
+import { ChevronRight, Plus, Trash2, Check, BookOpen, Flame, CircleDot, Bell, Clock, LogIn } from 'lucide-react';
 import { useExam } from '@/shared/context/useExam';
 import { APP_NAME } from '@/shared/brand';
 import { ExamDatePicker } from '@/shared/components/ui/ExamDatePicker';
@@ -8,6 +8,7 @@ import { deriveLastStudyAt, formatLastStudyLabel } from '@/shared/utils/lastStud
 import type { AppUser } from '@/types/app';
 import type { WrongQuestion } from '@/features/drills/hooks/useDrills';
 import '@/shared/components/ui/exam-date-picker.css';
+import '@/shared/components/guest-locked.css';
 
 function topicLabel(topicId: string | null | undefined): string {
   if (!topicId) return 'Topic';
@@ -35,6 +36,8 @@ interface TodayFocusWorkspaceProps {
   onReviewWrongVocab?: () => void;
   onRemoveWrongVocab?: (question: string | null | undefined) => void;
   onClearWrongVocab?: () => void;
+  isGuest?: boolean;
+  onSignIn?: () => void;
 }
 
 export function TodayFocusWorkspace({
@@ -47,14 +50,14 @@ export function TodayFocusWorkspace({
   onReviewWrongVocab,
   onRemoveWrongVocab,
   onClearWrongVocab,
+  isGuest = false,
+  onSignIn,
 }: TodayFocusWorkspaceProps) {
   const {
-    exam,
     examId,
     examDate,
     setExamDate,
     examSubjects,
-    openExamPicker,
     targets,
     addTarget,
     toggleTarget,
@@ -122,19 +125,26 @@ export function TodayFocusWorkspace({
 
   return (
     <div className="today-focus">
+      {isGuest && (
+        <div className="guest-banner" role="status">
+          <p className="guest-banner__copy">
+            <strong>Browse freely</strong> — open every module. Try drills & a short mock. Sign in when you want to save.
+          </p>
+          <button type="button" className="guest-banner__cta" onClick={() => onSignIn?.()}>
+            <LogIn size={15} />
+            Sign in
+          </button>
+        </div>
+      )}
+
       <header className="today-focus__hero">
         <div className="today-focus__hero-text">
           <p className="today-focus__eyebrow">{APP_NAME} · Study plan</p>
           <h1>What to study</h1>
           <p className="today-focus__sub">
-            Subjects, goals, and progress for <strong>{exam.fullName}</strong>.
+            Focus on competitive exam prep — subjects, goals, and progress in one place.
           </p>
         </div>
-        <button type="button" className="today-focus__exam-chip" onClick={openExamPicker} style={{ '--exam-accent': exam.accent } as CSSProperties}>
-          <Target size={16} />
-          <span>{exam.name}</span>
-          <ChevronRight size={14} />
-        </button>
       </header>
 
       <div className="today-last-study" title={lastStudyAt ? new Date(lastStudyAt).toLocaleString() : undefined}>
@@ -148,8 +158,8 @@ export function TodayFocusWorkspace({
       <ExamDatePicker
         value={examDate}
         onChange={setExamDate}
-        accent={exam.accent}
-        examName={exam.name}
+        accent="#0071e3"
+        examName="Exam"
       />
 
       <button
@@ -237,8 +247,8 @@ export function TodayFocusWorkspace({
           {strong.length === 0 ? (
             <p className="study-empty">
               {displaySubjects.length === 0
-                ? `No subjects mapped for ${exam.name} yet — ask admin to add them.`
-                : `Complete ${exam.name} topic tests to build your strong list.`}
+                ? 'No subjects in the catalogue yet — check back soon.'
+                : 'Complete topic tests to build your strong list.'}
             </p>
           ) : (
             <ul className="study-status-list study-status-list--scroll">
@@ -261,8 +271,8 @@ export function TodayFocusWorkspace({
           {remaining.length === 0 ? (
             <p className="study-empty">
               {displaySubjects.length === 0
-                ? `Map subjects for ${exam.name} to track weak topics.`
-                : `No weak ${exam.name} topics from topic tests yet.`}
+                ? 'Subjects will show here once the catalogue is ready.'
+                : 'No weak topics from topic tests yet.'}
             </p>
           ) : (
             <ul className="study-status-list study-status-list--scroll">
@@ -283,19 +293,18 @@ export function TodayFocusWorkspace({
 
       <section className="study-block">
         <div className="study-block__head">
-          <h2><BookOpen size={18} /> Exam subjects</h2>
-          <p>Configured for your target exam. Open a subject to view syllabus and topics.</p>
+          <h2><BookOpen size={18} /> Subjects</h2>
+          <p>Open a subject to view syllabus, notes, and practice topics.</p>
         </div>
         <div className="study-subjects">
           {displaySubjects.length === 0 && (
-            <p className="study-empty">No subjects yet. Add subjects in Syllabus (admin) or map them in Exam subjects.</p>
+            <p className="study-empty">No subjects yet. Add them from Syllabus when you have access.</p>
           )}
           {displaySubjects.map((name) => (
             <button
               key={name}
               type="button"
               className="study-subject-chip"
-              style={{ '--exam-accent': exam.accent } as CSSProperties}
               onClick={() => openSubject(name)}
             >
               <span>{name}</span>

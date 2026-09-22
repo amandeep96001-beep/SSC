@@ -6,10 +6,10 @@ import { useGSAP } from '@gsap/react';
 import { useDrills } from '@/features/drills/hooks/useDrills';
 import { useStudy } from '@/features/study/hooks/useStudy';
 import { XCircle, X, Menu } from 'lucide-react';
-import type { AppUser, VocabItem, PathContext, StudyTopic, VocabFormState } from '@/types/app';
+import type { VocabItem, PathContext, StudyTopic, VocabFormState } from '@/types/app';
 import { errorMessage, isRecord } from '@/types/app';
 import { apiService } from '@/shared/services/apiService';
-import { showAppToast, notifyReminder } from '@/shared/utils/appToast';
+import { showAppToast, notifyReminder, showLoginPromptToast } from '@/shared/utils/appToast';
 import './Dashboard.css';
 import '@/features/study/study.css';
 import '@/features/analytics/performance.css';
@@ -17,7 +17,7 @@ import '@/features/drills/drills.css';
 import '@/features/exam/exam.css';
 import '@/features/competition/competition.css';
 
-import { AuthPanel } from '@/features/auth/components/AuthPanel';
+import { AuthModal } from '@/features/auth/components/AuthModal';
 import { ExamPortal } from '@/features/exam/components/ExamPortal';
 import { ResultsPortal } from '@/features/exam/components/ResultsPortal';
 import { Sidebar } from './Sidebar';
@@ -27,7 +27,7 @@ import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock
 import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
-import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT, type BulkMcqItem } from '@/shared/utils/parseBulkQuestions';
+import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT } from '@/shared/utils/parseBulkQuestions';
 
 import { startReminderScheduler } from '@/features/reminders/reminderScheduler';
 import { fetchNotifications, markNotificationsReadApi } from '@/features/reminders/remindersStorage';
@@ -36,6 +36,15 @@ import '@/features/admin/admin.css';
 import '@/features/reminders/reminders.css';
 import { FeatureErrorBoundary } from '@/shared/components/layout/FeatureErrorBoundary';
 import '@/shared/components/layout/feature-error.css';
+import { GuestLockedPanel } from '@/shared/components/GuestLockedPanel';
+import '@/shared/components/guest-locked.css';
+import {
+  GUEST_DRILL_LIMIT,
+  GUEST_MOCK_QUESTION_LIMIT,
+  hasGuestDrillQuota,
+  hasGuestMockPreview,
+  markGuestMockPreviewUsed,
+} from '@/shared/utils/guestQuota';
 
 const DrillWorkspace = lazy(() =>
   import('@/features/drills/components/DrillWorkspace').then((m) => ({ default: m.DrillWorkspace }))
@@ -124,7 +133,7 @@ export function Dashboard() {
     timer,
     testSummary,
     user,
-    loading: studyLoading,
+    loading: _studyLoading,
     subjectsLoading,
     topicsLoading,
     notesLoading,
@@ -159,6 +168,41 @@ export function Dashboard() {
     cancelTest
   } = useStudy();
 
+  const [authOpen, setAuthOpen] = useState(false);
+  const isLoggedIn = Boolean(user && typeof localStorage !== 'undefined' && localStorage.getItem('ssc_token'));
+  const openSignIn = useCallback(() => setAuthOpen(true), []);
+  const closeSignIn = useCallback(() => setAuthOpen(false), []);
+  const askLogin = useCallback((message?: string) => {
+    showLoginPromptToast({
+      message: message || 'Please login to use this feature.',
+      onLogin: () => setAuthOpen(true),
+      onContinue: () => setAuthOpen(false),
+    });
+    setAuthOpen(true);
+  }, []);
+  const requireAuth = useCallback((thenDo?: () => void, message?: string) => {
+    if (isLoggedIn) {
+      thenDo?.();
+      return true;
+    }
+    askLogin(message);
+    return false;
+  }, [isLoggedIn, askLogin]);
+
+  const authModal = authOpen && !isLoggedIn ? (
+    <AuthModal
+      onClose={closeSignIn}
+      loginUser={loginUser}
+      registerUser={registerUser}
+      requestOtp={requestOtp}
+      verifyOtp={verifyOtp}
+      forgotPassword={forgotPassword}
+      verifyPasswordResetOtp={verifyPasswordResetOtp}
+      resetPassword={resetPassword}
+      loginWithGoogle={loginWithGoogle}
+    />
+  ) : null;
+
   const {
     drillType,
     currentDrill,
@@ -177,8 +221,12 @@ export function Dashboard() {
     changeDrillType,
     submitAnswer: submitDrillAnswer,
     skipQuestion: skipDrillQuestion,
-    loadNextDrill
-  } = useDrills(!!user);
+    loadNextDrill,
+    guestRemaining,
+    isGuestTrial,
+  } = useDrills(isLoggedIn, () => {
+    askLogin('Free trial done — please login for unlimited drills.');
+  });
 
   const mockTestsHooks = useMockTests();
   const [activeMockTestId, setActiveMockTestId] = useState<string | null>(null);
@@ -223,12 +271,6 @@ export function Dashboard() {
     }
   }, { dependencies: [activeView], scope: workspaceRef });
 
-  // Start mock test
-  const startMockExam = (testId: string) => {
-    setActiveMockTestId(testId);
-    setActiveView('mock_exam_active', { mockId: testId });
-  };
-
   const [modalOpen, setModalOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicSyllabus, setNewTopicSyllabus] = useState('');
@@ -261,6 +303,31 @@ export function Dashboard() {
 
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Start mock: guests get a 10-question preview once; then sign-in
+  const startMockExam = (testId: string) => {
+    if (isLoggedIn) {
+      setActiveMockTestId(testId);
+      setActiveView('mock_exam_active', { mockId: testId });
+      return;
+    }
+    if (!hasGuestMockPreview()) {
+      askLogin('Please login for full mocks and saved scores.');
+      return;
+    }
+    markGuestMockPreviewUsed();
+    setActiveMockTestId(testId);
+    setActiveView('mock_exam_active', { mockId: testId });
+  };
+
+  const gatedStartTest = useCallback(
+    async (...args: Parameters<typeof startTest>) => {
+      if (!requireAuth()) return { success: false as const };
+      return startTest(...args);
+    },
+    [requireAuth, startTest],
+  );
+
   const viewStackRef = useRef<string[]>([]);
   const skipStackRef = useRef(false);
   const prevViewRef = useRef(activeView);
@@ -272,27 +339,30 @@ export function Dashboard() {
     selectedSubject,
   });
 
-  navRef.current = {
-    activeView,
-    isMobileSidebarOpen,
-    cancelConfirmOpen,
-    user,
-    selectedSubject,
-  };
-
-  // Restore mock exam from URL on reload
   useEffect(() => {
-    if (parsed.mockId) {
-      setActiveMockTestId(parsed.mockId);
-    } else if (activeView !== 'mock_exam_active') {
-      setActiveMockTestId(null);
-    }
+    navRef.current = {
+      activeView,
+      isMobileSidebarOpen,
+      cancelConfirmOpen,
+      user,
+      selectedSubject,
+    };
+  }, [activeView, isMobileSidebarOpen, cancelConfirmOpen, user, selectedSubject]);
+
+  // Restore mock exam from URL on reload (defer setState out of the effect body)
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      if (parsed.mockId) {
+        setActiveMockTestId(parsed.mockId);
+      } else if (activeView !== 'mock_exam_active') {
+        setActiveMockTestId(null);
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [parsed.mockId, activeView]);
 
   // Track in-app section history
   useEffect(() => {
-    if (!user) return;
-
     const prev = prevViewRef.current;
     if (skipStackRef.current) {
       skipStackRef.current = false;
@@ -311,19 +381,11 @@ export function Dashboard() {
     }
 
     prevViewRef.current = activeView;
-    // Keep an extra history entry whenever the section changes
     trapHistory();
-  }, [activeView, user]);
+  }, [activeView]);
 
-  // After login, kill leftover auth-page scroll so fixed hamburger
-  // doesn't sit on top of workspace titles (refresh looks fine; SPA entry doesn't).
+  // Keep shell mounted styles for guests + signed-in users; drop for fullscreen exams.
   useEffect(() => {
-    if (!user) {
-      document.documentElement.classList.remove('lms-mounted');
-      return undefined;
-    }
-
-    // AuthPanel unmounts on login — make sure its scroll lock is gone.
     document.documentElement.classList.remove('auth-mounted');
 
     const fullscreen =
@@ -353,7 +415,6 @@ export function Dashboard() {
       resetShellScroll();
       window.requestAnimationFrame(resetShellScroll);
     });
-    // iOS often dismisses the login keyboard a beat later and re-scrolls
     const t1 = window.setTimeout(resetShellScroll, 120);
     const t2 = window.setTimeout(resetShellScroll, 400);
 
@@ -363,7 +424,7 @@ export function Dashboard() {
       window.clearTimeout(t2);
       document.documentElement.classList.remove('lms-mounted');
     };
-  }, [user, activeView, activeMockTestId]);
+  }, [activeView, activeMockTestId]);
 
   // Study reminders — local browser alerts while tab open
   useEffect(() => {
@@ -523,6 +584,8 @@ export function Dashboard() {
         if (meta) {
           setVocabPage(Number(meta.page) || page);
           setVocabTotalPages(Number(meta.totalPages) || 1);
+        } else {
+          setVocabPage(page);
         }
       }
     } catch (e) {
@@ -532,24 +595,14 @@ export function Dashboard() {
     }
   }, []);
 
-  // Effect to load vocab only when revision deck is open
+  // Fetch vocab off the effect tick (setTimeout) so setState isn't sync in the effect body.
   useEffect(() => {
-    if (activeView !== 'revision') return;
-    setVocabPage(1);
-    loadVocabList(1, vocabSearch, vocabCategory);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, vocabCategory]);
-
-  // Debounced search — only while on revision deck
-  useEffect(() => {
-    if (activeView !== 'revision') return;
-    const delayDebounceFn = setTimeout(() => {
-      setVocabPage(1);
-      loadVocabList(1, vocabSearch, vocabCategory);
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vocabSearch, activeView]);
+    if (activeView !== 'revision') return undefined;
+    const id = window.setTimeout(() => {
+      void loadVocabList(1, vocabSearch, vocabCategory);
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [activeView, vocabCategory, vocabSearch, loadVocabList]);
 
   const handleVocabPageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= vocabTotalPages) {
@@ -746,34 +799,6 @@ export function Dashboard() {
     return compact;
   };
 
-  const mergePdfMcqsIntoJson = (
-    items: BulkMcqItem[],
-    currentJson: string,
-    setJson: (v: string) => void,
-    setSuccess: (v: string) => void,
-    setError: (v: string) => void
-  ) => {
-    setError('');
-    const { items: compact, errors: compactErrors } = toCompactMcqs(items);
-    if (compact.length === 0) {
-      setError(compactErrors[0] || 'No valid MCQs extracted from PDF.');
-      return;
-    }
-    let existing: unknown[] = [];
-    if (currentJson.trim()) {
-      try {
-        const parsed = JSON.parse(currentJson.trim());
-        existing = Array.isArray(parsed) ? parsed : [];
-      } catch {
-        const { items: fromText } = parseBulkQuestions(currentJson);
-        const { items: c } = toCompactMcqs(fromText);
-        existing = c;
-      }
-    }
-    setJson(JSON.stringify([...existing, ...compact], null, 2));
-    setSuccess(`${compact.length} MCQ${compact.length === 1 ? '' : 's'} added from PDF. Save when ready.`);
-  };
-
   const handleCreateSubjectSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubjectFormError('');
@@ -839,22 +864,44 @@ export function Dashboard() {
     }
   };
 
-  if (!user || !localStorage.getItem('ssc_token')) {
+  // Fullscreen topic exam / results still need an account (progress save)
+  if (!isLoggedIn && (activeView === 'test' || activeView === 'results')) {
     return (
-      <AuthPanel
-        loginUser={loginUser}
-        registerUser={registerUser}
-        requestOtp={requestOtp}
-        verifyOtp={verifyOtp}
-        forgotPassword={forgotPassword}
-        verifyPasswordResetOtp={verifyPasswordResetOtp}
-        resetPassword={resetPassword}
-        loginWithGoogle={loginWithGoogle}
-      />
+      <div className="lms-container">
+        <Helmet><title>{pageTitle('Sign in')}</title></Helmet>
+        <GuestLockedPanel
+          title="Try a topic test after sign-in"
+          blurb="Browse notes free. Sign in to start timed topic tests and keep your scores."
+          bullets={['Timed topic tests', 'Progress by subject', 'Weak-area tracking']}
+          onSignIn={() => askLogin('Please login to start a topic test.')}
+        />
+        {authModal}
+      </div>
     );
   }
 
-  if (activeView === 'test') {
+  if (activeView === 'mock_exam_active' && activeMockTestId) {
+    return (
+      <>
+        <FullMockPortal
+          mockTestId={activeMockTestId}
+          user={user}
+          guestPreviewLimit={isLoggedIn ? null : GUEST_MOCK_QUESTION_LIMIT}
+          onGuestNeedsAuth={() => {
+            askLogin('Nice try — please login for the full mock and saved scores.');
+          }}
+          onCancel={() => {
+            setActiveMockTestId(null);
+            setActiveView('mock');
+          }}
+          onSubmit={submitMockExam}
+        />
+        {authModal}
+      </>
+    );
+  }
+
+  if (isLoggedIn && activeView === 'test') {
     return (
       <ExamPortal 
         selectedSubject={selectedSubject}
@@ -879,28 +926,14 @@ export function Dashboard() {
     );
   }
 
-  if (activeView === 'mock_exam_active' && activeMockTestId) {
-    return (
-      <FullMockPortal 
-        mockTestId={activeMockTestId}
-        user={user}
-        onCancel={() => {
-          setActiveMockTestId(null);
-          setActiveView('mock');
-        }}
-        onSubmit={submitMockExam}
-      />
-    );
-  }
-
-  if (activeView === 'results') {
+  if (isLoggedIn && activeView === 'results') {
     return (
       <ResultsPortal 
         testSummary={testSummary}
         testQuestions={testQuestions}
         selectedAnswers={selectedAnswers}
         selectedSubject={selectedSubject}
-        startTest={startTest}
+        startTest={gatedStartTest}
         setActiveView={setActiveView}
       />
     );
@@ -925,6 +958,7 @@ export function Dashboard() {
         skipToSubjects={skipToSubjects}
         isMobileOpen={isMobileSidebarOpen}
         setIsMobileOpen={setIsMobileSidebarOpen}
+        onSignIn={openSignIn}
       />
 
       <main className="lms-workspace">
@@ -951,11 +985,14 @@ export function Dashboard() {
               catalogSubjectNames={subjects.map((s) => (typeof s === 'string' ? s : s.name))}
               wrongQuestions={wrongQuestions}
               onReviewWrongVocab={() => {
+                if (!requireAuth()) return;
                 setOpenWrongLogOnce(true);
                 setActiveView('drill');
               }}
               onRemoveWrongVocab={removeWrongQuestion}
               onClearWrongVocab={clearWrongVocab}
+              isGuest={!isLoggedIn}
+              onSignIn={() => askLogin('Please login to save progress and unlock full features.')}
             />
           )}
 
@@ -964,26 +1001,39 @@ export function Dashboard() {
           )}
 
           {activeView === 'drill' && (
-            <DrillWorkspace 
-              drillType={drillType}
-              currentDrill={currentDrill}
-              userAnswer={userAnswer}
-              setUserAnswer={setUserAnswer}
-              maxTableBase={maxTableBase}
-              setMaxTableBase={setMaxTableBase}
-              drillStats={drillStats}
-              drillFeedback={drillFeedback}
-              wrongQuestions={wrongQuestions}
-              clearWrongLog={clearWrongLog}
-              removeWrongQuestion={removeWrongQuestion}
-              clearWrongVocab={clearWrongVocab}
-              changeDrillType={changeDrillType}
-              submitDrillAnswer={submitDrillAnswer}
-              skipDrillQuestion={skipDrillQuestion}
-              loadNextDrill={loadNextDrill}
-              initialTab={openWrongLogOnce ? 'wronglog' : 'drill'}
-              onConsumedInitialTab={() => setOpenWrongLogOnce(false)}
-            />
+            isLoggedIn || hasGuestDrillQuota() || Boolean(currentDrill) ? (
+              <DrillWorkspace 
+                drillType={drillType}
+                currentDrill={currentDrill}
+                userAnswer={userAnswer}
+                setUserAnswer={setUserAnswer}
+                maxTableBase={maxTableBase}
+                setMaxTableBase={setMaxTableBase}
+                drillStats={drillStats}
+                drillFeedback={drillFeedback}
+                wrongQuestions={wrongQuestions}
+                clearWrongLog={clearWrongLog}
+                removeWrongQuestion={removeWrongQuestion}
+                clearWrongVocab={clearWrongVocab}
+                changeDrillType={changeDrillType}
+                submitDrillAnswer={submitDrillAnswer}
+                skipDrillQuestion={skipDrillQuestion}
+                loadNextDrill={loadNextDrill}
+                initialTab={openWrongLogOnce ? 'wronglog' : 'drill'}
+                onConsumedInitialTab={() => setOpenWrongLogOnce(false)}
+                isGuestTrial={isGuestTrial}
+                guestRemaining={guestRemaining}
+                guestLimit={GUEST_DRILL_LIMIT}
+                onSignIn={() => askLogin('Please login for unlimited drills.')}
+              />
+            ) : (
+              <GuestLockedPanel
+                title="Free drill trial used"
+                blurb={`You tried ${GUEST_DRILL_LIMIT} drills as a guest. Sign in for unlimited drills and a synced wrong-answer log.`}
+                bullets={['Unlimited speed drills', 'Wrong-log across devices', 'Tables, vocab, GK & more']}
+                onSignIn={() => askLogin('Please login for unlimited drills.')}
+              />
+            )
           )}
 
           {['subjects', 'topics', 'notes'].includes(activeView) && (
@@ -991,7 +1041,10 @@ export function Dashboard() {
               activeView={activeView}
               setActiveView={setActiveView}
               contentSource={contentSource}
-              setContentSource={setContentSource}
+              setContentSource={async (src) => {
+                if (src === 'mine' && !requireAuth()) return;
+                await setContentSource(src);
+              }}
               isMineMode={isMineMode}
               canManageContent={canManageContent}
               subjects={subjects}
@@ -1001,15 +1054,30 @@ export function Dashboard() {
               topicsLoading={topicsLoading}
               selectTopic={selectTopic}
               user={user}
-              setModalOpen={setModalOpen}
-              setSubjectModalOpen={setSubjectModalOpen}
-              handleOpenEditModal={handleOpenEditModal}
-              handleDeleteClick={handleDeleteClick}
-              handleDeleteSubjectClick={handleDeleteSubjectClick}
+              setModalOpen={(open) => {
+                if (open && !requireAuth()) return;
+                setModalOpen(open);
+              }}
+              setSubjectModalOpen={(open) => {
+                if (open && !requireAuth()) return;
+                setSubjectModalOpen(open);
+              }}
+              handleOpenEditModal={(...args) => {
+                if (!requireAuth()) return;
+                handleOpenEditModal(...args);
+              }}
+              handleDeleteClick={(...args) => {
+                if (!requireAuth()) return;
+                handleDeleteClick(...args);
+              }}
+              handleDeleteSubjectClick={(...args) => {
+                if (!requireAuth()) return;
+                handleDeleteSubjectClick(...args);
+              }}
               activeNotes={activeNotes}
               notesLoading={notesLoading}
               testStarting={testStarting}
-              startTest={startTest}
+              startTest={gatedStartTest}
               updateCustomTopic={updateCustomTopic}
               onOpenNotesDock={openNotesDock}
             />
@@ -1018,11 +1086,19 @@ export function Dashboard() {
           {activeView === 'roadmap' && <SyllabusRoadmapWorkspace />}
 
           {activeView === 'performance' && (
-            <PerformanceWorkspace user={user} />
+            <PerformanceWorkspace
+              user={user}
+              isPreview={!isLoggedIn}
+              onSignIn={() => askLogin('Please login to track your performance.')}
+            />
           )}
 
           {activeView === 'analytics' && (
-            <AnalyticsWorkspace user={user} />
+            <AnalyticsWorkspace
+              user={user}
+              isPreview={!isLoggedIn}
+              onSignIn={() => askLogin('Please login for your study charts.')}
+            />
           )}
 
           {activeView === 'mock' && (
@@ -1030,6 +1106,7 @@ export function Dashboard() {
               mockTestsApi={mockTestsHooks}
               startMockExam={startMockExam}
               canEditPattern={user?.role === 'admin'}
+              isGuest={!isLoggedIn}
             />
           )}
 
@@ -1047,8 +1124,14 @@ export function Dashboard() {
               setVocabCategory={setVocabCategory}
               vocabListLoading={vocabListLoading}
               filteredVocabDB={filteredVocabDB}
-              setVocabModalOpen={setVocabModalOpen}
-              openEditVocab={openEditVocab}
+              setVocabModalOpen={(open) => {
+                if (open && !requireAuth()) return;
+                setVocabModalOpen(open);
+              }}
+              openEditVocab={(...args) => {
+                if (!requireAuth()) return;
+                openEditVocab(...args);
+              }}
               loadVocabList={loadVocabList}
               vocabModalOpen={vocabModalOpen}
               editingVocabId={editingVocabId}
@@ -1059,7 +1142,10 @@ export function Dashboard() {
               vocabFormSuccess={vocabFormSuccess}
               resetVocabForm={resetVocabForm}
               vocabBulkModalOpen={vocabBulkModalOpen}
-              setVocabBulkModalOpen={setVocabBulkModalOpen}
+              setVocabBulkModalOpen={(open) => {
+                if (open && !requireAuth()) return;
+                setVocabBulkModalOpen(open);
+              }}
               vocabBulkJson={vocabBulkJson}
               setVocabBulkJson={setVocabBulkJson}
               vocabBulkError={vocabBulkError}
@@ -1071,10 +1157,20 @@ export function Dashboard() {
             />
           )}
 
-          {activeView === 'reminders' && <RemindersWorkspace />}
+          {activeView === 'reminders' && (
+            <RemindersWorkspace
+              isGuest={!isLoggedIn}
+              onSignIn={() => askLogin('Please login to set study reminders.')}
+            />
+          )}
 
           {activeView === 'competition' && (
-            <CompetitionWorkspace user={user} setActiveView={setActiveView} />
+            <CompetitionWorkspace
+              user={user}
+              setActiveView={setActiveView}
+              isGuest={!isLoggedIn}
+              onSignIn={() => askLogin('Please login to join MCQ Battle.')}
+            />
           )}
           </Suspense>
           </FeatureErrorBoundary>
@@ -1083,6 +1179,8 @@ export function Dashboard() {
 
       <NotesFloatingDock openSignal={notesDockSignal} />
       <ExamPicker />
+
+      {authModal}
 
       {/* --- ADD CUSTOM SUBJECT MODAL --- */}
       {subjectModalOpen && (

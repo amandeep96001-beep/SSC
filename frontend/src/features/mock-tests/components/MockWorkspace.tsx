@@ -25,9 +25,10 @@ interface MockWorkspaceProps {
   mockTestsApi: UseMockTestsReturn;
   startMockExam: (id: string) => void;
   canEditPattern?: boolean;
+  isGuest?: boolean;
 }
 
-export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = false }: MockWorkspaceProps) {
+export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = false, isGuest = false }: MockWorkspaceProps) {
   const { exam, examId } = useExam();
   const { mockTests, loading, listLoading, createLoading, error, loadMockTests, addMockTest, removeMockTest } = mockTestsApi;
   const [showAddForm, setShowAddForm] = useState(false);
@@ -523,7 +524,7 @@ export function MockWorkspace({ mockTestsApi, startMockExam, canEditPattern = fa
                       onClick={() => startMockExam(test._id || test.id || '')}
                     >
                       <Play size={16} style={{ marginRight: '8px', fill: 'currentColor' }} />
-                      Start exam
+                      {isGuest ? 'Try 10 questions free' : 'Start exam'}
                     </button>
                   </div>
                   );

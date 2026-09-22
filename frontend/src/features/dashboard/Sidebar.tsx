@@ -13,7 +13,8 @@ import {
   Shield,
   Bell,
   Map,
-  Pencil
+  Pencil,
+  LogIn,
 } from 'lucide-react';
 import { useRef, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import gsap from 'gsap';
@@ -36,6 +37,7 @@ interface SidebarProps {
   skipToSubjects: () => void;
   isMobileOpen: boolean;
   setIsMobileOpen: Dispatch<SetStateAction<boolean>>;
+  onSignIn?: () => void;
 }
 
 export function Sidebar({
@@ -46,7 +48,8 @@ export function Sidebar({
   setActiveView,
   skipToSubjects,
   isMobileOpen,
-  setIsMobileOpen
+  setIsMobileOpen,
+  onSignIn,
 }: SidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
   const { theme, toggleTheme } = useTheme();
@@ -97,7 +100,8 @@ export function Sidebar({
     setIsMobileOpen(false);
   };
 
-  const displayLabel = user?.displayName?.trim() || user?.username || 'Account';
+  const displayLabel = user?.displayName?.trim() || user?.username || 'Guest';
+  const isGuest = !user;
 
   return (
     <>
@@ -122,27 +126,54 @@ export function Sidebar({
       </div>
 
       <div className="user-profile-card">
-        <button
-          type="button"
-          className="user-profile-card__main"
-          onClick={() => setProfileOpen(true)}
-          title="Edit profile"
-        >
-          <div className="avatar-icon">
-            <UserAvatar user={user} size={32} />
-          </div>
-          <div className="user-details">
-            <span className="username-label">{displayLabel}</span>
-            <span className="profile-edit-hint">
-              <Pencil size={11} />
-              Edit profile
-            </span>
-          </div>
-        </button>
-        <button className="btn-logout" onClick={logoutUser} type="button">
-          <LogOut size={12} />
-          <span>Log Out</span>
-        </button>
+        {isGuest ? (
+          <>
+            <div className="user-profile-card__main" style={{ cursor: 'default' }}>
+              <div className="avatar-icon">
+                <UserAvatar user={null} size={32} />
+              </div>
+              <div className="user-details">
+                <span className="username-label">Browsing as guest</span>
+                <span className="profile-edit-hint">Explore free — sign in to save</span>
+              </div>
+            </div>
+            <button
+              className="btn-logout"
+              onClick={() => {
+                onSignIn?.();
+                setIsMobileOpen(false);
+              }}
+              type="button"
+            >
+              <LogIn size={12} />
+              <span>Sign in</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className="user-profile-card__main"
+              onClick={() => setProfileOpen(true)}
+              title="Edit profile"
+            >
+              <div className="avatar-icon">
+                <UserAvatar user={user} size={32} />
+              </div>
+              <div className="user-details">
+                <span className="username-label">{displayLabel}</span>
+                <span className="profile-edit-hint">
+                  <Pencil size={11} />
+                  Edit profile
+                </span>
+              </div>
+            </button>
+            <button className="btn-logout" onClick={logoutUser} type="button">
+              <LogOut size={12} />
+              <span>Log Out</span>
+            </button>
+          </>
+        )}
       </div>
 
       <nav className="sidebar-nav">

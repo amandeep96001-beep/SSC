@@ -12,6 +12,9 @@ import {
 import { showAppToast } from '@/shared/utils/appToast';
 import { errorMessage, isRecord } from '@/types/app';
 import type { AppUser } from '@/types/app';
+import { buildDemoUser } from '@/shared/utils/demoUser';
+import { GuestPreviewBanner } from '@/shared/components/GuestPreviewBanner';
+import '@/shared/components/guest-preview.css';
 
 function formatTopicLabel(topicId: string | null | undefined): string {
   if (!topicId) return 'Unknown topic';
@@ -122,21 +125,39 @@ function HistoryCard({ title, attempt, tone, score, maxScore, statusLabel, elaps
   );
 }
 
-export function PerformanceWorkspace({ user }: { user: AppUser | null }) {
+export function PerformanceWorkspace({
+  user,
+  isPreview = false,
+  onSignIn,
+}: {
+  user: AppUser | null;
+  isPreview?: boolean;
+  onSignIn?: () => void;
+}) {
   const [activeTab, setActiveTab] = useState('syllabus');
   const [exporting, setExporting] = useState(false);
   const { exam, examId, examSubjects } = useExam();
 
+  const viewUser = useMemo(
+    () => (isPreview || !user ? buildDemoUser(examId || 'ssc') : user),
+    [isPreview, user, examId],
+  );
+
   const progress = useMemo(
-    () => filterProgressForExam(user?.progress || [], { examId, examSubjects }),
-    [user?.progress, examId, examSubjects]
+    () => filterProgressForExam(viewUser?.progress || [], { examId, examSubjects }),
+    [viewUser?.progress, examId, examSubjects]
   );
   const mockProgress = useMemo(
-    () => filterMockProgressForExam(user?.mockProgress || [], { examId }),
-    [user?.mockProgress, examId]
+    () => filterMockProgressForExam(viewUser?.mockProgress || [], { examId }),
+    [viewUser?.mockProgress, examId]
   );
 
   const exportMine = async (kind: 'mock' | 'syllabus') => {
+    if (isPreview) {
+      onSignIn?.();
+      showAppToast('Sign in to export your real scores.', { variant: 'warn' });
+      return;
+    }
     setExporting(true);
     try {
       const rows = kind === 'mock' ? mockProgress : progress;
@@ -215,13 +236,20 @@ export function PerformanceWorkspace({ user }: { user: AppUser | null }) {
   }, [mockProgress, exam]);
 
   return (
-    <div className="study-workspace perf-workspace">
+    <div className={`study-workspace perf-workspace${isPreview ? ' guest-preview-shell__body' : ''}`}>
+      {isPreview && onSignIn && (
+        <GuestPreviewBanner
+          line="Sample view — green = strong, yellow = revise, red = weak. Your scores appear here after you practice."
+          onSignIn={onSignIn}
+          cta="Sign in to track yours"
+        />
+      )}
       <div className="workspace-header-sticky">
         <div className="section-header perf-hero-header">
           <div>
             <h1>Performance Tracker</h1>
             <p className="section-header-sub">
-              {exam.name} — syllabus coverage, mock averages, and weak areas for this exam only.
+              Syllabus coverage, mock averages, and weak areas from your practice.
             </p>
           </div>
           <button
@@ -365,7 +393,7 @@ export function PerformanceWorkspace({ user }: { user: AppUser | null }) {
               )}
 
               {mockProgress.length > 0 && (
-                <p className="perf-footnote">Scoring for {exam.name}: {exam.markingLabel}.</p>
+                <p className="perf-footnote">Scoring: {exam.markingLabel}.</p>
               )}
             </section>
           </>

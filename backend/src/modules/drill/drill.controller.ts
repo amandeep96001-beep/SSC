@@ -20,12 +20,33 @@ export class DrillController {
     return ok(res, { data });
   });
 
+  /** Public guest preview — challenge bound to synthetic id "guest". */
+  getNextDrillGuest = asyncHandler(async (req, res) => {
+    const type = String(req.query.type || 'table');
+    const data = await this.drillService.getNextDrill({
+      type,
+      maxBase: req.query.maxBase,
+      userId: 'guest',
+    });
+    return ok(res, { data });
+  });
+
   verifyDrill = asyncHandler(async (req, res) => {
     const body = req.body as VerifyDrillBody;
     const data = await this.drillService.verifyDrill({
       challengeToken: body.challengeToken,
       userAnswer: body.userAnswer,
       userId: req.user!.id,
+    });
+    return ok(res, { data });
+  });
+
+  verifyDrillGuest = asyncHandler(async (req, res) => {
+    const body = req.body as VerifyDrillBody;
+    const data = await this.drillService.verifyDrill({
+      challengeToken: body.challengeToken,
+      userAnswer: body.userAnswer,
+      userId: 'guest',
     });
     return ok(res, { data });
   });

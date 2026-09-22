@@ -1,0 +1,137 @@
+.guest-locked {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0 1.5rem;
+  min-height: min(70vh, 640px);
+  align-items: stretch;
+  justify-content: center;
+}
+
+.guest-locked__card {
+  max-width: 36rem;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.75rem;
+  text-align: center;
+  border-radius: 18px;
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.guest-locked__icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 1.1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(0, 113, 227, 0.12);
+  color: var(--accent, #0071e3);
+}
+
+.guest-locked__title {
+  margin: 0 0 0.55rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.65rem);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.guest-locked__blurb {
+  margin: 0 0 1.15rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--muted, #8a8f98);
+}
+
+.guest-locked__list {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.guest-locked__list li {
+  position: relative;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  color: var(--text, inherit);
+}
+
+.guest-locked__list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #0071e3);
+}
+
+.guest-locked__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent, #0071e3);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.guest-locked__cta:hover {
+  filter: brightness(1.05);
+}
+
+.guest-locked__hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted, #8a8f98);
+}
+
+.guest-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 113, 227, 0.14), rgba(88, 86, 214, 0.1));
+  border: 1px solid rgba(0, 113, 227, 0.22);
+}
+
+.guest-banner__copy {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex: 1 1 14rem;
+}
+
+.guest-banner__copy strong {
+  font-weight: 700;
+}
+
+.guest-banner__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent, #0071e3);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}

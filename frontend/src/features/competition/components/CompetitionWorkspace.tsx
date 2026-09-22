@@ -10,6 +10,8 @@ import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 import { isRecord } from '@/types/app';
 import type { AppUser } from '@/types/app';
 import '@/features/exam/exam.css';
+import { GuestPreviewBanner } from '@/shared/components/GuestPreviewBanner';
+import '@/shared/components/guest-preview.css';
 
 const SUBJECTS = ['Mixed', 'GK', 'English', 'Maths', 'Reasoning'] as const;
 const QUESTION_LIMIT = 20;
@@ -59,9 +61,16 @@ interface CompetitionResult {
 interface CompetitionWorkspaceProps {
   user: AppUser | null;
   setActiveView: (view: string, options?: Record<string, unknown>) => void;
+  isGuest?: boolean;
+  onSignIn?: () => void;
 }
 
-export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspaceProps) {
+export function CompetitionWorkspace({
+  user,
+  setActiveView,
+  isGuest = false,
+  onSignIn,
+}: CompetitionWorkspaceProps) {
   const [screen, setScreen]           = useState('start');
   const [selectedSubject, setSelectedSubject] = useState('Mixed');
   const [questions, setQuestions]     = useState<CompetitionQuestion[]>([]);
@@ -204,6 +213,11 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
 
   // ── Start Competition ─────────────────────────────────────────────
   const startBattle = async () => {
+    if (isGuest) {
+      showAppToast('Sign in to join a battle and save your rank.', { variant: 'warn' });
+      onSignIn?.();
+      return;
+    }
     clearNextTimeout();
     setScreen('loading');
     try {
@@ -338,7 +352,14 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
   // ═══════════════════════════════════════════════════════════════════
   if (screen === 'start') {
     return (
-      <div className="competition-start-screen">
+      <div className={`competition-start-screen${isGuest ? ' guest-preview-shell__body' : ''}`}>
+        {isGuest && onSignIn && (
+          <GuestPreviewBanner
+            line="Pick a subject, race the clock, climb the board. Sign in to play for real."
+            onSignIn={onSignIn}
+            cta="Sign in to battle"
+          />
+        )}
         <div className="competition-hero">
           <div className="competition-hero-icon"><Swords size={40} /></div>
           <h1 className="competition-hero-title">MCQ Battle Mode</h1>

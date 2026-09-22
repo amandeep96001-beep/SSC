@@ -52,6 +52,7 @@ export function useStudy() {
   const { exam, examId, examSubjects, refreshExamConfigs } = useExam();
   const [contentSource, setContentSourceState] = useState<ContentSource>(() => {
     try {
+      if (!localStorage.getItem('ssc_token')) return 'global';
       const stored = localStorage.getItem(CONTENT_SOURCE_KEY);
       return stored === 'mine' ? 'mine' : 'global';
     } catch {
@@ -873,11 +874,7 @@ export function useStudy() {
   const subjectsLoadedForRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const userKey = user?.id ?? user?.username ?? null;
-    if (!userKey) {
-      subjectsLoadedForRef.current = null;
-      return;
-    }
+    const userKey = user?.id ?? user?.username ?? 'guest';
     const cacheKey = `${userKey}:${contentSource}`;
     if (subjectsLoadedForRef.current === cacheKey) return;
     subjectsLoadedForRef.current = cacheKey;
@@ -913,9 +910,6 @@ export function useStudy() {
 
   // Load study data from URL — single source of truth (no duplicate fetch loops)
   useEffect(() => {
-    const userKey = user?.id ?? user?.username;
-    if (!userKey) return undefined;
-
     const routeKey = `${location.pathname}${location.search}`;
     if (syncedRouteRef.current === routeKey) return undefined;
     syncedRouteRef.current = routeKey;

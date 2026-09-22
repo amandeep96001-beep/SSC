@@ -48,7 +48,7 @@ function defaultSubjectsMap(): Record<string, string[]> {
 export function ExamProvider({ children }: { children: ReactNode }) {
   const [examId, setExamIdState] = useState(() => localStorage.getItem(STORAGE_KEY) || 'ssc');
   const [examDate, setExamDateState] = useState(() => localStorage.getItem(DATE_KEY) || '');
-  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(ONBOARD_KEY) === '1');
+  const [onboarded, setOnboarded] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [targetsByExam, setTargetsByExam] = useState<Record<string, StudyTarget[]>>(loadTargetsByExam);
   const [subjectsByExam, setSubjectsByExam] = useState<Record<string, string[]>>(defaultSubjectsMap);
@@ -172,7 +172,9 @@ export function ExamProvider({ children }: { children: ReactNode }) {
     removeTarget,
     refreshExamConfigs,
     saveExamSubjects,
-    openExamPicker: () => setPickerOpen(true),
+    openExamPicker: () => {
+      /* multi-exam picker paused */
+    },
     closeExamPicker,
   };
 

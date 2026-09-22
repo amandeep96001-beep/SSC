@@ -16,6 +16,7 @@ import { sameDrillAnswer } from '../hooks/useDrills';
 import '@/features/dashboard/Dashboard.css';
 import '@/features/exam/exam.css';
 import '@/features/drills/drills.css';
+import '@/shared/components/guest-locked.css';
 
 interface RelatedQuestion {
   _id?: string;
@@ -501,6 +502,10 @@ interface DrillWorkspaceProps {
   loadNextDrill: (typeToLoad?: string, baseLimit?: number) => void;
   initialTab?: string;
   onConsumedInitialTab?: () => void;
+  isGuestTrial?: boolean;
+  guestRemaining?: number;
+  guestLimit?: number;
+  onSignIn?: () => void;
 }
 
 export function DrillWorkspace({
@@ -510,6 +515,10 @@ export function DrillWorkspace({
   changeDrillType, submitDrillAnswer, skipDrillQuestion, loadNextDrill,
   initialTab = 'drill',
   onConsumedInitialTab,
+  isGuestTrial = false,
+  guestRemaining = 0,
+  guestLimit = 10,
+  onSignIn,
 }: DrillWorkspaceProps) {
   const [activeTab, setActiveTab] = useState(initialTab === 'wronglog' ? 'wronglog' : 'drill');
   const [wrongFilter, setWrongFilter] = useState(initialTab === 'wronglog' ? 'vocab' : 'all'); // all | vocab | other
@@ -545,6 +554,16 @@ export function DrillWorkspace({
 
   return (
     <div className="drill-workspace">
+      {isGuestTrial && (
+        <div className="guest-banner" role="status">
+          <p className="guest-banner__copy">
+            <strong>Free trial</strong> — {guestRemaining} of {guestLimit} drills left. Sign in for unlimited practice.
+          </p>
+          <button type="button" className="guest-banner__cta" onClick={() => onSignIn?.()}>
+            Sign in
+          </button>
+        </div>
+      )}
       <div className="workspace-header-sticky">
         <div className="section-header">
           <h1>Daily Speed Drills</h1>

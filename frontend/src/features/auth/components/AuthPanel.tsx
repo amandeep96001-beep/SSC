@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react';
 import { Helmet } from 'react-helmet-async';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
@@ -18,6 +18,31 @@ const OTP_LEN = 6;
 function prefersReducedMotion() {
   return typeof window !== 'undefined'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function readResetTokenFromUrl(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const token = (params.get('reset') || params.get('resetToken') || '').trim();
+    return token.length >= 20 ? token : '';
+  } catch {
+    return '';
+  }
+}
+
+function clearResetParamsFromUrl() {
+  if (typeof window === 'undefined') return;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('reset') && !params.has('resetToken')) return;
+    params.delete('reset');
+    params.delete('resetToken');
+    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+    window.history.replaceState({}, '', next);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Never surface raw API / stack messages in the UI. */
@@ -185,6 +210,9 @@ interface AuthPanelProps {
   verifyPasswordResetOtp: (email: string, code: string) => Promise<AuthActionResult>;
   resetPassword: (token: string, password: string) => Promise<AuthActionResult>;
   loginWithGoogle: (payload: string | { credential?: string; code?: string }) => Promise<AuthActionResult>;
+  /** page = full-screen (legacy); modal = overlay from guest browse */
+  variant?: 'page' | 'modal';
+  onClose?: () => void;
 }
 
 export function AuthPanel({
@@ -196,8 +224,10 @@ export function AuthPanel({
   verifyPasswordResetOtp,
   resetPassword,
   loginWithGoogle,
+  variant = 'page',
+  onClose,
 }: AuthPanelProps) {
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(() => (readResetTokenFromUrl() ? 'reset' : 'login'));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -207,8 +237,13 @@ export function AuthPanel({
   const [resendIn, setResendIn] = useState(0);
   const [mailSent, setMailSent] = useState(true);
   const [debugOtp, setDebugOtp] = useState('');
-  const [resetToken, setResetToken] = useState('');
-  const [resetUrl, setResetUrl] = useState('');
+  const [resetToken, setResetToken] = useState(() => readResetTokenFromUrl());
+  const [resetUrl, setResetUrl] = useState(() => {
+    const token = readResetTokenFromUrl();
+    return token && typeof window !== 'undefined'
+      ? `${window.location.origin}/?reset=${encodeURIComponent(token)}`
+      : '';
+  });
   const [googleClientId, setGoogleClientId] = useState(
     () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
   );
@@ -244,6 +279,13 @@ export function AuthPanel({
     }
 
     const shell = shellRef.current;
+    // Modal overlay: skip heavy entrance — CSS already shows shell
+    if (variant === 'modal') {
+      gsap.set(shell, { opacity: 1, clearProps: 'filter,transform' });
+      entranceDoneRef.current = true;
+      return;
+    }
+
     const showcase = shell.querySelectorAll(
       '.auth-showcase__art, .auth-showcase__eyebrow, .auth-showcase__title, .auth-showcase__copy, .auth-showcase__exams'
     );
@@ -296,7 +338,7 @@ export function AuthPanel({
         repeat: -1,
       });
     }
-  }, { scope: pageRef });
+  }, { scope: pageRef, dependencies: [variant] });
 
   // Mode switch — cross-fade / rise the form stage
   useGSAP(() => {
@@ -368,25 +410,11 @@ export function AuthPanel({
     resetAuthFields();
   };
 
-  // Deep-link: /?reset=<token> opens the set-password step with the secure token.
+  // Deep-link: /?reset=<token> — state seeded above; only clean the URL here.
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const token = (params.get('reset') || params.get('resetToken') || '').trim();
-      if (!token || token.length < 20) return;
-      setResetToken(token);
-      setResetUrl(`${window.location.origin}/?reset=${encodeURIComponent(token)}`);
-      setMode('reset');
-      setPassword('');
-      setConfirmPassword('');
-      params.delete('reset');
-      params.delete('resetToken');
-      const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
-      window.history.replaceState({}, '', next);
-    } catch {
-      // ignore malformed URLs
-    }
-  }, []);
+    if (!resetToken) return;
+    clearResetParamsFromUrl();
+  }, [resetToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -788,14 +816,20 @@ export function AuthPanel({
   }[mode] || 'Sign in';
 
   return (
-    <div className="auth-page" ref={pageRef}>
+    <div
+      className={`auth-page${variant === 'modal' ? ' auth-page--modal' : ''}`}
+      ref={pageRef}
+      role={variant === 'modal' ? 'dialog' : undefined}
+      aria-modal={variant === 'modal' ? true : undefined}
+      aria-label={variant === 'modal' ? 'Sign in' : undefined}
+    >
       <div className="auth-page__wallpaper" aria-hidden="true" />
       <div className="auth-page__veil" aria-hidden="true" />
       <div className="auth-page__orb auth-page__orb--a" aria-hidden="true" />
       <div className="auth-page__orb auth-page__orb--b" aria-hidden="true" />
       <Helmet>
         <title>{pageTitle(pageHeading)}</title>
-        <meta name="description" content="Sign in to CrackuEx — SSC CGL, CHSL, GD, Banking and Railways exam prep with drills, mocks and revision decks." />
+        <meta name="description" content="Sign in to CrackuEx — competitive exam prep with drills, mocks, notes and revision decks." />
         <meta name="robots" content="noindex, follow" />
         <meta
           httpEquiv="Permissions-Policy"
@@ -806,6 +840,12 @@ export function AuthPanel({
       <button type="button" className="auth-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
         {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
       </button>
+
+      {variant === 'modal' && onClose && (
+        <button type="button" className="auth-modal-dismiss" onClick={onClose}>
+          Continue browsing
+        </button>
+      )}
 
       <div className="auth-shell" ref={shellRef}>
         <aside className="auth-showcase" aria-hidden="true">
@@ -853,10 +893,10 @@ export function AuthPanel({
               Notes, drills, and mocks in one quiet place — built for long study days.
             </p>
             <ul className="auth-showcase__exams">
-              <li>SSC</li>
-              <li>Banking</li>
-              <li>Railways</li>
-              <li>UPSC</li>
+              <li>Drills</li>
+              <li>Mocks</li>
+              <li>Notes</li>
+              <li>Revision</li>
             </ul>
           </div>
         </aside>
