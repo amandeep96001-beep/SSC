@@ -19,6 +19,6 @@
     "verbatimModuleSyntax": false,
     "types": ["node"]
   },
-  "include": ["server.ts", "src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "tests", "scripts"]
+  "include": ["server.ts", "worker.ts", "src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "test", "scripts", "vitest.config.ts"]
 }

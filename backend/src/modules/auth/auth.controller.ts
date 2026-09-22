@@ -19,10 +19,14 @@ export class AuthController {
   });
 
   getMe = asyncHandler(async (req, res) => {
-    const data = await this.authService.getMe(req.user!.id, req.user!.username, {
-      email: req.user!.email,
-      role: req.user!.role,
-    });
+    const include = String(req.query.include || '');
+    const includeAvatar = include.split(',').map((s) => s.trim()).includes('avatar');
+    const data = await this.authService.getMe(
+      req.user!.id,
+      req.user!.username,
+      { email: req.user!.email, role: req.user!.role },
+      { includeAvatar },
+    );
     return ok(res, { data });
   });
 

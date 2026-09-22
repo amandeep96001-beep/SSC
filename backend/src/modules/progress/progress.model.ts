@@ -1,7 +1,8 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, Types } from 'mongoose';
 import type { IProgress } from './progress.interface.js';
 
 const ProgressSchema = new Schema<IProgress>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   username: { type: String, required: true, index: true },
   examId: { type: String, required: false, index: true, default: null },
   subjectName: { type: String, required: false, default: null },
@@ -11,12 +12,15 @@ const ProgressSchema = new Schema<IProgress>({
   status: { type: String, enum: ['red', 'yellow', 'green'], required: true },
   elapsedTime: { type: String, required: false },
   attemptNumber: { type: Number, default: 1 },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
 });
 
+ProgressSchema.index({ userId: 1, timestamp: -1 });
+ProgressSchema.index({ userId: 1, examId: 1, topicId: 1 });
 ProgressSchema.index({ username: 1, examId: 1, topicId: 1 });
 ProgressSchema.index({ username: 1, timestamp: -1 });
 
 const Progress = mongoose.model<IProgress>('Progress', ProgressSchema);
 
+export type ProgressUserId = Types.ObjectId;
 export default Progress;

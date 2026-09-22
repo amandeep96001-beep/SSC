@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import progressRepository from './progress.repository.js';
 import mockProgressRepository from './mock-progress.repository.js';
 import authRepository from '../auth/auth.repository.js';
@@ -21,41 +22,85 @@ interface CsvExportResult {
   filename: string;
 }
 
+function computeSyllabusScore(body: SaveProgressInput): { score: number; maxScore: number; status: ProgressStatus } {
+  const maxScore = Math.min(10_000, Math.max(1, Number(body.maxScore) || 50));
+  const hasCounts =
+    body.correct !== undefined || body.wrong !== undefined || body.blank !== undefined;
+
+  let score: number;
+  if (hasCounts) {
+    const correct = Math.max(0, Number(body.correct) || 0);
+    const wrong = Math.max(0, Number(body.wrong) || 0);
+    const blank = Math.max(0, Number(body.blank) || 0);
+    const total = correct + wrong + blank;
+    if (total > 0) {
+      score = Math.min(maxScore, Math.round((correct / total) * maxScore));
+    } else {
+      score = Math.min(maxScore, Math.max(0, Number(body.score) || 0));
+    }
+  } else {
+    score = Math.min(maxScore, Math.max(0, Number(body.score) || 0));
+  }
+
+  let status: ProgressStatus = 'red';
+  if (score >= maxScore * 0.8) status = 'green';
+  else if (score >= maxScore * 0.4) status = 'yellow';
+
+  return { score, maxScore, status };
+}
+
+function computeMockScore(body: SaveMockProgressInput): {
+  score: number;
+  correct: number;
+  wrong: number;
+  blank: number;
+  accuracy: number;
+} {
+  const correct = Math.min(500, Math.max(0, Number(body.correct) || 0));
+  const wrong = Math.min(500, Math.max(0, Number(body.wrong) || 0));
+  const blank = Math.min(500, Math.max(0, Number(body.blank) || 0));
+  const answered = correct + wrong;
+  const accuracy =
+    answered > 0
+      ? Math.round((correct / answered) * 1000) / 10
+      : Math.min(100, Math.max(0, Number(body.accuracy) || 0));
+  // Prefer count-derived score; ignore client score when counts are present.
+  const score = correct - wrong * 0.25;
+
+  return { score, correct, wrong, blank, accuracy };
+}
+
 export class ProgressService {
   async saveProgress(
-    username: string,
     userId: string,
+    username: string,
     body: SaveProgressInput,
   ): Promise<ProgressSaveResult> {
-    const { topicId, score, maxScore, elapsedTime, examId, subjectName } = body;
+    const topicId = String(body.topicId || '').trim();
     if (!topicId) throw badRequest('topicId is required.');
 
-    let status: ProgressStatus = 'red';
-    const dynamicMaxScore = maxScore || 50;
-    const scoreNum = Number(score) || 0;
-    if (scoreNum >= dynamicMaxScore * 0.8) status = 'green';
-    else if (scoreNum >= dynamicMaxScore * 0.4) status = 'yellow';
+    const { score, maxScore, status } = computeSyllabusScore(body);
+    const scopedExamId = body.examId ? String(body.examId).trim() : null;
+    const scopedSubject = body.subjectName ? String(body.subjectName).trim() : null;
 
-    const scopedExamId = examId ? String(examId).trim() : null;
-    const scopedSubject = subjectName ? String(subjectName).trim() : null;
-
-    const attemptFilter: { username: string; topicId: string; examId?: string } = {
-      username,
-      topicId: String(topicId),
+    const attemptFilter = {
+      userId,
+      topicId,
+      ...(scopedExamId ? { examId: scopedExamId } : {}),
     };
-    if (scopedExamId) attemptFilter.examId = scopedExamId;
 
     const existingCount = await progressRepository.countAttempts(attemptFilter);
 
     await progressRepository.create({
+      userId: new mongoose.Types.ObjectId(userId),
       username,
       examId: scopedExamId,
       subjectName: scopedSubject,
-      topicId: String(topicId),
-      score: scoreNum,
-      maxScore: dynamicMaxScore,
+      topicId,
+      score,
+      maxScore,
       status,
-      elapsedTime: elapsedTime != null ? String(elapsedTime) : undefined,
+      elapsedTime: body.elapsedTime != null ? String(body.elapsedTime) : undefined,
       attemptNumber: existingCount + 1,
       timestamp: new Date(),
     });
@@ -63,48 +108,45 @@ export class ProgressService {
     await authRepository.touchLastStudyAt(userId);
 
     return {
-      data: await progressRepository.findByUsername(username),
+      data: await progressRepository.findByUserId(userId),
       lastStudyAt: new Date().toISOString(),
     };
   }
 
   async saveMockProgress(
-    username: string,
     userId: string,
+    username: string,
     body: SaveMockProgressInput,
   ): Promise<ProgressSaveResult> {
-    const {
-      mockTestId, title, score, correct, wrong, blank, accuracy,
-      elapsedTime, sectionTimes, examId,
-    } = body;
+    const scopedMockTestId = String(body.mockTestId || '').trim();
+    if (!scopedMockTestId) throw badRequest('mockTestId is required.');
 
-    const scopedExamId = examId ? String(examId).trim() : null;
-    const scopedMockTestId = mockTestId ? String(mockTestId).trim() : '';
-    if (!scopedMockTestId) {
-      throw badRequest('mockTestId is required.');
-    }
-    const attemptFilter: { username: string; mockTestId: string; examId?: string } = {
-      username,
+    const scopedExamId = body.examId ? String(body.examId).trim() : null;
+    const { score, correct, wrong, blank, accuracy } = computeMockScore(body);
+
+    const attemptFilter = {
+      userId,
       mockTestId: scopedMockTestId,
+      ...(scopedExamId ? { examId: scopedExamId } : {}),
     };
-    if (scopedExamId) attemptFilter.examId = scopedExamId;
 
     const existingCount = await mockProgressRepository.countAttempts(attemptFilter);
 
     await mockProgressRepository.create({
+      userId: new mongoose.Types.ObjectId(userId),
       username,
       examId: scopedExamId,
       mockTestId: scopedMockTestId,
-      title: String(title ?? ''),
-      score: Number(score) || 0,
-      correct: Number(correct) || 0,
-      wrong: Number(wrong) || 0,
-      blank: Number(blank) || 0,
-      accuracy: Number(accuracy) || 0,
-      elapsedTime: elapsedTime != null ? String(elapsedTime) : undefined,
+      title: String(body.title ?? '').slice(0, 200),
+      score,
+      correct,
+      wrong,
+      blank,
+      accuracy,
+      elapsedTime: body.elapsedTime != null ? String(body.elapsedTime) : undefined,
       sectionTimes:
-        sectionTimes && typeof sectionTimes === 'object'
-          ? (sectionTimes as Record<string, unknown>)
+        body.sectionTimes && typeof body.sectionTimes === 'object'
+          ? body.sectionTimes
           : null,
       attemptNumber: existingCount + 1,
       timestamp: new Date(),
@@ -113,17 +155,49 @@ export class ProgressService {
     await authRepository.touchLastStudyAt(userId);
 
     return {
-      data: await mockProgressRepository.findByUsername(username),
+      data: await mockProgressRepository.findByUserId(userId),
       lastStudyAt: new Date().toISOString(),
     };
   }
 
+  async listProgress(userId: string, opts: { limit?: number; before?: string } = {}) {
+    const limit = Math.min(100, Math.max(1, opts.limit || 50));
+    const before = opts.before ? new Date(opts.before) : undefined;
+    const rows = await progressRepository.findPageByUserId(userId, {
+      limit: limit + 1,
+      before: before && !Number.isNaN(before.getTime()) ? before : undefined,
+    });
+    const hasMore = rows.length > limit;
+    const data = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor =
+      hasMore && data.length > 0
+        ? new Date(data[data.length - 1].timestamp as Date).toISOString()
+        : null;
+    return { data, nextCursor };
+  }
+
+  async listMockProgress(userId: string, opts: { limit?: number; before?: string } = {}) {
+    const limit = Math.min(100, Math.max(1, opts.limit || 30));
+    const before = opts.before ? new Date(opts.before) : undefined;
+    const rows = await mockProgressRepository.findPageByUserId(userId, {
+      limit: limit + 1,
+      before: before && !Number.isNaN(before.getTime()) ? before : undefined,
+    });
+    const hasMore = rows.length > limit;
+    const data = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor =
+      hasMore && data.length > 0
+        ? new Date(data[data.length - 1].timestamp as Date).toISOString()
+        : null;
+    return { data, nextCursor };
+  }
+
   async exportMockProgressCsv(opts: ProgressExportOptions): Promise<CsvExportResult> {
-    const filter: { username?: string; examId?: string } = {};
+    const filter: { userId?: string; username?: string; examId?: string } = {};
     if (opts.scope === 'all') {
       if (opts.role !== 'admin') throw forbidden('Admin access required.');
     } else {
-      filter.username = opts.username;
+      filter.userId = opts.userId;
     }
     if (opts.examId) filter.examId = opts.examId;
 
@@ -133,11 +207,11 @@ export class ProgressService {
   }
 
   async exportSyllabusProgressCsv(opts: ProgressExportOptions): Promise<CsvExportResult> {
-    const filter: { username?: string; examId?: string } = {};
+    const filter: { userId?: string; username?: string; examId?: string } = {};
     if (opts.scope === 'all') {
       if (opts.role !== 'admin') throw forbidden('Admin access required.');
     } else {
-      filter.username = opts.username;
+      filter.userId = opts.userId;
     }
     if (opts.examId) filter.examId = opts.examId;
 

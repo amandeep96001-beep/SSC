@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import hpp from 'hpp';
-import morgan from 'morgan';
+import { pinoHttp } from 'pino-http';
 import apiRouter from './routes/index.js';
 import { getDBStatus } from './config/db.config.js';
 import { isHostedRuntime } from './config/env.config.js';
@@ -12,6 +12,8 @@ import { notFound, errorHandler } from './middleware/error.middleware.js';
 import { mongoSanitize } from './middleware/sanitize.middleware.js';
 import { createRateLimitStore } from './infra/rate-limit-store.js';
 import { getRedis, isRedisReady } from './infra/redis.js';
+import { logger } from './lib/logger.js';
+import { requestIdMiddleware } from './lib/request-id.js';
 
 function normalizeOrigin(url: unknown): string {
   return String(url || '').trim().replace(/\/+$/, '');
@@ -70,6 +72,8 @@ export function createApp() {
     app.set('trust proxy', 1);
   }
 
+  app.use(requestIdMiddleware);
+
   app.use(helmet({
     contentSecurityPolicy: hosted ? undefined : false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -93,12 +97,14 @@ export function createApp() {
     if (!origin) return next();
     if (isOriginAllowed(origin, allowedOrigins)) return next();
 
-    console.warn(`[cors] Blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || '(none)'}`);
+    logger.warn({ origin, allowedOrigins, msg: 'CORS origin blocked' });
 
     if (req.method === 'OPTIONS') {
       return res.status(403).json({
         status: 'error',
+        code: 'CORS_BLOCKED',
         message: 'CORS origin not allowed. Set FRONTEND_URL / FRONTEND_URLS on the API host.',
+        requestId: req.requestId,
       });
     }
     return next();
@@ -114,7 +120,7 @@ export function createApp() {
     },
     credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
     optionsSuccessStatus: 204,
   }));
 
@@ -122,14 +128,22 @@ export function createApp() {
   app.use(express.urlencoded({ extended: false, limit: '2mb' }));
   app.use(mongoSanitize);
   app.use(hpp());
-  app.use(morgan(hosted ? 'combined' : 'dev'));
+
+  app.use(pinoHttp({
+    logger,
+    genReqId: (req) => req.requestId || 'unknown',
+    customProps: (req) => ({ requestId: req.requestId }),
+    autoLogging: {
+      ignore: (req) => req.url === '/health' || req.url === '/keepalive' || req.url === '/api/health',
+    },
+  }));
 
   if (hosted) {
     const max = Number(process.env.RATE_LIMIT_API_MAX || 1200);
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000,
       max: Number.isFinite(max) && max > 0 ? Math.floor(max) : 1200,
-      message: { status: 'error', message: 'Too many requests. Please try again later.' },
+      message: { status: 'error', code: 'TOO_MANY_REQUESTS', message: 'Too many requests. Please try again later.' },
       standardHeaders: true,
       legacyHeaders: false,
       store: createRateLimitStore('api'),
@@ -143,11 +157,10 @@ export function createApp() {
     res.json({
       status: 'ok',
       message: 'CrackuEx API',
-      version: '1.1.0',
+      version: '1.2.0',
     });
   });
 
-  // Eager Redis client (no-op when REDIS_URL unset)
   getRedis();
 
   app.get('/health', (_req, res) => {

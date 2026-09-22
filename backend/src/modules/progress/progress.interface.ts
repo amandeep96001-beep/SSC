@@ -1,6 +1,8 @@
+import type { Types } from 'mongoose';
 import type { ProgressStatus } from '../../types/domain.js';
 
 export interface IProgress {
+  userId: Types.ObjectId;
   username: string;
   examId?: string | null;
   subjectName?: string | null;
@@ -14,6 +16,7 @@ export interface IProgress {
 }
 
 export interface IMockProgress {
+  userId: Types.ObjectId;
   username: string;
   examId?: string | null;
   mockTestId: string;
@@ -30,41 +33,46 @@ export interface IMockProgress {
 }
 
 export interface SaveProgressInput {
-  topicId?: unknown;
+  topicId: string;
   score?: number;
   maxScore?: number;
-  elapsedTime?: unknown;
-  examId?: unknown;
-  subjectName?: unknown;
+  correct?: number;
+  wrong?: number;
+  blank?: number;
+  elapsedTime?: string;
+  examId?: string;
+  subjectName?: string;
 }
 
 export interface SaveMockProgressInput {
-  mockTestId?: unknown;
-  title?: unknown;
-  score?: unknown;
-  correct?: unknown;
-  wrong?: unknown;
-  blank?: unknown;
-  accuracy?: unknown;
-  elapsedTime?: unknown;
-  sectionTimes?: unknown;
-  examId?: unknown;
+  mockTestId: string;
+  title: string;
+  score?: number;
+  correct: number;
+  wrong: number;
+  blank: number;
+  accuracy?: number;
+  elapsedTime?: string;
+  sectionTimes?: Record<string, unknown>;
+  examId?: string;
 }
 
 export interface ProgressExportOptions {
   scope: string;
   examId: string | null;
+  userId: string;
   username: string;
   role: string;
 }
 
 export interface ProgressAttemptFilter {
-  username: string;
+  userId: string;
   topicId: string;
   examId?: string;
 }
 
 export interface ProgressCreateData {
+  userId: Types.ObjectId | string;
   username: string;
   examId?: string | null;
   subjectName?: string | null;
@@ -78,17 +86,19 @@ export interface ProgressCreateData {
 }
 
 export interface ProgressListFilter {
+  userId?: string;
   username?: string;
   examId?: string;
 }
 
 export interface MockProgressAttemptFilter {
-  username: string;
+  userId: string;
   mockTestId: string;
   examId?: string;
 }
 
 export interface MockProgressCreateData {
+  userId: Types.ObjectId | string;
   username: string;
   examId?: string | null;
   mockTestId: string;
@@ -105,6 +115,7 @@ export interface MockProgressCreateData {
 }
 
 export interface MockProgressListFilter {
+  userId?: string;
   username?: string;
   examId?: string;
 }

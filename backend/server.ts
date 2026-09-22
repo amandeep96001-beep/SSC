@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import { connectDB, getDBStatus } from './src/config/db.config.js';
+import { connectDB } from './src/config/db.config.js';
 import { validateEnv, isHostedRuntime } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
+import { logger } from './src/lib/logger.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.basename(here) === 'dist' ? path.resolve(here, '..') : here;
@@ -23,7 +24,7 @@ async function start() {
   try {
     await connectDB();
   } catch (err) {
-    console.error('MongoDB connection failed:', err instanceof Error ? err.message : err);
+    logger.error({ err, msg: 'MongoDB connection failed' });
     if (isHostedRuntime()) {
       process.exit(1);
     }
@@ -31,18 +32,19 @@ async function start() {
 
   const app = createApp();
 
-  const { startReminderCron } = await import('./src/modules/reminders/reminder.cron.js');
-  startReminderCron();
+  // Inline reminders (BullMQ when Redis is set, else in-process cron).
+  // Dedicated workers set REMINDER_INLINE=0 and run worker.ts instead.
+  if (String(process.env.REMINDER_INLINE || '1') !== '0') {
+    const { startReminderRuntime } = await import('./src/modules/reminders/reminder.runtime.js');
+    await startReminderRuntime();
+  }
 
   app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-    if (!getDBStatus()) {
-      console.warn('Database not connected — DB routes will return 503');
-    }
+    logger.info({ port: PORT, msg: 'Server listening' });
   });
 }
 
 start().catch((err) => {
-  console.error('Failed to start server:', err);
+  logger.error({ err, msg: 'Failed to start server' });
   process.exit(1);
 });

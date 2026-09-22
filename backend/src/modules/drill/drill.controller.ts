@@ -1,49 +1,38 @@
 import { asyncHandler } from '../../utils/async-handler.js';
 import { ok } from '../../utils/api-response.js';
 import { DrillService } from './drill.service.js';
+import type { VerifyDrillBody } from './drill.schema.js';
 
 export class DrillController {
   constructor(private readonly drillService = new DrillService()) {}
 
   getNextDrill = asyncHandler(async (req, res) => {
     const type = String(req.query.type || 'table');
-    const userId = (req.user as { _id?: unknown } | undefined)?._id ?? null;
-
     const data = await this.drillService.getNextDrill({
       type,
       maxBase: req.query.maxBase,
-      userId,
+      userId: req.user!.id,
     });
-
     return ok(res, { data });
   });
 
   verifyDrill = asyncHandler(async (req, res) => {
-    const { type, userAnswer, correctAnswer, questionId, question } = req.body;
-    const userId = req.user?.id ?? null;
-
+    const body = req.body as VerifyDrillBody;
     const data = await this.drillService.verifyDrill({
-      type,
-      userAnswer,
-      correctAnswer,
-      questionId,
-      question,
-      userId,
+      challengeToken: body.challengeToken,
+      userAnswer: body.userAnswer,
+      userId: req.user!.id,
     });
-
     return ok(res, { data });
   });
 
   getRelatedQuestions = asyncHandler(async (req, res) => {
-    const { category, type, excludeQuestion, excludeIds } = req.query;
-
     const data = await this.drillService.getRelatedQuestions({
-      category,
-      type,
-      excludeQuestion,
-      excludeIds,
+      category: req.query.category,
+      type: req.query.type,
+      excludeQuestion: req.query.excludeQuestion,
+      excludeIds: req.query.excludeIds,
     });
-
     return ok(res, { data });
   });
 }

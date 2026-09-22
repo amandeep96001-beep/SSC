@@ -41,22 +41,35 @@ function resolveRole(email: string | null | undefined): 'user' | 'admin' {
 export class AuthService {
   constructor(private readonly otpService = new OtpService()) {}
 
-  async buildSessionPayload(user: UserDoc): Promise<PublicUserPayload> {
+  async buildSessionPayload(
+    user: UserDoc,
+    opts: { includeAvatar?: boolean } = {},
+  ): Promise<PublicUserPayload> {
     // Single active device: bump tokenVersion so every other session dies immediately.
     const newTv = await authRepository.bumpTokenVersion(String(user._id));
     user.tokenVersion = newTv;
 
-    const [progress, mockProgress] = await Promise.all([
-      progressRepository.findByUsername(user.username),
-      mockProgressRepository.findByUsername(user.username),
+    const userId = String(user._id);
+    let [progress, mockProgress] = await Promise.all([
+      progressRepository.findByUserId(userId),
+      mockProgressRepository.findByUserId(userId),
     ]);
+    // Migration window: fall back to username-keyed rows until backfill completes.
+    if (!progress.length) {
+      progress = await progressRepository.findByUsername(user.username);
+    }
+    if (!mockProgress.length) {
+      mockProgress = await mockProgressRepository.findByUsername(user.username);
+    }
     const token = signToken(user);
-    return publicUserPayload(user, progress, mockProgress, token);
+    return publicUserPayload(user, progress, mockProgress, token, {
+      includeAvatar: opts.includeAvatar !== false,
+    });
   }
 
   async updateProfile(
     userId: string,
-    username: string,
+    _username: string,
     input: { displayName?: unknown; avatarUrl?: unknown },
   ): Promise<PublicUserPayload> {
     const user = await authRepository.findById(userId);
@@ -83,11 +96,11 @@ export class AuthService {
     await invalidateAuthUser(userId);
 
     const [progress, mockProgress] = await Promise.all([
-      progressRepository.findByUsername(username),
-      mockProgressRepository.findByUsername(username),
+      progressRepository.findByUserId(userId),
+      mockProgressRepository.findByUserId(userId),
     ]);
 
-    return publicUserPayload(user, progress, mockProgress);
+    return publicUserPayload(user, progress, mockProgress, null, { includeAvatar: true });
   }
 
   async register(input: RegisterInput): Promise<RegisterResult> {
@@ -196,12 +209,20 @@ export class AuthService {
     userId: string,
     username: string,
     fallback?: SessionFallback,
+    opts: { includeAvatar?: boolean } = {},
   ): Promise<PublicUserPayload> {
-    const [progress, mockProgress, dbUser] = await Promise.all([
-      progressRepository.findByUsername(username),
-      mockProgressRepository.findByUsername(username),
-      authRepository.findByIdLean(userId),
+    const includeAvatar = opts.includeAvatar === true;
+    let [progress, mockProgress, dbUser] = await Promise.all([
+      progressRepository.findByUserId(userId),
+      mockProgressRepository.findByUserId(userId),
+      authRepository.findByIdLean(userId, includeAvatar ? undefined : { avatarUrl: 0 }),
     ]);
+    if (!progress.length) {
+      progress = await progressRepository.findByUsername(username);
+    }
+    if (!mockProgress.length) {
+      mockProgress = await mockProgressRepository.findByUsername(username);
+    }
 
     const lastStudyAt = deriveLastStudyAt(progress, mockProgress, dbUser?.lastStudyAt ?? null);
     if (lastStudyAt && !dbUser?.lastStudyAt) {
@@ -213,13 +234,15 @@ export class AuthService {
         username,
         email: dbUser?.email || fallback?.email || null,
         displayName: dbUser?.displayName || null,
-        avatarUrl: dbUser?.avatarUrl || null,
+        avatarUrl: includeAvatar ? (dbUser?.avatarUrl || null) : null,
         emailVerified: Boolean(dbUser?.emailVerified),
         role: dbUser?.role || fallback?.role || 'user',
         lastStudyAt: dbUser?.lastStudyAt || lastStudyAt,
       },
       progress,
       mockProgress,
+      null,
+      { includeAvatar },
     );
   }
 

@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import type { IMockProgress } from './progress.interface.js';
 
 const MockProgressSchema = new Schema<IMockProgress>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   username: { type: String, required: true, index: true },
   examId: { type: String, required: false, index: true, default: null },
   mockTestId: { type: String, required: true },
@@ -14,9 +15,11 @@ const MockProgressSchema = new Schema<IMockProgress>({
   elapsedTime: { type: String, required: false },
   sectionTimes: { type: Schema.Types.Mixed, required: false },
   attemptNumber: { type: Number, default: 1 },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
 });
 
+MockProgressSchema.index({ userId: 1, timestamp: -1 });
+MockProgressSchema.index({ userId: 1, examId: 1, mockTestId: 1 });
 MockProgressSchema.index({ username: 1, examId: 1, mockTestId: 1 });
 MockProgressSchema.index({ username: 1, timestamp: -1 });
 

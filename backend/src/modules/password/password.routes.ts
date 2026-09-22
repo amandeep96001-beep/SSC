@@ -1,18 +1,18 @@
 import express from 'express';
 import { passwordController } from './password.controller.js';
 import {
-  forgotPasswordValidation,
-  verifyPasswordResetOtpValidation,
-  resetPasswordValidation,
-} from './password.validation.js';
-import { validateRequest } from '../../middleware/validate.middleware.js';
+  forgotPasswordSchema,
+  verifyPasswordResetOtpSchema,
+  resetPasswordSchema,
+} from './password.schema.js';
+import { validate } from '../../lib/validate.js';
 import { requireDb } from '../../middleware/db.middleware.js';
 import { authLimiter, otpLimiter } from '../../middleware/rate-limit.js';
 
 const router = express.Router();
 
-router.post('/password/forgot', otpLimiter, requireDb, forgotPasswordValidation, validateRequest, passwordController.forgotPassword);
-router.post('/password/verify-otp', authLimiter, requireDb, verifyPasswordResetOtpValidation, validateRequest, passwordController.verifyPasswordResetOtp);
-router.post('/password/reset', authLimiter, requireDb, resetPasswordValidation, validateRequest, passwordController.resetPassword);
+router.post('/password/forgot', otpLimiter, requireDb, validate(forgotPasswordSchema), passwordController.forgotPassword);
+router.post('/password/verify-otp', authLimiter, requireDb, validate(verifyPasswordResetOtpSchema), passwordController.verifyPasswordResetOtp);
+router.post('/password/reset', authLimiter, requireDb, validate(resetPasswordSchema), passwordController.resetPassword);
 
 export default router;

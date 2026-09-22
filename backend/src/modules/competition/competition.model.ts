@@ -2,6 +2,7 @@ import mongoose, { Schema } from 'mongoose';
 import type { ICompetitionScore } from './competition.interface.js';
 
 const CompetitionScoreSchema = new Schema<ICompetitionScore>({
+  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
   username: { type: String, required: true, index: true },
   subject: {
     type: String,
@@ -19,6 +20,7 @@ const CompetitionScoreSchema = new Schema<ICompetitionScore>({
 });
 
 CompetitionScoreSchema.index({ subject: 1, score: -1, timeTaken: 1 });
+CompetitionScoreSchema.index({ userId: 1, subject: 1, score: -1 });
 
 const CompetitionScore = mongoose.model<ICompetitionScore>('CompetitionScore', CompetitionScoreSchema);
 

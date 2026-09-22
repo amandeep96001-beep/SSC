@@ -1,5 +1,6 @@
 import CompetitionScore from './competition.model.js';
 import TCSQuestion from '../questions/tcs-question.model.js';
+import type { Types } from 'mongoose';
 
 class CompetitionRepository {
   async sampleQuestions(matchFilter: object, size: number) {
@@ -19,13 +20,23 @@ class CompetitionRepository {
     ]);
   }
 
-  async createScore(data: Record<string, unknown>) {
+  async createScore(data: {
+    userId: Types.ObjectId | string;
+    username: string;
+    subject: string;
+    score: number;
+    correct: number;
+    wrong: number;
+    skipped: number;
+    accuracy: number;
+    timeTaken: number;
+  }) {
     return CompetitionScore.create(data);
   }
 
-  async findPersonalBest(username: string, subject: string) {
+  async findPersonalBest(userId: string, subject: string) {
     return CompetitionScore.findOne(
-      { username, subject },
+      { userId, subject },
       null,
       { sort: { score: -1, timeTaken: 1 } },
     ).lean();

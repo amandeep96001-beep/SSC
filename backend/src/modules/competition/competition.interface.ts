@@ -1,6 +1,9 @@
+import type { Types } from 'mongoose';
+
 export type CompetitionSubject = 'GK' | 'English' | 'Maths' | 'Reasoning' | 'Mixed';
 
 export interface ICompetitionScore {
+  userId: Types.ObjectId;
   username: string;
   subject: CompetitionSubject | string;
   score: number;
@@ -15,14 +18,21 @@ export interface ICompetitionScore {
 export interface CompetitionQuestionMeta {
   total: number;
   subject: string;
+  sessionToken: string;
 }
 
 export interface SubmitScoreInput {
-  subject?: unknown;
-  score?: unknown;
-  correct?: unknown;
-  wrong?: unknown;
-  skipped?: unknown;
-  accuracy?: unknown;
-  timeTaken?: unknown;
+  sessionToken: string;
+  answers: Array<number | null>;
+  timeTaken: number;
+  subject?: string;
+}
+
+export interface PublicCompetitionQuestion {
+  _id: string;
+  question: string;
+  options: string[];
+  subject?: string;
+  category?: string;
+  explanation?: string;
 }

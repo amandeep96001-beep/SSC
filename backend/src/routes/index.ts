@@ -25,6 +25,15 @@ function googleClientId(): string {
   return process.env.GOOGLE_CLIENT_ID?.trim() || '';
 }
 
+/** Mount a feature router behind DB + auth without catching unrelated 404s. */
+function mountProtected(path: string, feature: express.Router) {
+  router.use(path, requireDb, requireAuth, feature);
+}
+
+// ---------------------------------------------------------------------------
+// Public routes (no auth)
+// ---------------------------------------------------------------------------
+
 router.get('/health', (_req, res) => {
   const dbOk = getDBStatus();
   res.status(dbOk ? 200 : 503).json({
@@ -49,20 +58,21 @@ router.get('/auth/google-config', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/auth', otpRoutes);
 router.use('/auth', passwordRoutes);
-router.use('/auth', progressRoutes);
-router.use('/auth', adminRoutes);
 
-router.use(requireDb);
-router.use(requireAuth);
+// ---------------------------------------------------------------------------
+// Protected routes (DB + auth per mount)
+// ---------------------------------------------------------------------------
 
-router.use('/prep', prepRoutes);
-router.use('/study', studyRoutes);
-router.use('/drill', drillRoutes);
-router.use('/mock', mockRoutes);
-router.use('/ai', aiRoutes);
-router.use('/competition', competitionRoutes);
-router.use('/exam-config', examConfigRoutes);
-router.use('/questions', tcsQuestionRoutes);
-router.use('/reminders', reminderRoutes);
+mountProtected('/auth', progressRoutes);
+mountProtected('/auth', adminRoutes);
+mountProtected('/prep', prepRoutes);
+mountProtected('/study', studyRoutes);
+mountProtected('/drill', drillRoutes);
+mountProtected('/mock', mockRoutes);
+mountProtected('/ai', aiRoutes);
+mountProtected('/competition', competitionRoutes);
+mountProtected('/exam-config', examConfigRoutes);
+mountProtected('/questions', tcsQuestionRoutes);
+mountProtected('/reminders', reminderRoutes);
 
 export default router;

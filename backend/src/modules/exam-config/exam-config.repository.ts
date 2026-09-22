@@ -1,10 +1,12 @@
 import ExamConfig from './exam-config.model.js';
-import type { IExamConfig } from './exam-config.interface.js';
-import { BaseRepository } from '../../base-repository/base.repository.js';
 
-class ExamConfigRepository extends BaseRepository<IExamConfig> {
-  constructor() {
-    super(ExamConfig);
+class ExamConfigRepository {
+  async findAll() {
+    return ExamConfig.find().lean();
+  }
+
+  async findById(id: string) {
+    return ExamConfig.findById(id).lean();
   }
 
   async upsert(examId: string, subjects: string[]) {

@@ -12,6 +12,7 @@ import {
 } from '../study/vocab.mcq.js';
 import type { VocabLean } from '../study/study.interface.js';
 import { badRequest, notFound } from '../../utils/app-errors.js';
+import { signDrillChallenge, verifyDrillChallenge } from '../../lib/challenge-token.js';
 
 const SUBJECT_MAP: Record<string, string> = {
   gk: 'GK',
@@ -31,72 +32,104 @@ function cleanDrillAnswer(value: unknown, type: string): string {
   return text;
 }
 
+function publicDrill(
+  payload: Record<string, unknown>,
+  challenge: { userId: string; answer: string; questionId?: string; question?: string; subject?: string; drillType: string },
+): Record<string, unknown> {
+  const { correctAnswer: _drop, ...rest } = payload;
+  void _drop;
+  return {
+    ...rest,
+    challengeToken: signDrillChallenge(challenge),
+  };
+}
+
 export class DrillService {
   async getNextDrill(params: {
     type: string;
     maxBase?: unknown;
-    userId: unknown;
+    userId: string;
   }): Promise<Record<string, unknown>> {
     const { type, maxBase, userId } = params;
 
     switch (type) {
       case 'table': {
-        // Always 12–max (never push tables 1–11)
         const max = Math.min(50, Math.max(12, parseInt(String(maxBase ?? ''), 10) || 20));
         let tableBase: number;
         do {
           tableBase = Math.floor(Math.random() * (max - 12 + 1)) + 12;
         } while (tableBase % 10 === 0 && max > 12);
 
-        const multiplier = Math.floor(Math.random() * 8) + 2; // ×2–×9
-        return {
-          type,
-          question: `${tableBase} × ${multiplier}`,
-          correctAnswer: (tableBase * multiplier).toString(),
-          placeholder: 'Enter calculations result...',
-        };
+        const multiplier = Math.floor(Math.random() * 8) + 2;
+        const answer = (tableBase * multiplier).toString();
+        return publicDrill(
+          {
+            type,
+            question: `${tableBase} × ${multiplier}`,
+            placeholder: 'Enter calculations result...',
+          },
+          { userId, drillType: type, answer, question: `${tableBase} × ${multiplier}` },
+        );
       }
 
       case 'fraction': {
         const conversion = await vocabRepository.getRandomConversion();
-        return {
-          type,
-          question: `Convert fraction: ${conversion.fraction}`,
-          correctAnswer: conversion.percentage,
-          placeholder: 'e.g. 12.5%',
-        };
+        return publicDrill(
+          {
+            type,
+            question: `Convert fraction: ${conversion.fraction}`,
+            placeholder: 'e.g. 12.5%',
+          },
+          {
+            userId,
+            drillType: type,
+            answer: String(conversion.percentage),
+            question: `Convert fraction: ${conversion.fraction}`,
+          },
+        );
       }
 
       case 'percentage': {
         const conversion = await vocabRepository.getRandomConversion();
-        return {
-          type,
-          question: `Convert percentage: ${conversion.percentage}`,
-          correctAnswer: conversion.fraction,
-          placeholder: 'e.g. 1/8',
-        };
+        return publicDrill(
+          {
+            type,
+            question: `Convert percentage: ${conversion.percentage}`,
+            placeholder: 'e.g. 1/8',
+          },
+          {
+            userId,
+            drillType: type,
+            answer: String(conversion.fraction),
+            question: `Convert percentage: ${conversion.percentage}`,
+          },
+        );
       }
 
       case 'square': {
         const max = Math.max(2, parseInt(String(maxBase ?? ''), 10) || 30);
         const num = Math.floor(Math.random() * max) + 1;
-        return {
-          type,
-          question: `What is the square of ${num}? (${num}²)`,
-          correctAnswer: (num * num).toString(),
-          placeholder: 'Enter square...',
-        };
+        return publicDrill(
+          {
+            type,
+            question: `What is the square of ${num}? (${num}²)`,
+            placeholder: 'Enter square...',
+          },
+          { userId, drillType: type, answer: String(num * num), question: `What is the square of ${num}? (${num}²)` },
+        );
       }
 
       case 'cube': {
         const max = Math.max(2, parseInt(String(maxBase ?? ''), 10) || 20);
         const num = Math.floor(Math.random() * max) + 1;
-        return {
-          type,
-          question: `What is the cube of ${num}? (${num}³)`,
-          correctAnswer: (num * num * num).toString(),
-          placeholder: 'Enter cube...',
-        };
+        return publicDrill(
+          {
+            type,
+            question: `What is the cube of ${num}? (${num}³)`,
+            placeholder: 'Enter cube...',
+          },
+          { userId, drillType: type, answer: String(num * num * num), question: `What is the cube of ${num}? (${num}³)` },
+        );
       }
 
       case 'vocab': {
@@ -104,7 +137,17 @@ export class DrillService {
         if (!mcq) {
           throw notFound('No vocabulary questions are available yet.');
         }
-        return { type, ...mcq };
+        const { correctAnswer, ...rest } = mcq;
+        return publicDrill(
+          { type, ...rest },
+          {
+            userId,
+            drillType: type,
+            answer: String(correctAnswer),
+            questionId: mcq._id ? String(mcq._id) : undefined,
+            question: mcq.question,
+          },
+        );
       }
 
       case 'gk':
@@ -112,24 +155,34 @@ export class DrillService {
       case 'maths-mcq':
       case 'reasoning-mcq': {
         const subject = SUBJECT_MAP[type];
-        const tcsQ = await TCSQuestionRepository.getWeightedQuestion(subject, userId as string | null);
+        const tcsQ = await TCSQuestionRepository.getWeightedQuestion(subject, userId);
 
         if (!tcsQ) {
           throw notFound(`No ${subject} questions found in database.`);
         }
 
-        return {
-          type,
-          _id: tcsQ._id?.toString() || null,
-          question: tcsQ.question,
-          options: tcsQ.options,
-          correctAnswer: tcsQ.options[tcsQ.correctAnswer],
-          explanation: tcsQ.explanation,
-          category: tcsQ.category,
-          subject,
-          year: tcsQ.year,
-          isImportant: tcsQ.isImportant || false,
-        };
+        const answer = String(tcsQ.options[tcsQ.correctAnswer] ?? '');
+        return publicDrill(
+          {
+            type,
+            _id: tcsQ._id?.toString() || null,
+            question: tcsQ.question,
+            options: tcsQ.options,
+            explanation: tcsQ.explanation,
+            category: tcsQ.category,
+            subject,
+            year: tcsQ.year,
+            isImportant: tcsQ.isImportant || false,
+          },
+          {
+            userId,
+            drillType: type,
+            answer,
+            questionId: tcsQ._id?.toString(),
+            question: tcsQ.question,
+            subject,
+          },
+        );
       }
 
       default:
@@ -138,65 +191,62 @@ export class DrillService {
   }
 
   async verifyDrill(params: {
-    type: unknown;
+    challengeToken: string;
     userAnswer: unknown;
-    correctAnswer: unknown;
-    questionId: unknown;
-    question: unknown;
-    userId: unknown;
+    userId: string;
   }): Promise<{ isCorrect: boolean; correctAnswer: unknown }> {
-    const { type, userAnswer, correctAnswer, questionId, question, userId } = params;
-
-    if (userAnswer === undefined || (correctAnswer === undefined && !questionId)) {
-      throw badRequest('Please provide userAnswer and correctAnswer.');
+    const { challengeToken, userAnswer, userId } = params;
+    if (!challengeToken) throw badRequest('challengeToken is required.');
+    if (userAnswer === undefined || userAnswer === null || String(userAnswer).trim() === '') {
+      throw badRequest('userAnswer is required.');
     }
+
+    const challenge = verifyDrillChallenge(challengeToken, userId);
+    const type = challenge.drillType;
 
     if (type === 'vocab') {
       let doc: VocabLean | null = null;
-      if (questionId && mongoose.isValidObjectId(String(questionId))) {
-        doc = await vocabRepository.findByIdLean(String(questionId));
+      if (challenge.questionId && mongoose.isValidObjectId(challenge.questionId)) {
+        doc = await vocabRepository.findByIdLean(challenge.questionId);
       }
       if (!doc) {
-        const quoted = extractQuoted(String(question || ''));
+        const quoted = extractQuoted(String(challenge.question || ''));
         if (quoted) {
           doc = await vocabRepository.findByWordCaseInsensitive(quoted);
         }
       }
 
-      const kind = inferVocabPromptKind(String(question || ''), doc?.category, doc?.pos);
+      const kind = inferVocabPromptKind(String(challenge.question || ''), doc?.category, doc?.pos);
       const accepted = [
         ...(doc ? acceptedVocabAnswers(doc, kind) : []),
-        correctAnswer,
+        challenge.answer,
       ].filter(Boolean);
 
       const isCorrect = accepted.some((answer) => answersMatch(answer, userAnswer));
-      const shownCorrect = accepted.find((answer) => answersMatch(answer, correctAnswer));
-      const authoritativeCorrect = shownCorrect || accepted[0] || correctAnswer;
+      const authoritativeCorrect =
+        accepted.find((answer) => answersMatch(answer, challenge.answer))
+        || accepted[0]
+        || challenge.answer;
 
       return { isCorrect, correctAnswer: authoritativeCorrect };
     }
 
-    let authoritativeCorrect = correctAnswer;
-    const subject = SUBJECT_MAP[String(type)];
-    if (subject && questionId && mongoose.isValidObjectId(String(questionId))) {
-      const stored = await TCSQuestionRepository.findByIdForVerify(String(questionId));
+    let authoritativeCorrect = challenge.answer;
+    const subject = SUBJECT_MAP[type] || challenge.subject;
+    if (subject && challenge.questionId && mongoose.isValidObjectId(challenge.questionId)) {
+      const stored = await TCSQuestionRepository.findByIdForVerify(challenge.questionId);
       if (stored && Array.isArray(stored.options) && typeof stored.correctAnswer === 'number') {
-        authoritativeCorrect = stored.options[stored.correctAnswer] ?? stored.correctAnswer;
+        authoritativeCorrect = String(stored.options[stored.correctAnswer] ?? stored.correctAnswer);
       }
     }
 
-    if (authoritativeCorrect === undefined) {
-      throw badRequest('Please provide userAnswer and correctAnswer.');
-    }
-
     const isCorrect =
-      cleanDrillAnswer(userAnswer, String(type)) ===
-      cleanDrillAnswer(authoritativeCorrect, String(type));
+      cleanDrillAnswer(userAnswer, type) === cleanDrillAnswer(authoritativeCorrect, type);
 
-    if (subject && questionId && userId) {
+    if (subject && challenge.questionId && userId) {
       void drillPerformanceRepository.createSafe(
-        String(userId),
-        String(questionId),
+        userId,
+        challenge.questionId,
         subject,
         isCorrect,
       );

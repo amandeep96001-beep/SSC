@@ -38,12 +38,14 @@ export function publicUserPayload(
   progress: unknown[] = [],
   mockProgress: unknown[] = [],
   token: string | null = null,
+  opts: { includeAvatar?: boolean } = {},
 ): PublicUserPayload {
+  const includeAvatar = opts.includeAvatar !== false;
   const payload: PublicUserPayload = {
     username: user.username,
     email: user.email || null,
     displayName: user.displayName || null,
-    avatarUrl: user.avatarUrl || null,
+    avatarUrl: includeAvatar ? (user.avatarUrl || null) : null,
     emailVerified: Boolean(user.emailVerified),
     role: user.role || 'user',
     lastStudyAt: deriveLastStudyAt(progress, mockProgress, user.lastStudyAt ?? null),

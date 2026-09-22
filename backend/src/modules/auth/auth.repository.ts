@@ -10,8 +10,10 @@ class AuthRepository {
     return User.findById(id);
   }
 
-  async findByIdLean(id: string) {
-    return User.findById(id).lean();
+  async findByIdLean(id: string, projection?: Record<string, 0 | 1>) {
+    const q = User.findById(id);
+    if (projection) q.select(projection);
+    return q.lean();
   }
 
   async findByUsername(username: string) {

@@ -1,16 +1,24 @@
+import mongoose from 'mongoose';
 import competitionRepository from './competition.repository.js';
 import { badRequest, notFound, unauthorized } from '../../utils/app-errors.js';
-import type { CompetitionQuestionMeta, SubmitScoreInput } from './competition.interface.js';
+import type {
+  CompetitionQuestionMeta,
+  PublicCompetitionQuestion,
+  SubmitScoreInput,
+} from './competition.interface.js';
 import { cacheDel, cacheGetJson, cacheSetJson } from '../../infra/cache.js';
+import { signCompetitionSession, verifyCompetitionSession } from '../../lib/challenge-token.js';
 
 export class CompetitionService {
-  async getQuestions(subjectRaw: unknown, limitRaw: unknown) {
-    const subject = subjectRaw ?? 'Mixed';
+  async getQuestions(userId: string, subjectRaw: unknown, limitRaw: unknown) {
+    if (!userId) throw unauthorized('Authentication required.');
+
+    const subject = String(subjectRaw ?? 'Mixed');
     const questionLimit = Math.min(parseInt(String(limitRaw), 10) || 10, 20);
 
     const matchFilter: { subject?: string } = {};
     if (subject !== 'Mixed') {
-      matchFilter.subject = String(subject);
+      matchFilter.subject = subject;
     }
 
     const questions = await competitionRepository.sampleQuestions(matchFilter, questionLimit);
@@ -18,45 +26,114 @@ export class CompetitionService {
       throw notFound(`No questions found for subject: ${subject}. Please seed the database first.`);
     }
 
+    const qids: string[] = [];
+    const keys: number[] = [];
+    const publicQuestions: PublicCompetitionQuestion[] = [];
+
+    for (const q of questions) {
+      const id = String(q._id);
+      qids.push(id);
+      keys.push(Number(q.correctAnswer));
+      publicQuestions.push({
+        _id: id,
+        question: q.question,
+        options: q.options,
+        subject: q.subject,
+        category: q.category,
+        explanation: q.explanation,
+      });
+    }
+
+    const sessionToken = signCompetitionSession({
+      userId,
+      subject,
+      qids,
+      keys,
+    });
+
     return {
-      data: questions,
-      meta: { total: questions.length, subject: String(subject) } satisfies CompetitionQuestionMeta,
+      data: publicQuestions,
+      meta: {
+        total: publicQuestions.length,
+        subject,
+        sessionToken,
+      } satisfies CompetitionQuestionMeta,
     };
   }
 
-  async submitScore(username: string | undefined, body: SubmitScoreInput) {
-    if (!username) throw unauthorized('Authentication required.');
+  async submitScore(
+    userId: string,
+    username: string,
+    body: SubmitScoreInput,
+  ) {
+    if (!userId) throw unauthorized('Authentication required.');
 
-    const { subject, score, correct, wrong, skipped, accuracy, timeTaken } = body;
-    if (score === undefined || correct === undefined || wrong === undefined) {
-      throw badRequest('score, correct, and wrong are required fields.');
+    const session = verifyCompetitionSession(body.sessionToken, userId);
+    const answers = Array.isArray(body.answers) ? body.answers : [];
+    if (answers.length !== session.qids.length) {
+      throw badRequest(`Expected ${session.qids.length} answers, got ${answers.length}.`);
     }
 
-    const resolvedSubject = String(subject || 'Mixed').slice(0, 32);
-    const scoreN = Math.min(20, Math.max(0, Number(score) || 0));
-    const correctN = Math.min(20, Math.max(0, Number(correct) || 0));
-    const wrongN = Math.min(20, Math.max(0, Number(wrong) || 0));
-    const skippedN = Math.min(20, Math.max(0, Number(skipped) || 0));
-    const accuracyN = Math.min(100, Math.max(0, parseFloat(String(accuracy)) || 0));
-    const timeTakenN = Math.min(3600, Math.max(0, Number(timeTaken) || 0));
+    let correct = 0;
+    let wrong = 0;
+    let skipped = 0;
+    const keyedResults: Array<{
+      questionId: string;
+      selected: number | null;
+      correctIndex: number;
+      isCorrect: boolean;
+    }> = [];
+
+    for (let i = 0; i < session.keys.length; i++) {
+      const selected = answers[i];
+      const correctIndex = session.keys[i];
+      const normalized =
+        selected === null || selected === undefined || Number.isNaN(Number(selected))
+          ? null
+          : Number(selected);
+
+      let isCorrect = false;
+      if (normalized === null) {
+        skipped += 1;
+      } else if (normalized === correctIndex) {
+        correct += 1;
+        isCorrect = true;
+      } else {
+        wrong += 1;
+      }
+
+      keyedResults.push({
+        questionId: session.qids[i],
+        selected: normalized,
+        correctIndex,
+        isCorrect,
+      });
+    }
+
+    const total = session.keys.length || 1;
+    const accuracy = Math.round((correct / total) * 1000) / 10;
+    const score = correct;
+    const timeTakenN = Math.min(3600, Math.max(0, Number(body.timeTaken) || 0));
+    const resolvedSubject = String(body.subject || session.subject || 'Mixed').slice(0, 32);
 
     const newScore = await competitionRepository.createScore({
+      userId: new mongoose.Types.ObjectId(userId),
       username,
       subject: resolvedSubject,
-      score: scoreN,
-      correct: correctN,
-      wrong: wrongN,
-      skipped: skippedN,
-      accuracy: accuracyN,
+      score,
+      correct,
+      wrong,
+      skipped,
+      accuracy,
       timeTaken: timeTakenN,
     });
 
     await cacheDel(`competition:lb:${resolvedSubject}`);
 
-    const personalBest = await competitionRepository.findPersonalBest(username, resolvedSubject);
+    const personalBest = await competitionRepository.findPersonalBest(userId, resolvedSubject);
     const betterScores = await competitionRepository.countBetterScores(
       resolvedSubject,
-      scoreN,
+      score,
       timeTakenN,
     );
 
@@ -65,6 +142,13 @@ export class CompetitionService {
         savedScore: newScore,
         personalBest,
         rank: betterScores + 1,
+        correct,
+        wrong,
+        skipped,
+        accuracy,
+        score,
+        timeTaken: timeTakenN,
+        results: keyedResults,
       },
     };
   }

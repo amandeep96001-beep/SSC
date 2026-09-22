@@ -1,4 +1,5 @@
 import { Redis } from 'ioredis';
+import { logger } from '../lib/logger.js';
 
 let client: Redis | null = null;
 let initAttempted = false;
@@ -9,7 +10,7 @@ export function getRedis(): Redis | null {
 
   const url = process.env.REDIS_URL?.trim();
   if (!url) {
-    console.info('[redis] REDIS_URL unset — using in-process memory cache/rate-limits');
+    logger.info('REDIS_URL unset — using in-process memory cache/rate-limits');
     return null;
   }
 
@@ -21,14 +22,14 @@ export function getRedis(): Redis | null {
       connectTimeout: 8000,
     });
     client.on('error', (err: Error) => {
-      console.error('[redis] error:', err.message);
+      logger.error({ err: err.message, msg: 'redis error' });
     });
     client.on('connect', () => {
-      console.info('[redis] connected');
+      logger.info('redis connected');
     });
     return client;
   } catch (err) {
-    console.error('[redis] failed to init:', err instanceof Error ? err.message : err);
+    logger.error({ err, msg: 'redis failed to init' });
     client = null;
     return null;
   }
