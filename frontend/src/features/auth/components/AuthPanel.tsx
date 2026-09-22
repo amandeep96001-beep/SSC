@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
 import { APP_NAME, APP_TAGLINE, pageTitle } from '@/shared/brand';
-import { preloadGsi, signInWithGoogle, isCancelledError } from '@/shared/utils/gsi';
+import { preloadGsi, mountGoogleButton, signInWithGoogle, isCancelledError } from '@/shared/utils/gsi';
 import { showAppToast } from '@/shared/utils/appToast';
 import { apiService } from '@/shared/services/apiService';
 import '../auth.css';
@@ -46,12 +46,13 @@ interface GoogleSignInButtonProps {
 
 function GoogleSignInButton({
   clientId,
-  allowCodeFlow = true,
+  allowCodeFlow = false,
   disabled,
   onAuth,
   onError,
 }: GoogleSignInButtonProps) {
   const [busy, setBusy] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
   const onAuthRef = useRef(onAuth);
   const onErrorRef = useRef(onError);
 
@@ -63,6 +64,43 @@ function GoogleSignInButton({
   useEffect(() => {
     preloadGsi();
   }, []);
+
+  // No client secret → official GIS ID-token button (reliable). Code popup only when server allows it.
+  useEffect(() => {
+    if (allowCodeFlow || !clientId) return undefined;
+    let cleanup = () => {};
+    let cancelled = false;
+
+    const mount = async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+      if (cancelled || !hostRef.current) return;
+      try {
+        const width = Math.max(260, Math.floor(hostRef.current.getBoundingClientRect().width) || 320);
+        cleanup = await mountGoogleButton(hostRef.current, clientId, {
+          width,
+          onCredential: async (credential) => {
+            setBusy(true);
+            try {
+              await onAuthRef.current?.({ credential });
+            } finally {
+              setBusy(false);
+            }
+          },
+          onError: (err) => {
+            if (!isCancelledError(err)) onErrorRef.current?.();
+          },
+        });
+      } catch {
+        // fall through — custom button still available if mount fails
+      }
+    };
+
+    mount();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [allowCodeFlow, clientId]);
 
   const handleClick = async () => {
     if (disabled || busy) return;
@@ -80,6 +118,21 @@ function GoogleSignInButton({
       setBusy(false);
     }
   };
+
+  // ID-token path: render official GIS button (no double frame; host is transparent)
+  if (!allowCodeFlow && clientId) {
+    return (
+      <div className={`auth-google-host${busy || disabled ? ' is-busy' : ''}`}>
+        {busy && (
+          <div className="auth-google-host__busy">
+            <Loader2 size={18} className="spin-icon" />
+            <span>Connecting…</span>
+          </div>
+        )}
+        <div ref={hostRef} className="auth-google-host__btn" aria-hidden={busy || disabled} />
+      </div>
+    );
+  }
 
   return (
     <button
@@ -159,7 +212,7 @@ export function AuthPanel({
   const [googleClientId, setGoogleClientId] = useState(
     () => import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim() || '',
   );
-  const [allowCodeFlow, setAllowCodeFlow] = useState(true);
+  const [allowCodeFlow, setAllowCodeFlow] = useState(false);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const pageRef = useRef<HTMLDivElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);

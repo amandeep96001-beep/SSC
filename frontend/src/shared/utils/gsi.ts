@@ -272,7 +272,7 @@ export async function signInWithGoogle(
   clientId: string,
   options: SignInWithGoogleOptions = {},
 ): Promise<GoogleSignInResult> {
-  const allowCodeFlow = options.allowCodeFlow !== false;
+  const allowCodeFlow = options.allowCodeFlow === true;
 
   try {
     const credential = await requestGoogleCredential(clientId);

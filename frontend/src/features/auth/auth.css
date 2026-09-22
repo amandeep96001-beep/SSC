@@ -797,7 +797,6 @@
   flex-shrink: 0;
 }
 
-/* Legacy GIS host — kept for safety if re-enabled; never double-frame */
 .auth-google-host {
   position: relative;
   width: 100%;
@@ -809,6 +808,7 @@
   background: transparent;
   isolation: isolate;
   z-index: 1;
+  border-radius: 14px;
 }
 
 .auth-google-host__btn {
@@ -821,11 +821,15 @@
   border-radius: 14px;
 }
 
-.auth-google-host__btn > div,
-.auth-google-host__btn iframe {
+.auth-google-host__btn > div {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
+}
+
+.auth-google-host__btn iframe {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 .auth-google-host.is-busy .auth-google-host__btn {
