@@ -1,4 +1,5 @@
 import { APP_NAME } from '@/shared/brand';
+import { HttpError, errorMessage } from '@/types/app';
 
 const TOAST_ID = 'examprep-app-toast';
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -160,4 +161,18 @@ export function notifyReminder({ title, body, tag }: BrowserNotificationPayload 
     durationMs: 12000,
   });
   return shown;
+}
+
+/** Prefer this for API failures — surfaces code + requestId for support. */
+export function showApiErrorToast(err: unknown, fallback = 'Something went wrong.'): void {
+  const message = errorMessage(err) || fallback;
+  let title = 'Error';
+  if (err instanceof HttpError && err.code) {
+    title = err.code.replace(/_/g, ' ');
+  }
+  const suffix =
+    err instanceof HttpError && err.requestId
+      ? ` (ref: ${err.requestId.slice(0, 8)})`
+      : '';
+  showAppToast(`${message}${suffix}`, { variant: 'error', title, durationMs: 6500 });
 }

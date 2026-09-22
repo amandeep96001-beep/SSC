@@ -3,11 +3,11 @@ import {
   Swords, Trophy, Target, Zap, Clock, CheckCircle2, XCircle, 
   SkipForward, RefreshCw, ChevronRight, Medal, Crown, Timer, Award, Shuffle, Ban, X
 } from 'lucide-react';
-import { apiService } from '@/shared/services/apiService';
+import { competitionApi } from '@/shared/api/drillApi';
 import { McqText } from '@/shared/components/ui/McqText';
-import { showAppToast } from '@/shared/utils/appToast';
+import { showAppToast, showApiErrorToast } from '@/shared/utils/appToast';
 import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
-import { errorMessage, isRecord } from '@/types/app';
+import { isRecord } from '@/types/app';
 import type { AppUser } from '@/types/app';
 import '@/features/exam/exam.css';
 
@@ -65,6 +65,7 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
   const [screen, setScreen]           = useState('start');
   const [selectedSubject, setSelectedSubject] = useState('Mixed');
   const [questions, setQuestions]     = useState<CompetitionQuestion[]>([]);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [currentIdx, setCurrentIdx]   = useState(0);
   const [userAnswers, setUserAnswers]  = useState<(number | null | undefined)[]>([]);
   const [timeLeft, setTimeLeft]        = useState(TIME_PER_QUESTION);
@@ -96,7 +97,7 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
   const fetchLeaderboard = useCallback(async () => {
     setLoadingLeader(true);
     try {
-      const res = await apiService.get(`/competition/leaderboard?subject=${selectedSubject}`);
+      const res = await competitionApi.leaderboard(selectedSubject);
       if (res.status === 'success' && Array.isArray(res.data)) setLeaderboard(res.data as LeaderEntry[]);
     } catch {
       showAppToast('Could not load leaderboard.', { variant: 'warn', durationMs: 2500 });
@@ -104,40 +105,53 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
     finally { setLoadingLeader(false); }
   }, [selectedSubject]);
 
-  // ── POST score to backend ─────────────────────────────────────────
+  // ── POST answers — server grades ──────────────────────────────────
   const submitScore = useCallback(async ({
-    correct, wrong, skipped, accuracy, score, timeTaken, answers
+    timeTaken, answers, token,
   }: {
-    correct: number;
-    wrong: number;
-    skipped: number;
-    accuracy: number;
-    score: number;
     timeTaken: number;
     answers: (number | null | undefined)[];
+    token: string;
   }) => {
     try {
-      const res = await apiService.post('/competition/submit', {
-        username: user?.username || 'Guest',
+      const res = await competitionApi.submit({
         subject: selectedSubject,
-        score, correct, wrong, skipped, accuracy, timeTaken
+        sessionToken: token,
+        answers: answers.map((a) => (a === undefined ? null : a)),
+        timeTaken,
       });
 
       if (res.status === 'success') {
         const extra = isRecord(res.data) ? res.data : {};
-        setResultData({ ...extra, correct, wrong, skipped, accuracy, score, timeTaken, answers });
+        const results = Array.isArray(extra.results) ? extra.results : [];
+        setQuestions((prev) =>
+          prev.map((q, i) => {
+            const row = results[i] as { correctIndex?: number } | undefined;
+            return row && typeof row.correctIndex === 'number'
+              ? { ...q, correctAnswer: row.correctIndex }
+              : q;
+          }),
+        );
+        setResultData({
+          correct: Number(extra.correct) || 0,
+          wrong: Number(extra.wrong) || 0,
+          skipped: Number(extra.skipped) || 0,
+          accuracy: Number(extra.accuracy) || 0,
+          score: Number(extra.score) || 0,
+          timeTaken,
+          answers,
+          rank: typeof extra.rank === 'number' ? extra.rank : undefined,
+        });
         fetchLeaderboard();
         setScreen('result');
       } else {
         throw new Error(res.message || 'Score submission failed on the server.');
       }
     } catch (err) {
-      showAppToast(errorMessage(err) || 'Could not save score to leaderboard.', { variant: 'error' });
-      // Even if submission fails, show result locally
-      setResultData({ correct, wrong, skipped, accuracy, score, timeTaken, answers, rank: undefined });
-      setScreen('result');
+      showApiErrorToast(err, 'Could not save score to leaderboard.');
+      setScreen('start');
     }
-  }, [user, selectedSubject, fetchLeaderboard]);
+  }, [selectedSubject, fetchLeaderboard]);
 
   // ── Compute results & submit ──────────────────────────────────────
   const finishBattle = useCallback(() => {
@@ -147,27 +161,19 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
     setTotalTimeTaken(taken);
 
     const finalAnswers = [...userAnswersRef.current];
-    // fill any remaining unanswered as null
     for (let i = 0; i < questions.length; i++) {
       if (finalAnswers[i] === undefined) finalAnswers[i] = null;
     }
 
-    const correct = questions.filter((q, i) => finalAnswers[i] === q.correctAnswer).length;
-    const wrong   = questions.filter((q, i) => finalAnswers[i] !== null && finalAnswers[i] !== q.correctAnswer).length;
-    const skipped = questions.filter((q, i) => finalAnswers[i] === null).length;
-    
-    let accuracy = 0;
-    if (questions.length > 0) {
-      accuracy = Math.round((correct / questions.length) * 100);
-    }
-    if (isNaN(accuracy)) accuracy = 0;
-
-    const score = correct;
-
     setUserAnswers(finalAnswers);
     setScreen('submitting');
-    submitScore({ correct, wrong, skipped, accuracy, score, timeTaken: taken, answers: finalAnswers });
-  }, [questions, submitScore]);
+    if (!sessionToken) {
+      showAppToast('Competition session missing. Start again.', { variant: 'error' });
+      setScreen('start');
+      return;
+    }
+    submitScore({ timeTaken: taken, answers: finalAnswers, token: sessionToken });
+  }, [questions.length, submitScore, sessionToken]);
 
   // ── Move to next question or finish ──────────────────────────────
   const moveToNext = useCallback(() => {
@@ -201,12 +207,16 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
     clearNextTimeout();
     setScreen('loading');
     try {
-      const res = await apiService.get(`/competition/questions?subject=${selectedSubject}&limit=${QUESTION_LIMIT}`);
+      const res = await competitionApi.questions(selectedSubject, QUESTION_LIMIT);
       const list = Array.isArray(res.data) ? res.data : [];
-      if (res.status === 'success' && list.length > 0) {
-        // Normalize answers (convert letter-based answers to numeric indices)
+      const token =
+        isRecord(res.meta) && typeof res.meta.sessionToken === 'string'
+          ? res.meta.sessionToken
+          : null;
+      if (res.status === 'success' && list.length > 0 && token) {
         const normalizedQs = normalizeQuestions(list as CompetitionQuestion[]) as CompetitionQuestion[];
         const initialAnswers = new Array(normalizedQs.length).fill(undefined);
+        setSessionToken(token);
         setQuestions(normalizedQs);
         setUserAnswers(initialAnswers);
         userAnswersRef.current = initialAnswers;
@@ -219,7 +229,7 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
         throw new Error('Unable to load questions. Please ensure the database has been seeded with PYQ questions.');
       }
     } catch (err) {
-      showAppToast(errorMessage(err) || 'Could not connect to the server.', { variant: 'error' });
+      showApiErrorToast(err, 'Could not connect to the server.');
       setScreen('start');
     }
   };
@@ -269,6 +279,7 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
     setLeaveConfirmOpen(false);
     setScreen('start');
     setQuestions([]);
+    setSessionToken(null);
     setCurrentIdx(0);
     setUserAnswers([]);
     userAnswersRef.current = [];
@@ -451,7 +462,9 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
           <div className="battle-options-grid">
             {(q.options || []).map((opt, idx) => {
               let cls = 'battle-option-btn';
-              if (answered) {
+              if (answered && idx === userAnswers[currentIdx]) cls += ' selected';
+              // Reveal correct/wrong only after server grading (result review uses correctAnswer).
+              if (answered && typeof q.correctAnswer === 'number') {
                 if (idx === q.correctAnswer) cls += ' correct';
                 else if (idx === userAnswers[currentIdx] && idx !== q.correctAnswer) cls += ' wrong';
               }
@@ -459,14 +472,21 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
                 <button key={idx} className={cls} onClick={() => handleAnswer(idx)} disabled={answered}>
                   <span className="option-label">{String.fromCharCode(65 + idx)}</span>
                   <McqText text={opt} className="option-text" />
-                  {answered && idx === q.correctAnswer && <CheckCircle2 size={16} className="option-check" />}
-                  {answered && idx === userAnswers[currentIdx] && idx !== q.correctAnswer && <XCircle size={16} className="option-x" />}
+                  {answered && typeof q.correctAnswer === 'number' && idx === q.correctAnswer && (
+                    <CheckCircle2 size={16} className="option-check" />
+                  )}
+                  {answered
+                    && typeof q.correctAnswer === 'number'
+                    && idx === userAnswers[currentIdx]
+                    && idx !== q.correctAnswer && (
+                    <XCircle size={16} className="option-x" />
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {answered && q.explanation && (
+          {answered && typeof q.correctAnswer === 'number' && q.explanation && (
             <div className="battle-explanation-box">
               <span className="battle-exp-label">Explanation:</span> <McqText text={q.explanation} />
             </div>
@@ -477,7 +497,12 @@ export function CompetitionWorkspace({ user, setActiveView }: CompetitionWorkspa
         <div className="battle-bottom-bar">
           <div className="battle-score-live">
             <CheckCircle2 size={15} className="live-correct-icon" />
-            <span>{questions.slice(0, currentIdx).filter((q2, i) => userAnswers[i] === q2.correctAnswer).length} Correct</span>
+            <span>
+              {questions
+                .slice(0, currentIdx)
+                .filter((_, i) => userAnswers[i] !== null && userAnswers[i] !== undefined).length}{' '}
+              Answered
+            </span>
           </div>
           {!answered && (
             <button className="battle-skip-btn" onClick={() => { clearTimer(); handleAutoSkip(); }}>

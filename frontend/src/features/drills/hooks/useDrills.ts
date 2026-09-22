@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiService } from '@/shared/services/apiService';
+import { drillApi } from '@/shared/api/drillApi';
 import { useApi } from '@/shared/hooks/useApi';
 import type { ApiJson } from '@/shared/services/apiService';
 import { isRecord } from '@/types/app';
@@ -21,6 +21,7 @@ export interface DrillItem {
   type?: string;
   question?: string;
   correctAnswer?: string;
+  challengeToken?: string;
   _id?: string;
   options?: string[] | null;
   placeholder?: string | null;
@@ -35,6 +36,7 @@ export interface DrillItem {
 }
 
 export interface WrongQuestion {
+  id?: string;
   question: string;
   correctAnswer?: string;
   userAnswer?: string;
@@ -66,6 +68,9 @@ export interface DrillFeedback {
   selectedAnswer?: string;
 }
 
+const LOCAL_WRONG_KEY = 'wrongQuestions';
+const LOCAL_MIGRATED_KEY = 'wrongQuestions_migrated_v1';
+
 function extractVocabWord(question = ''): string | null {
   const m = String(question).match(/"([^"]+)"/);
   return m ? m[1] : null;
@@ -76,62 +81,147 @@ function asDrill(value: unknown): DrillItem | null {
   return value as unknown as DrillItem;
 }
 
+function readLocalWrongLog(): WrongQuestion[] {
+  try {
+    const saved = localStorage.getItem(LOCAL_WRONG_KEY);
+    if (!saved) return [];
+    const parsed = JSON.parse(saved) as WrongQuestion[];
+    return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
+  } catch {
+    return [];
+  }
+}
+
+function clearLocalWrongLog() {
+  try {
+    localStorage.removeItem(LOCAL_WRONG_KEY);
+  } catch { /* ignore */ }
+}
+
+function mapServerWrong(row: unknown): WrongQuestion | null {
+  if (!isRecord(row) || typeof row.question !== 'string') return null;
+  return {
+    id: typeof row.id === 'string' ? row.id : undefined,
+    question: row.question,
+    correctAnswer: typeof row.correctAnswer === 'string' ? row.correctAnswer : undefined,
+    userAnswer: typeof row.userAnswer === 'string' ? row.userAnswer : undefined,
+    options: Array.isArray(row.options) ? row.options.map(String) : null,
+    placeholder: typeof row.placeholder === 'string' ? row.placeholder : null,
+    explanation: typeof row.explanation === 'string' ? row.explanation : null,
+    category: typeof row.category === 'string' ? row.category : null,
+    type: typeof row.type === 'string' ? row.type : undefined,
+    word: typeof row.word === 'string' ? row.word : null,
+    revealDefinition: typeof row.revealDefinition === 'string' ? row.revealDefinition : null,
+    revealSynonyms: Array.isArray(row.revealSynonyms) ? row.revealSynonyms.map(String) : null,
+    revealAntonyms: Array.isArray(row.revealAntonyms) ? row.revealAntonyms.map(String) : null,
+    pos: typeof row.pos === 'string' ? row.pos : null,
+    wrongCount: Number(row.wrongCount) || 1,
+    lastWrongAt: Number(row.lastWrongAt) || Date.now(),
+  };
+}
+
 export function useDrills(isAuthenticated = false) {
-  const [drillType, setDrillType] = useState('table'); // table, fraction, percentage, vocab
+  const [drillType, setDrillType] = useState('table');
   const [currentDrill, setCurrentDrill] = useState<DrillItem | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
-  
   const [maxTableBase, setMaxTableBase] = useState(20);
 
-  // Game session scores
   const [stats, setStats] = useState<DrillStats>({
     score: 0,
     skips: 0,
     totalAsked: 0,
-    streak: 0
+    streak: 0,
   });
 
-  // Wrong questions log — { question, correctAnswer, explanation, category, type, wrongCount }
-  const [wrongQuestions, setWrongQuestions] = useState<WrongQuestion[]>(() => {
-    try {
-      const saved = localStorage.getItem('wrongQuestions');
-      return saved ? (JSON.parse(saved) as WrongQuestion[]).slice(0, 20) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('wrongQuestions', JSON.stringify(wrongQuestions));
-    } catch (e) {
-      console.error('Error saving wrongQuestions to localStorage', e);
-    }
-  }, [wrongQuestions]);
-
-  // Micro-feedback states for card glow animations
+  const [wrongQuestions, setWrongQuestions] = useState<WrongQuestion[]>([]);
   const [feedback, setFeedback] = useState<DrillFeedback>({
     isChecked: false,
     isCorrect: false,
-    showAnswer: false
+    showAnswer: false,
   });
+
+  const syncedRef = useRef(false);
 
   const { execute: fetchNextDrill, loading: nextDrillLoading, error: nextDrillError } = useApi<
     [{ type: string; maxBase: number }],
     ApiJson
   >(
-    useCallback(({ type, maxBase }: { type: string; maxBase: number }) => apiService.get(`/drill/next?type=${type}&maxBase=${maxBase}`), [])
+    useCallback(({ type, maxBase }: { type: string; maxBase: number }) => drillApi.next(type, maxBase), []),
   );
   const { execute: verifyDrill, loading: verifyLoading, error: verifyError } = useApi<[unknown], ApiJson>(
-    useCallback((body: unknown) => apiService.post('/drill/verify', body), [])
+    useCallback((body: unknown) => {
+      const b = body as { challengeToken: string; userAnswer: string };
+      return drillApi.verify(b);
+    }, []),
   );
 
-  // Load next question
+  // Load server wrong-log (and one-time migrate from localStorage).
+  useEffect(() => {
+    if (!isAuthenticated) {
+      syncedRef.current = false;
+      setWrongQuestions([]);
+      return;
+    }
+    if (syncedRef.current) return;
+    syncedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const local = readLocalWrongLog();
+        const alreadyMigrated = localStorage.getItem(LOCAL_MIGRATED_KEY) === '1';
+
+        if (local.length > 0 && !alreadyMigrated) {
+          const res = await drillApi.migrateWrongLog(
+            local.map((item) => ({
+              question: item.question,
+              correctAnswer: item.correctAnswer,
+              userAnswer: item.userAnswer,
+              options: item.options,
+              placeholder: item.placeholder,
+              explanation: item.explanation,
+              category: item.category,
+              type: item.type,
+              word: item.word,
+              revealDefinition: item.revealDefinition,
+              revealSynonyms: item.revealSynonyms,
+              revealAntonyms: item.revealAntonyms,
+              pos: item.pos,
+            })),
+          );
+          if (!cancelled && Array.isArray(res.data)) {
+            setWrongQuestions(
+              res.data.map(mapServerWrong).filter(Boolean) as WrongQuestion[],
+            );
+          }
+          localStorage.setItem(LOCAL_MIGRATED_KEY, '1');
+          clearLocalWrongLog();
+          return;
+        }
+
+        const res = await drillApi.listWrongLog();
+        if (!cancelled && Array.isArray(res.data)) {
+          setWrongQuestions(
+            res.data.map(mapServerWrong).filter(Boolean) as WrongQuestion[],
+          );
+        }
+        if (!alreadyMigrated) {
+          localStorage.setItem(LOCAL_MIGRATED_KEY, '1');
+          clearLocalWrongLog();
+        }
+      } catch {
+        // Fall back to whatever was local if server is down once.
+        if (!cancelled) setWrongQuestions(readLocalWrongLog());
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [isAuthenticated]);
+
   const loadNextDrill = useCallback(async (typeToLoad = drillType, baseLimit = maxTableBase) => {
     setUserAnswer('');
     setFeedback({ isChecked: false, isCorrect: false, showAnswer: false, selectedAnswer: '' });
 
-    // Jumping tables always start at base 12 (never 1–11)
     const cappedBase = typeToLoad === 'table'
       ? Math.min(50, Math.max(12, Number(baseLimit) || 20))
       : Math.min(50, Math.max(2, Number(baseLimit) || 20));
@@ -143,19 +233,18 @@ export function useDrills(isAuthenticated = false) {
     }
   }, [fetchNextDrill, drillType, maxTableBase]);
 
-  // Submit Answer
-  const submitAnswer = useCallback(async (e?: { preventDefault?: () => void } | null, directAnswer: string | null = null) => {
+  const submitAnswer = useCallback(async (
+    e?: { preventDefault?: () => void } | null,
+    directAnswer: string | null = null,
+  ) => {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
-    
+
     const finalAnswer = directAnswer !== null ? directAnswer : userAnswer;
     if (!currentDrill || !finalAnswer.trim()) return;
 
     const payload = {
-      type: currentDrill.type,
-      question: currentDrill.question,
+      challengeToken: currentDrill.challengeToken,
       userAnswer: finalAnswer,
-      correctAnswer: currentDrill.correctAnswer,
-      questionId: currentDrill._id || null,
     };
 
     const result = await verifyDrill(payload);
@@ -165,7 +254,7 @@ export function useDrills(isAuthenticated = false) {
         ? result.data.data.correctAnswer
         : currentDrill.correctAnswer;
 
-      if (serverCorrect && serverCorrect !== currentDrill.correctAnswer) {
+      if (serverCorrect) {
         setCurrentDrill((prev) => (prev ? { ...prev, correctAnswer: serverCorrect } : prev));
       }
       setUserAnswer(finalAnswer);
@@ -181,13 +270,29 @@ export function useDrills(isAuthenticated = false) {
         ...prev,
         score: prev.score + (isCorrect ? 1 : 0),
         totalAsked: prev.totalAsked + 1,
-        streak: isCorrect ? prev.streak + 1 : 0
+        streak: isCorrect ? prev.streak + 1 : 0,
       }));
 
-      // Track wrong answers in the log
       if (!isCorrect && currentDrill) {
+        const entry = {
+          question: currentDrill.question || '',
+          correctAnswer: serverCorrect || currentDrill.correctAnswer,
+          userAnswer: finalAnswer,
+          options: currentDrill.options || null,
+          placeholder: currentDrill.placeholder || null,
+          explanation: currentDrill.explanation || null,
+          category: currentDrill.category || null,
+          type: currentDrill.type,
+          word: currentDrill.word || extractVocabWord(currentDrill.question),
+          revealDefinition: currentDrill.revealDefinition || null,
+          revealSynonyms: currentDrill.revealSynonyms || null,
+          revealAntonyms: currentDrill.revealAntonyms || null,
+          pos: currentDrill.pos || null,
+        };
+
+        // Optimistic local update
         setWrongQuestions((prev) => {
-          const existingIdx = prev.findIndex((wq) => wq.question === currentDrill.question);
+          const existingIdx = prev.findIndex((wq) => wq.question === entry.question);
           let updated: WrongQuestion[];
           if (existingIdx >= 0) {
             updated = [...prev];
@@ -195,37 +300,27 @@ export function useDrills(isAuthenticated = false) {
               ...updated[existingIdx],
               wrongCount: updated[existingIdx].wrongCount + 1,
               userAnswer: finalAnswer,
+              correctAnswer: entry.correctAnswer,
               lastWrongAt: Date.now(),
             };
           } else {
-            updated = [
-              {
-                question: currentDrill.question || '',
-                correctAnswer: serverCorrect || currentDrill.correctAnswer,
-                userAnswer: finalAnswer,
-                options: currentDrill.options || null,
-                placeholder: currentDrill.placeholder || null,
-                explanation: currentDrill.explanation || null,
-                category: currentDrill.category || null,
-                type: currentDrill.type,
-                word: currentDrill.word || extractVocabWord(currentDrill.question),
-                // vocab-specific reveal fields
-                revealDefinition: currentDrill.revealDefinition || null,
-                revealSynonyms: currentDrill.revealSynonyms || null,
-                revealAntonyms: currentDrill.revealAntonyms || null,
-                pos: currentDrill.pos || null,
-                wrongCount: 1,
-                lastWrongAt: Date.now(),
-              },
-              ...prev
-            ];
+            updated = [{ ...entry, wrongCount: 1, lastWrongAt: Date.now() }, ...prev];
           }
-          return updated.slice(0, 20);
+          return updated.slice(0, 50);
         });
+
+        // Persist on server (fire-and-forget; reconcile from response)
+        void drillApi.upsertWrongLog(entry).then((res) => {
+          const mapped = mapServerWrong(res.data);
+          if (!mapped) return;
+          setWrongQuestions((prev) => {
+            const without = prev.filter((wq) => wq.question !== mapped.question);
+            return [mapped, ...without].slice(0, 50);
+          });
+        }).catch(() => { /* keep optimistic local row */ });
       }
 
       if (isCorrect) {
-        // Automatically load next drill after a short delay for correct answers
         setTimeout(() => {
           loadNextDrill(drillType);
         }, 1200);
@@ -233,21 +328,17 @@ export function useDrills(isAuthenticated = false) {
     }
   }, [currentDrill, userAnswer, verifyDrill, loadNextDrill, drillType]);
 
-  // Skip Question
   const skipQuestion = useCallback(() => {
     if (!currentDrill) return;
-
     setStats((prev) => ({
       ...prev,
       skips: prev.skips + 1,
       totalAsked: prev.totalAsked + 1,
-      streak: 0
+      streak: 0,
     }));
-
     loadNextDrill(drillType);
   }, [currentDrill, loadNextDrill, drillType]);
 
-  // Select another Category
   const changeDrillType = useCallback((newType: string) => {
     setDrillType(newType);
     if (newType === 'table') {
@@ -260,7 +351,6 @@ export function useDrills(isAuthenticated = false) {
 
   const initialDrillLoadedRef = useRef(false);
 
-  // Load first drill once after sign-in (changeDrillType handles type switches)
   useEffect(() => {
     if (!isAuthenticated) {
       initialDrillLoadedRef.current = false;
@@ -271,15 +361,20 @@ export function useDrills(isAuthenticated = false) {
     loadNextDrill();
   }, [isAuthenticated, loadNextDrill]);
 
-  const clearWrongLog = () => setWrongQuestions([]);
+  const clearWrongLog = useCallback(() => {
+    setWrongQuestions([]);
+    void drillApi.clearWrongLog().catch(() => {});
+  }, []);
 
   const removeWrongQuestion = useCallback((question: string | null | undefined) => {
     if (!question) return;
     setWrongQuestions((prev) => prev.filter((wq) => wq.question !== question));
+    void drillApi.removeWrongLog(question).catch(() => {});
   }, []);
 
   const clearWrongVocab = useCallback(() => {
     setWrongQuestions((prev) => prev.filter((wq) => wq.type !== 'vocab'));
+    void drillApi.clearWrongLog('vocab').catch(() => {});
   }, []);
 
   return {
@@ -300,7 +395,7 @@ export function useDrills(isAuthenticated = false) {
     changeDrillType,
     submitAnswer,
     skipQuestion,
-    loadNextDrill
+    loadNextDrill,
   };
 }
 

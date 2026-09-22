@@ -1,0 +1,49 @@
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/ssc_prep
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-docker-dev-secret-change-me-32chars
+      FRONTEND_URL: http://localhost:5173
+      REMINDER_INLINE: "0"
+    depends_on:
+      - mongo
+      - redis
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["node", "dist/worker.js"]
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongo:27017/ssc_prep
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: local-docker-dev-secret-change-me-32chars
+      FRONTEND_URL: http://localhost:5173
+      REMINDER_INLINE: "1"
+    depends_on:
+      - mongo
+      - redis
+
+volumes:
+  mongo_data:

@@ -15,6 +15,8 @@ export interface IUser {
 }
 
 export interface PublicUserSource {
+  _id?: { toString(): string } | string;
+  id?: string;
   username: string;
   email?: string | null;
   displayName?: string | null;

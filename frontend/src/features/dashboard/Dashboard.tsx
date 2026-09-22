@@ -34,6 +34,8 @@ import { fetchNotifications, markNotificationsReadApi } from '@/features/reminde
 import '@/features/home/home.css';
 import '@/features/admin/admin.css';
 import '@/features/reminders/reminders.css';
+import { FeatureErrorBoundary } from '@/shared/components/layout/FeatureErrorBoundary';
+import '@/shared/components/layout/feature-error.css';
 
 const DrillWorkspace = lazy(() =>
   import('@/features/drills/components/DrillWorkspace').then((m) => ({ default: m.DrillWorkspace }))
@@ -938,6 +940,7 @@ export function Dashboard() {
         </div>
 
         <div className="workspace-card-enclosure" ref={workspaceRef}>
+          <FeatureErrorBoundary>
           <Suspense fallback={<WorkspaceFallback />}>
           {activeView === 'home' && (
             <TodayFocusWorkspace
@@ -1074,6 +1077,7 @@ export function Dashboard() {
             <CompetitionWorkspace user={user} setActiveView={setActiveView} />
           )}
           </Suspense>
+          </FeatureErrorBoundary>
         </div>
       </main>
 

@@ -1,10 +1,17 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { apiService } from '@/shared/services/apiService';
 import type { ApiJson } from '@/shared/services/apiService';
+import { authApi, asAuthPayload } from '@/shared/api/authApi';
+import {
+  readStoredUser,
+  persistSession,
+  mergeUserProfile,
+  writeStoredUser,
+} from '@/shared/session/sessionStorage';
 import { useApi } from '@/shared/hooks/useApi';
 import { getListFromResponse } from '@/shared/utils/apiResponse';
 import { useExam } from '@/shared/context/useExam';
-import { showAppToast } from '@/shared/utils/appToast';
+import { showAppToast, showApiErrorToast } from '@/shared/utils/appToast';
 import { disableGsiAutoSelect } from '@/shared/utils/gsi';
 import { normalizeQuestions } from '@/shared/utils/answerNormalizer';
 import { namesMatch, sortSubjectsForExam } from '@/shared/utils/subjectNames';
@@ -15,7 +22,6 @@ import {
   HttpError,
   isRecord,
   type AppUser,
-  type AuthApiPayload,
   type ContentSource,
   type McqQuestion,
   type MockProgressRow,
@@ -40,29 +46,6 @@ function normalizeSubjects(list: unknown): SubjectListItem[] {
     }
     return { name: '', isOwned: false };
   });
-}
-
-function asAuthPayload(value: unknown): AuthApiPayload | null {
-  return isRecord(value) ? value as AuthApiPayload : null;
-}
-
-function readStoredUser(): AppUser | null {
-  try {
-    const token = localStorage.getItem('ssc_token');
-    const stored = localStorage.getItem('ssc_user');
-    if (!token || !stored) {
-      localStorage.removeItem('ssc_token');
-      localStorage.removeItem('ssc_user');
-      return null;
-    }
-    const parsed: unknown = JSON.parse(stored);
-    if (!isRecord(parsed)) return null;
-    const { password: _password, ...profile } = parsed;
-    void _password;
-    return profile as unknown as AppUser;
-  } catch {
-    return null;
-  }
 }
 
 export function useStudy() {
@@ -114,21 +97,17 @@ export function useStudy() {
     avatarUrl?: string | null;
   }) => {
     try {
-      const res = await apiService.patch('/auth/me', payload, { timeout: 30000 });
+      const res = await authApi.updateProfile(payload);
       const profile = asAuthPayload(res?.data);
       if (!profile?.username) {
         return { success: false, message: res.message || 'Could not update profile.' };
       }
-      const next: AppUser = {
-        ...(user || { username: profile.username }),
-        ...profile,
-        username: profile.username,
-        token: undefined,
-      };
-      localStorage.setItem('ssc_user', JSON.stringify(next));
+      const next = mergeUserProfile(user, profile, { replaceProgress: false });
+      writeStoredUser(next);
       setUser(next);
       return { success: true, message: res.message };
     } catch (err) {
+      showApiErrorToast(err, 'Could not update profile.');
       return { success: false, message: errorMessage(err) || 'Could not update profile.' };
     }
   }, [user]);
@@ -140,25 +119,16 @@ export function useStudy() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await apiService.get('/auth/me');
+        // Include avatar so slim /me does not leave us stuck without a photo after refresh.
+        const res = await authApi.me({ includeAvatar: true });
         const profile = asAuthPayload(res?.data);
         if (!cancelled && profile?.username) {
-          const { password: _password, ...safeUser } = user as AppUser & { password?: unknown };
-          void _password;
-          const { password: _p2, ...safeProfile } = profile as AuthApiPayload & { password?: unknown };
-          void _p2;
-          const next: AppUser = {
-            ...safeUser,
-            ...safeProfile,
-            username: profile.username,
-            role: profile.role || user.role || 'user'
-          };
-          localStorage.setItem('ssc_user', JSON.stringify(next));
+          const next = mergeUserProfile(user, profile, { replaceProgress: true });
+          writeStoredUser(next);
           setUser(next);
         }
       } catch (err) {
         if (cancelled) return;
-        // Storage already cleared on 401; drop hollow React session
         if ((err instanceof HttpError && err.status === 401) || !localStorage.getItem('ssc_token')) {
           setUser(null);
         }
@@ -216,16 +186,16 @@ export function useStudy() {
     return apiService.delete(`/study/subjects/${encodeURIComponent(subjectName)}${q}`);
   }, []));
 
-  const loginApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/login', body), []));
-  const registerApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/register', body, { timeout: 25000 }), []));
-  const requestOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/request', body, { timeout: 20000 }), []));
-  const verifyOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/otp/verify', body), []));
-  const forgotPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/forgot', body, { timeout: 35000 }), []));
-  const verifyPasswordResetOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/verify-otp', body, { timeout: 20000 }), []));
-  const resetPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/password/reset', body, { timeout: 20000 }), []));
-  const googleAuthApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/google', body), []));
-  const updateProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/progress', body), []));
-  const updateMockProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => apiService.post('/auth/mock-progress', body), []));
+  const loginApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.login(body as { password: string }), []));
+  const registerApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.register(body as { email: string; password: string }), []));
+  const requestOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.requestOtp(body as { email: string }), []));
+  const verifyOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.verifyOtp(body as { email: string; code: string }), []));
+  const forgotPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.forgotPassword(body as { email: string }), []));
+  const verifyPasswordResetOtpApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.verifyPasswordResetOtp(body as { email: string; code: string }), []));
+  const resetPasswordApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.resetPassword(body as { token: string; password: string }), []));
+  const googleAuthApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.google(body as { code?: string; credential?: string }), []));
+  const updateProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.saveProgress(body), []));
+  const updateMockProgressApi = useApi<[unknown], ApiJson>(useCallback((body: unknown) => authApi.saveMockProgress(body), []));
   const updateTopicApi = useApi<[{ topicId: string; body: unknown }], ApiJson>(
     useCallback(({ topicId, body }: { topicId: string; body: unknown }) => apiService.put(`/study/topics/${topicId}`, body), [])
   );
@@ -262,11 +232,8 @@ export function useStudy() {
 
   const persistUser = (userData: unknown) => {
     if (!isRecord(userData)) return;
-    const { token, password: _password, ...profile } = userData;
-    void _password;
-    if (typeof token === 'string') localStorage.setItem('ssc_token', token);
-    localStorage.setItem('ssc_user', JSON.stringify(profile));
-    setUser(profile as unknown as AppUser);
+    const profile = persistSession(userData);
+    setUser(profile);
   };
 
   const loginUser = useCallback(async (username: string, password: string) => {
@@ -525,7 +492,7 @@ export function useStudy() {
               progress: Array.isArray(updatedProgress) ? updatedProgress as ProgressRow[] : prev.progress,
               lastStudyAt: res.data?.lastStudyAt || new Date().toISOString(),
             };
-            localStorage.setItem('ssc_user', JSON.stringify(next));
+            writeStoredUser(next);
             return next;
           });
         }
@@ -625,7 +592,7 @@ export function useStudy() {
               mockProgress: Array.isArray(updatedMockProgress) ? updatedMockProgress as MockProgressRow[] : prev.mockProgress,
               lastStudyAt: res.data?.lastStudyAt || new Date().toISOString(),
             };
-            localStorage.setItem('ssc_user', JSON.stringify(next));
+            writeStoredUser(next);
             return next;
           });
         }

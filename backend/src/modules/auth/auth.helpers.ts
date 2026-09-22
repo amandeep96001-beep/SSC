@@ -12,6 +12,15 @@ function rowTimestamp(row: unknown): number {
   return 0;
 }
 
+function resolveUserId(user: PublicUserSource): string {
+  if (typeof user.id === 'string' && user.id) return user.id;
+  if (user._id && typeof user._id === 'object' && 'toString' in user._id) {
+    return user._id.toString();
+  }
+  if (typeof user._id === 'string') return user._id;
+  return '';
+}
+
 export function deriveLastStudyAt(
   progress: unknown[] = [],
   mockProgress: unknown[] = [],
@@ -42,6 +51,7 @@ export function publicUserPayload(
 ): PublicUserPayload {
   const includeAvatar = opts.includeAvatar !== false;
   const payload: PublicUserPayload = {
+    id: resolveUserId(user),
     username: user.username,
     email: user.email || null,
     displayName: user.displayName || null,

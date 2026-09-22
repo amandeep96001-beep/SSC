@@ -171,6 +171,23 @@ export interface ApiErrorBody {
 
 export class HttpError extends Error {
   status?: number;
+  code?: string;
+  requestId?: string;
+  details?: unknown;
+
+  constructor(message: string, opts?: {
+    status?: number;
+    code?: string;
+    requestId?: string;
+    details?: unknown;
+  }) {
+    super(message);
+    this.name = 'HttpError';
+    this.status = opts?.status;
+    this.code = opts?.code;
+    this.requestId = opts?.requestId;
+    this.details = opts?.details;
+  }
 }
 
 export type JsonRecord = Record<string, unknown>;

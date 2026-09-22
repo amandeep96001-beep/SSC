@@ -9,6 +9,7 @@ export interface Timestamped {
 }
 
 export interface PublicUserPayload {
+  id: string;
   username: string;
   email: string | null;
   displayName: string | null;

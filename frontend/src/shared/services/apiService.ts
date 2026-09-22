@@ -15,7 +15,10 @@ export interface ApiJson {
   status?: string;
   message?: string;
   code?: string;
+  requestId?: string;
   data?: unknown;
+  meta?: unknown;
+  details?: unknown;
   mailSent?: boolean;
   debugOtp?: string;
   lastStudyAt?: string;
@@ -89,6 +92,16 @@ function handleUnauthorized(endpoint: string, result?: ApiJson): void {
   }
 }
 
+function toHttpError(result: ApiJson, status: number): HttpError {
+  const message = result.message || `Request failed with status ${status}`;
+  return new HttpError(message, {
+    status,
+    code: typeof result.code === 'string' ? result.code : undefined,
+    requestId: typeof result.requestId === 'string' ? result.requestId : undefined,
+    details: result.details,
+  });
+}
+
 async function request(endpoint: string, options: RequestOptions = {}): Promise<ApiJson> {
   const url = `${BASE_URL}${endpoint}`;
 
@@ -143,14 +156,16 @@ async function request(endpoint: string, options: RequestOptions = {}): Promise<
       result = { message: text || `Request failed with status ${response.status}` };
     }
 
+    // Prefer server request id; fall back to response header.
+    const headerId = response.headers.get('x-request-id');
+    if (!result.requestId && headerId) result.requestId = headerId;
+
     if (response.status === 401) {
       handleUnauthorized(endpoint, result);
     }
 
     if (!response.ok) {
-      const err = new HttpError(result.message || `Request failed with status ${response.status}`);
-      err.status = response.status;
-      throw err;
+      throw toHttpError(result, response.status);
     }
 
     return result;
@@ -214,11 +229,15 @@ export const apiService = {
     }
     if (!response.ok) {
       let message = `Download failed (${response.status})`;
+      let code: string | undefined;
+      let requestId: string | undefined;
       try {
-        const j = await response.json() as { message?: string };
+        const j = await response.json() as ApiJson;
         if (j?.message) message = j.message;
+        if (typeof j?.code === 'string') code = j.code;
+        if (typeof j?.requestId === 'string') requestId = j.requestId;
       } catch { /* ignore */ }
-      throw new Error(message);
+      throw new HttpError(message, { status: response.status, code, requestId });
     }
 
     const contentType = (response.headers.get('content-type') || '').toLowerCase();

@@ -231,6 +231,7 @@ export class AuthService {
 
     return publicUserPayload(
       {
+        id: userId,
         username,
         email: dbUser?.email || fallback?.email || null,
         displayName: dbUser?.displayName || null,

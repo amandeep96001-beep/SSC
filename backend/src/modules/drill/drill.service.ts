@@ -13,6 +13,8 @@ import {
 import type { VocabLean } from '../study/study.interface.js';
 import { badRequest, notFound } from '../../utils/app-errors.js';
 import { signDrillChallenge, verifyDrillChallenge } from '../../lib/challenge-token.js';
+import wrongLogRepository from './wrong-log.repository.js';
+import type { WrongLogUpsertInput } from './wrong-log.interface.js';
 
 const SUBJECT_MAP: Record<string, string> = {
   gk: 'GK',
@@ -335,6 +337,65 @@ export class DrillService {
       category: q.category,
     }));
   }
+
+  async listWrongLog(userId: string) {
+    const rows = await wrongLogRepository.listByUser(userId);
+    return rows.map(mapWrongLogRow);
+  }
+
+  async upsertWrongLog(userId: string, body: WrongLogUpsertInput) {
+    const doc = await wrongLogRepository.upsertWrong(userId, body);
+    if (!doc) throw badRequest('question is required.');
+    return mapWrongLogRow(doc);
+  }
+
+  async migrateWrongLog(userId: string, items: WrongLogUpsertInput[]) {
+    const count = await wrongLogRepository.bulkInsert(userId, items);
+    const data = await this.listWrongLog(userId);
+    return { migrated: count, data };
+  }
+
+  async removeWrongLog(userId: string, opts: { id?: string; question?: string }) {
+    if (opts.id) {
+      const result = await wrongLogRepository.deleteOne(userId, opts.id);
+      if (!result.deletedCount) throw notFound('Wrong-log entry not found.');
+      return { deleted: true };
+    }
+    if (opts.question) {
+      const result = await wrongLogRepository.deleteByQuestion(userId, opts.question);
+      if (!result.deletedCount) throw notFound('Wrong-log entry not found.');
+      return { deleted: true };
+    }
+    throw badRequest('id or question is required.');
+  }
+
+  async clearWrongLog(userId: string, type?: string) {
+    const result = await wrongLogRepository.clearAll(userId, type || undefined);
+    return { deleted: result.deletedCount || 0 };
+  }
+}
+
+function mapWrongLogRow(row: Record<string, unknown>) {
+  return {
+    id: String(row._id),
+    question: row.question,
+    correctAnswer: row.correctAnswer,
+    userAnswer: row.userAnswer,
+    options: row.options ?? null,
+    placeholder: row.placeholder ?? null,
+    explanation: row.explanation ?? null,
+    category: row.category ?? null,
+    type: row.type,
+    word: row.word ?? null,
+    revealDefinition: row.revealDefinition ?? null,
+    revealSynonyms: row.revealSynonyms ?? null,
+    revealAntonyms: row.revealAntonyms ?? null,
+    pos: row.pos ?? null,
+    wrongCount: Number(row.wrongCount) || 1,
+    lastWrongAt: row.lastWrongAt instanceof Date
+      ? row.lastWrongAt.getTime()
+      : new Date(String(row.lastWrongAt || Date.now())).getTime(),
+  };
 }
 
 export const drillService = new DrillService();
