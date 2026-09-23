@@ -1,3 +1,4 @@
+/** JWT and password-reset token helpers for authentication. */
 import crypto from 'crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { isHostedRuntime } from '../config/env.config.js';
