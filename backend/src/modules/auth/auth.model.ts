@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import type { IUser } from './auth.interface.js';
 
+/** Mongoose schema for auth users (credentials + Google OAuth). */
 const UserSchema = new Schema<IUser>({
   username: {
     type: String,
