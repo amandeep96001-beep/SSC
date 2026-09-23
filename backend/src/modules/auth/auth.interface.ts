@@ -1,6 +1,7 @@
 import type { JwtPayload } from 'jsonwebtoken';
 import type { PublicUserPayload } from '../../types/domain.js';
 
+/** Auth module TypeScript contracts (user docs, JWT, request shapes). */
 export interface IUser {
   username: string;
   email?: string;
