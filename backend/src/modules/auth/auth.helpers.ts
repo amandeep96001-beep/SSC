@@ -1,3 +1,4 @@
+/** Helpers for shaping public auth user payloads. */
 import { isRecord, type PublicUserPayload } from '../../types/domain.js';
 import type { PublicUserSource } from './auth.interface.js';
 
