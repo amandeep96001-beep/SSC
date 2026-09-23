@@ -1,5 +1,6 @@
 import { OAuth2Client, type TokenPayload } from 'google-auth-library';
 
+/** Google ID-token verification helpers for OAuth sign-in. */
 let idClient: OAuth2Client | null = null;
 
 function getClientId(): string {
