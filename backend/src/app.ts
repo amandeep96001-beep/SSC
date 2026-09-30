@@ -29,6 +29,7 @@ function getAllowedOrigins(): string[] {
 
   const productionFrontends = [
     'https://myexamprep-theta.vercel.app',
+    'http://localhost:5173',
   ];
 
   const localFrontends = [
