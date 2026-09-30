@@ -23,7 +23,7 @@ import { drillController } from '../modules/drill/drill.controller.js';
 import { verifyDrillSchema } from '../modules/drill/drill.schema.js';
 import { validate } from '../lib/validate.js';
 
-import { requireAuth } from '../middleware/auth.middleware.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.middleware.js';
 import { requireDb } from '../middleware/db.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
 
@@ -71,9 +71,9 @@ router.use('/auth', passwordRoutes);
 // Public browse (guest preview) — read-only catalogue
 // ---------------------------------------------------------------------------
 
-router.get('/study/subjects', requireDb, studyController.getSubjects);
-router.get('/study/subjects/:subjectName/topics', requireDb, studyController.getTopics);
-router.get('/study/topics/:topicId/notes', requireDb, studyController.getTopicNotes);
+router.get('/study/subjects', requireDb, optionalAuth, studyController.getSubjects);
+router.get('/study/subjects/:subjectName/topics', requireDb, optionalAuth, studyController.getTopics);
+router.get('/study/topics/:topicId/notes', requireDb, optionalAuth, studyController.getTopicNotes);
 router.get('/study/vocab', requireDb, studyController.getVocab);
 router.get('/exam-config', requireDb, examConfigController.listExamConfigs);
 router.get('/mock', requireDb, mockController.getMockTests);

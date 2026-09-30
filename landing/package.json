@@ -1,0 +1,24 @@
+{
+  "name": "crackuex-landing",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Standalone High-Converting SEO Landing Page for CrackuEx SSC Prep",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^1.17.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.12"
+  }
+}

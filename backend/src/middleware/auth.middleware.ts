@@ -94,3 +94,52 @@ export const requireAdmin: RequestHandler = (req, res, next) => {
   }
   next();
 };
+
+export const optionalAuth: RequestHandler = async (req, _res, next) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = header.slice(7);
+    const payload = verifyToken(token);
+
+    let cached = await getCachedAuthUser(payload.userId);
+    if (!cached) {
+      const user = await User.findById(payload.userId)
+        .select('_id username email role tokenVersion')
+        .lean();
+
+      if (!user) return next();
+
+      let role: string = user.role || 'user';
+      if (process.env.ADMIN_EMAIL?.trim() && user.email) {
+        role = resolveRoleByEmail(user.email);
+      }
+
+      cached = {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email || undefined,
+        role,
+        tokenVersion: user.tokenVersion ?? 0,
+      } satisfies CachedAuthUser;
+      await setCachedAuthUser(cached);
+    }
+
+    const claimed = typeof payload.tv === 'number' ? payload.tv : 0;
+    if (claimed === cached.tokenVersion) {
+      req.user = {
+        id: cached.id,
+        username: cached.username,
+        email: cached.email,
+        role: cached.role,
+      };
+    }
+  } catch {
+    // Non-fatal for optional auth
+  }
+  next();
+};
+

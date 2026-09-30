@@ -24,44 +24,48 @@ import { FaqAccordion } from './components/FaqAccordion';
 import { LandingCta } from './components/LandingCta';
 import { LandingFooter } from './components/LandingFooter';
 import { StickyMobileCta } from './components/StickyMobileCta';
-import type { LandingProps } from './types/landing.types';
-import './landing.css';
+import { navigateToApp } from './config';
+import './styles/landing.css';
 
-export function LandingPage({ onGoToDashboard }: LandingProps) {
+export function App() {
+  const handleGoToDashboard = () => {
+    navigateToApp();
+  };
+
   return (
     <div className="lp-root">
-      <LandingNavbar onGoToDashboard={onGoToDashboard} />
+      <LandingNavbar onGoToDashboard={handleGoToDashboard} />
       <main id="main-content">
-        <LandingHero onGoToDashboard={onGoToDashboard} />
+        <LandingHero onGoToDashboard={handleGoToDashboard} />
         <ExamMetricsBanner />
         
         {/* Interactive Speed Calculation & Math Challenge */}
-        <SpeedBoosterWidget onGoToDashboard={onGoToDashboard} />
+        <SpeedBoosterWidget onGoToDashboard={handleGoToDashboard} />
 
         {/* Live Exam Countdown Radar */}
-        <ExamCountdownWidget onGoToDashboard={onGoToDashboard} />
+        <ExamCountdownWidget onGoToDashboard={handleGoToDashboard} />
 
         {/* TCS Normalization & Cut-off Simulator */}
-        <CutoffPredictorWidget onGoToDashboard={onGoToDashboard} />
+        <CutoffPredictorWidget onGoToDashboard={handleGoToDashboard} />
 
         {/* Official TCS Subject Weightage & PYQ Hotspots */}
-        <TcsWeightageTable onGoToDashboard={onGoToDashboard} />
+        <TcsWeightageTable onGoToDashboard={handleGoToDashboard} />
 
         {/* Comprehensive Exam Guides & Pattern Deep Dive */}
         <PrepIntro />
-        <ExamSelectorTabs onGoToDashboard={onGoToDashboard} />
-        <ExamProcess onGoToDashboard={onGoToDashboard} />
-        <SyllabusBoard onGoToDashboard={onGoToDashboard} />
+        <ExamSelectorTabs onGoToDashboard={handleGoToDashboard} />
+        <ExamProcess onGoToDashboard={handleGoToDashboard} />
+        <SyllabusBoard onGoToDashboard={handleGoToDashboard} />
         <TierGuide />
-        <RailwaySection onGoToDashboard={onGoToDashboard} />
+        <RailwaySection onGoToDashboard={handleGoToDashboard} />
         <OverlapSection />
-        <PrepGuide onGoToDashboard={onGoToDashboard} />
+        <PrepGuide onGoToDashboard={handleGoToDashboard} />
 
         {/* Feature Highlights & Study Loop */}
-        <BentoFeatures onGoToDashboard={onGoToDashboard} />
-        <HowTheAppWorks onGoToDashboard={onGoToDashboard} />
-        <PracticePointers onGoToDashboard={onGoToDashboard} />
-        <StudyLoopSection onGoToDashboard={onGoToDashboard} />
+        <BentoFeatures onGoToDashboard={handleGoToDashboard} />
+        <HowTheAppWorks onGoToDashboard={handleGoToDashboard} />
+        <PracticePointers onGoToDashboard={handleGoToDashboard} />
+        <StudyLoopSection onGoToDashboard={handleGoToDashboard} />
 
         {/* Social Proof & Verified Aspirant Reviews */}
         <AspirantSuccessStories />
@@ -70,13 +74,13 @@ export function LandingPage({ onGoToDashboard }: LandingProps) {
         <FaqAccordion />
 
         {/* High-Converting Final Call to Action */}
-        <LandingCta onGoToDashboard={onGoToDashboard} />
+        <LandingCta onGoToDashboard={handleGoToDashboard} />
       </main>
 
-      <LandingFooter onGoToDashboard={onGoToDashboard} />
-      <StickyMobileCta onGoToDashboard={onGoToDashboard} />
+      <LandingFooter onGoToDashboard={handleGoToDashboard} />
+      <StickyMobileCta onGoToDashboard={handleGoToDashboard} />
     </div>
   );
 }
 
-export default LandingPage;
+export default App;

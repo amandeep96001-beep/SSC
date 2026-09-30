@@ -1,0 +1,14 @@
+# CrackuEx Landing Page — Search Engine Robots Configuration
+User-agent: *
+Allow: /
+Allow: /#speed-drill-tool
+Allow: /#rank-predictor
+Allow: /#tcs-weightage
+Allow: /#exams
+Allow: /#syllabus
+Allow: /#faq
+
+# Crawl Delay
+Crawl-delay: 0
+
+Sitemap: https://crackuex.com/sitemap.xml

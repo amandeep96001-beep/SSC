@@ -27,8 +27,8 @@ function ownerScope(req: Request): string | null {
   return req.user.id;
 }
 
-function isUserOwned(doc: { ownerId?: string | null } | null | undefined, userId: string) {
-  return Boolean(doc?.ownerId && doc.ownerId === userId);
+function isUserOwned(doc: { ownerId?: string | null } | null | undefined, userId?: string | null) {
+  return Boolean(doc?.ownerId && userId && doc.ownerId === userId);
 }
 
 function isAdmin(req: Request) {
@@ -36,7 +36,7 @@ function isAdmin(req: Request) {
 }
 
 function canManageTopic(topic: { ownerId?: string | null } | null | undefined, req: Request) {
-  if (isUserOwned(topic, req.user!.id)) return true;
+  if (req.user?.id && isUserOwned(topic, req.user.id)) return true;
   if (isAdmin(req) && !topic?.ownerId) return true;
   return false;
 }
@@ -184,12 +184,13 @@ export class StudyService {
   }
 
   const topics = await topicRepository.findBySubjectName(subject.name, ownerId);
+  const currentUserId = req.user?.id;
   return {
     data: topics.map((t) => ({
       id: t.id,
       name: t.name,
       syllabus: t.syllabus,
-      isOwned: isUserOwned(t, req.user!.id),
+      isOwned: isUserOwned(t, currentUserId),
     })),
     meta: { source: parseSource(req) },
   };
@@ -200,7 +201,8 @@ export class StudyService {
   const topic = await topicRepository.findById(topicId);
   if (!topic) throw notFound('Topic not found.');
 
-  if (topic.ownerId && topic.ownerId !== req.user!.id) {
+  const currentUserId = req.user?.id;
+  if (topic.ownerId && (!currentUserId || topic.ownerId !== currentUserId)) {
     throw forbidden('You do not have access to this topic.');
   }
 
@@ -211,7 +213,7 @@ export class StudyService {
       name: topic.name,
       notes: topic.notes,
       questions,
-      isOwned: isUserOwned(topic, req.user!.id),
+      isOwned: isUserOwned(topic, currentUserId),
       ownerId: topic.ownerId || null,
     },
   };
@@ -222,7 +224,8 @@ export class StudyService {
   const topic = await topicRepository.findById(topicId);
   if (!topic) throw notFound('Topic not found.');
 
-  if (topic.ownerId && topic.ownerId !== req.user!.id) {
+  const currentUserId = req.user?.id;
+  if (topic.ownerId && (!currentUserId || topic.ownerId !== currentUserId)) {
     throw forbidden('You do not have access to this topic.');
   }
 

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="cGradient" x1="104" y1="88" x2="390" y2="421" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A8A9FF"/>
+      <stop offset="0.48" stop-color="#696AF2"/>
+      <stop offset="1" stop-color="#4D4ED5"/>
+    </linearGradient>
+
+    <linearGradient id="cDepth" x1="95" y1="134" x2="185" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4D4FD0"/>
+      <stop offset="1" stop-color="#30339A"/>
+    </linearGradient>
+
+    <linearGradient id="arrowGradient" x1="323" y1="207" x2="426" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B9B9FF"/>
+      <stop offset="0.5" stop-color="#7B7CF5"/>
+      <stop offset="1" stop-color="#5D5EE0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Main C -->
+  <path
+    d="M375.5 132.5
+       C340.2 102.2 295.0 86.0 247.0 86.0
+       C156.0 86.0 82.0 159.0 82.0 250.0
+       C82.0 341.0 156.0 414.0 247.0 414.0
+       C294.5 414.0 339.5 397.9 375.0 367.8
+       L326.8 312.0
+       C304.4 330.0 276.7 340.5 247.0 340.5
+       C196.7 340.5 155.5 300.1 155.5 250.0
+       C155.5 199.9 196.7 159.5 247.0 159.5
+       C276.8 159.5 304.6 170.0 327.0 188.0
+       Z"
+    fill="url(#cGradient)"
+  />
+
+  <!-- Subtle inner depth -->
+  <path
+    d="M247 86
+       C156 86 82 159 82 250
+       C82 341 156 414 247 414
+       C272 414 296 408.5 318 398
+       C250 386 199 337 199 270
+       C199 204 248 148 315 137
+       C294 104.5 273 86 247 86Z"
+    fill="url(#cDepth)"
+    opacity="0.28"
+  />
+
+  <!-- Clean folded arrow inside C -->
+  <path
+    d="M321.5 244.5
+       L409.5 194
+       C421.8 186.9 436.2 195.7 434.0 209.7
+       L419.2 303.8
+       C417.0 317.8 400.6 323.2 390.2 313.5
+       L321.5 258.2
+       C315.8 253.6 315.8 247.8 321.5 244.5Z"
+    fill="url(#arrowGradient)"
+  />
+
+  <!-- Arrow highlight -->
+  <path
+    d="M321.5 244.5
+       L409.5 194
+       C421.8 186.9 436.2 195.7 434.0 209.7
+       L374.8 268.0
+       Z"
+    fill="#D3D3FF"
+    opacity="0.42"
+  />
+
+  <!-- Arrow lower facet -->
+  <path
+    d="M374.8 268
+       L419.2 303.8
+       C417 317.8 400.6 323.2 390.2 313.5
+       L350 281.2Z"
+    fill="#5557D8"
+    opacity="0.42"
+  />
+</svg>

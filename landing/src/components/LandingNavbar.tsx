@@ -1,5 +1,5 @@
 import { ArrowRight, Sun, Moon, Zap, Target } from 'lucide-react';
-import { useTheme } from '@/shared/context/useTheme';
+import { useTheme } from '../context/ThemeContext';
 
 interface LandingNavbarProps {
   onGoToDashboard: () => void;

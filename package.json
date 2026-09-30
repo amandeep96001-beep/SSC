@@ -7,6 +7,8 @@
     "dev:api": "npm run dev --prefix backend",
     "dev:web": "npm run dev --prefix frontend",
     "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "dev:landing": "npm run dev --prefix landing",
+    "build:landing": "npm run build --prefix landing",
     "start": "npm run start --prefix backend",
     "seed": "npm run seed --prefix backend"
   },
