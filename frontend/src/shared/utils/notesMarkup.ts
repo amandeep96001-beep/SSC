@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 interface TreeNode {
   label: string;
   depth: number;
@@ -829,6 +831,17 @@ function stripDangerousHtml(html: string): string {
     .replace(/\s(?:href|src|xlink:href)\s*=\s*javascript:[^\s>]+/gi, '');
 }
 
+function sanitizeNotesHtml(html: string): string {
+  if (typeof window === 'undefined' || !window.document) {
+    return stripDangerousHtml(html);
+  }
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ['style', 'svg', 'math', 'form', 'input', 'script', 'iframe', 'object', 'embed'],
+    FORBID_ATTR: ['style'],
+  });
+}
+
 function alreadyCleanNotes(html: unknown): boolean {
   if (!html) return false;
   const src = String(html);
@@ -847,7 +860,7 @@ export function prepareNotesHtml(content: unknown): string {
 
   // Already app-clean: light pass only (still strip rogue styles)
   if (alreadyCleanNotes(raw)) {
-    return stripDangerousHtml(stripThemeBreakingStyles(tidyStructure(raw)));
+    return sanitizeNotesHtml(stripThemeBreakingStyles(tidyStructure(raw)));
   }
 
   let html = isLikelyHtml(raw) ? normalizeImportedHtml(raw) : markdownToHtml(raw);
@@ -856,7 +869,7 @@ export function prepareNotesHtml(content: unknown): string {
   html = convertLooseAsciiParagraphs(html);
   html = wrapTables(html);
   html = tidyStructure(html);
-  return stripDangerousHtml(html);
+  return sanitizeNotesHtml(html);
 }
 
 /** Prefer clipboard HTML when present; always normalize. */

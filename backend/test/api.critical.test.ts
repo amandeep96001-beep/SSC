@@ -44,6 +44,14 @@ describe('health + errors', () => {
     expect(res.body.code).toBe('NOT_FOUND');
     expect(res.body.requestId || res.headers['x-request-id']).toBeTruthy();
   });
+
+  it('returns code and requestId when auth is missing', async () => {
+    const res = await request(app).get('/api/auth/me');
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe('error');
+    expect(res.body.code).toBe('UNAUTHORIZED');
+    expect(res.body.requestId || res.headers['x-request-id']).toBeTruthy();
+  });
 });
 
 describe('auth', () => {

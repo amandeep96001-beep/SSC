@@ -5,6 +5,8 @@ import { connectDB } from './src/config/db.config.js';
 import { validateEnv, isHostedRuntime } from './src/config/env.config.js';
 import { createApp } from './src/app.js';
 import { logger } from './src/lib/logger.js';
+import { waitForRedis } from './src/infra/redis.js';
+import { installProcessShutdown } from './src/infra/shutdown.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.basename(here) === 'dist' ? path.resolve(here, '..') : here;
@@ -30,18 +32,27 @@ async function start() {
     }
   }
 
+  if (process.env.REDIS_URL?.trim()) {
+    const redisOk = await waitForRedis(10_000);
+    if (!redisOk) {
+      logger.error('Redis did not become ready');
+      if (isHostedRuntime()) process.exit(1);
+    }
+  }
+
   const app = createApp();
 
-  // Inline reminders (BullMQ when Redis is set, else in-process cron).
   // Dedicated workers set REMINDER_INLINE=0 and run worker.ts instead.
   if (String(process.env.REMINDER_INLINE || '1') !== '0') {
     const { startReminderRuntime } = await import('./src/modules/reminders/reminder.runtime.js');
     await startReminderRuntime();
   }
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     logger.info({ port: PORT, msg: 'Server listening' });
   });
+
+  installProcessShutdown({ server });
 }
 
 start().catch((err) => {

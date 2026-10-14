@@ -1,5 +1,5 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
-import { getRedis } from './redis.js';
+import { getRedis, isRedisReady } from './redis.js';
 import { logger } from '../lib/logger.js';
 
 export const REMINDER_QUEUE = 'reminders';
@@ -71,7 +71,7 @@ export async function stopReminderWorker(): Promise<void> {
   }
 }
 
-/** True when Redis is configured (BullMQ path available). */
+/** True when Redis is up — BullMQ is unsafe to start on a dead connection. */
 export function canUseReminderQueue(): boolean {
-  return Boolean(process.env.REDIS_URL?.trim() && getRedis());
+  return Boolean(process.env.REDIS_URL?.trim() && getRedis() && isRedisReady());
 }

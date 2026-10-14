@@ -7,14 +7,26 @@ export const logger = pino({
   level,
   base: { service: 'crackuex-api' },
   timestamp: pino.stdTimeFunctions.isoTime,
-  ...(isHostedRuntime()
-    ? {}
-    : {
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'password',
+      'token',
+      'otp',
+      'REDIS_URL',
+      'err.config.headers.Authorization',
+    ],
+    censor: '[redacted]',
+  },
+  ...(!isHostedRuntime() && process.env.NODE_ENV !== 'test'
+    ? {
         transport: {
           target: 'pino-pretty',
           options: { colorize: true, translateTime: 'SYS:standard' },
         },
-      }),
+      }
+    : {}),
 });
 
 export type AppLogger = typeof logger;

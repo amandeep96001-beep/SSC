@@ -5,6 +5,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import type { Attachment } from 'nodemailer/lib/mailer/index.js';
 import { isHostedRuntime } from '../config/env.config.js';
 import { errorMessage } from '../types/domain.js';
+import { logger } from '../lib/logger.js';
 import type { OtpPurpose } from '../types/domain.js';
 
 const LOGO_CID = 'crackuex-logo';
@@ -115,8 +116,8 @@ export async function sendMail({
     if (isHostedRuntime()) {
       throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
     }
-    console.info(`[mail] SMTP not configured — would send to ${recipient}: ${subject}`);
-    console.info(`[mail] ${text}`);
+    logger.info({ recipient, subject, msg: 'SMTP not configured — mail skipped' });
+    logger.debug({ recipient, text, msg: 'skipped mail body' });
     return { sent: false, reason: 'smtp_not_configured' };
   }
 
@@ -137,7 +138,7 @@ export async function sendMail({
   } catch (err) {
     cachedTransporter = null;
     const reason = errorMessage(err);
-    console.error('[mail] SMTP send failed:', reason);
+    logger.error({ err: reason, msg: 'SMTP send failed' });
     if (isHostedRuntime()) {
       throw new Error('Unable to send email. Please try again shortly.');
     }
@@ -251,23 +252,24 @@ export async function sendOtpEmail(
       throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
     }
     // Local only — never expose this code over HTTP
-    console.info(`[auth:otp] SMTP not configured — OTP for ${email}: ${code}`);
+    logger.info({ email, msg: 'SMTP not configured — OTP issued locally' });
+    logger.debug({ email, code, msg: 'local OTP code' });
     return { sent: false };
   }
 
   try {
     const result = await sendMail({ to: email, subject, text: copy.text, html });
     if (result.sent) return { sent: true };
-    console.error(`[auth:otp] Mail not sent for ${email}`);
+    logger.error({ email, msg: 'OTP mail not sent' });
     if (!isHostedRuntime()) {
-      console.info(`[auth:otp] Local fallback code for ${email}: ${code}`);
+      logger.debug({ email, code, msg: 'local OTP fallback' });
       return { sent: false };
     }
     throw new Error('Unable to send verification email. Please try again shortly.');
   } catch (err) {
-    console.error('[auth:otp] SMTP send failed:', errorMessage(err));
+    logger.error({ err: errorMessage(err), email, msg: 'OTP SMTP send failed' });
     if (!isHostedRuntime()) {
-      console.info(`[auth:otp] Local fallback code for ${email}: ${code}`);
+      logger.debug({ email, code, msg: 'local OTP fallback' });
       return { sent: false };
     }
     throw new Error('Unable to send verification email. Please try again shortly.');

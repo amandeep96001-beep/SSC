@@ -22,7 +22,7 @@ export async function startReminderRuntime(): Promise<void> {
     return;
   }
 
-  logger.info('REDIS_URL unset — using in-process reminder cron');
+  logger.info('Redis not ready — using in-process reminder cron');
   startReminderCron();
 }
 

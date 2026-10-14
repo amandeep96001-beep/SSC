@@ -205,6 +205,10 @@ export function useStudy() {
   const fetchSubjects = useCallback(async (sourceOverride?: string) => {
     const source = sourceOverride || contentSourceRef.current;
     const result = await fetchSubjectsApi(source);
+    if (!result.success) {
+      showApiErrorToast(result.error, 'Could not load subjects.');
+      return;
+    }
     const list = getListFromResponse(result);
     setSubjectsRaw(normalizeSubjects(list));
   }, [fetchSubjectsApi]);
@@ -399,7 +403,7 @@ export function useStudy() {
       }
     } catch (err) {
       if (controller.signal.aborted) return;
-      console.warn('[loadTopicNotes] notes fetch failed:', errorMessage(err));
+      showApiErrorToast(err, 'Could not load notes.');
     } finally {
       if (!controller.signal.aborted) {
         setNotesLoading(false);
@@ -949,7 +953,7 @@ export function useStudy() {
         }
       } catch (err) {
         if (!cancelled) {
-          console.warn('[study route sync]', errorMessage(err) || err);
+          showApiErrorToast(err, 'Could not load this study page.');
         }
       }
     })();

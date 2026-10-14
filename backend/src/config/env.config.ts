@@ -1,4 +1,4 @@
-const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL'] as const;
+const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL', 'REDIS_URL'] as const;
 
 export function isHostedRuntime(): boolean {
   return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
@@ -28,5 +28,12 @@ export function validateEnv(): void {
 
   if (!process.env.ADMIN_EMAIL?.trim()) {
     console.warn('[env] ADMIN_EMAIL is unset — no account will receive admin role.');
+  }
+
+  const smtpReady = Boolean(
+    process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim(),
+  );
+  if (!smtpReady) {
+    console.warn('[env] SMTP is unset — OTP and password-reset email will fail.');
   }
 }

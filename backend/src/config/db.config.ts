@@ -2,6 +2,7 @@ import dns from 'node:dns';
 import mongoose, { type ConnectOptions } from 'mongoose';
 import Subject from '../modules/study/subject.model.js';
 import { errorMessage, mongoErrorCode, mongoErrorCodeName } from '../types/domain.js';
+import { logger } from '../lib/logger.js';
 
 dns.setDefaultResultOrder('ipv4first');
 
@@ -52,13 +53,13 @@ function bindConnectionListeners(): void {
   listenersBound = true;
 
   mongoose.connection.on('connected', () => {
-    console.log('MongoDB connected');
+    logger.info('MongoDB connected');
   });
   mongoose.connection.on('error', (err) => {
-    console.error('MongoDB error:', err.message);
+    logger.error({ err: err.message, msg: 'MongoDB error' });
   });
   mongoose.connection.on('disconnected', () => {
-    console.warn('MongoDB disconnected');
+    logger.warn('MongoDB disconnected');
   });
 }
 
@@ -67,7 +68,7 @@ async function migrateSubjectIndexes(): Promise<void> {
     await Subject.collection.dropIndex('name_1');
   } catch (err) {
     if (mongoErrorCodeName(err) !== 'IndexNotFound' && mongoErrorCode(err) !== 27) {
-      console.warn('Subject index migrate:', errorMessage(err));
+      logger.warn({ err: errorMessage(err), msg: 'Subject index migrate' });
     }
   }
   await Subject.syncIndexes();
@@ -76,7 +77,7 @@ async function migrateSubjectIndexes(): Promise<void> {
 export async function connectDB(): Promise<void> {
   const uri = normalizeUri(process.env.MONGODB_URI);
   if (!uri) {
-    console.error('MONGODB_URI is not set');
+    logger.error('MONGODB_URI is not set');
     process.exit(1);
   }
 
@@ -87,4 +88,9 @@ export async function connectDB(): Promise<void> {
 
 export function getDBStatus(): boolean {
   return mongoose.connection.readyState === 1;
+}
+
+export async function disconnectDB(): Promise<void> {
+  if (mongoose.connection.readyState === 0) return;
+  await mongoose.disconnect();
 }

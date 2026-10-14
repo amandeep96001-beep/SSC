@@ -1,10 +1,26 @@
 import { createHash } from 'node:crypto';
 import { getRedis } from './redis.js';
+import { isHostedRuntime } from '../config/env.config.js';
+import { logger } from '../lib/logger.js';
+import { errorMessage } from '../types/domain.js';
 
 type MemoryEntry = { value: string; expiresAt: number };
 
 const memory = new Map<string, MemoryEntry>();
 const MAX_MEMORY_KEYS = Number(process.env.CACHE_MAX_KEYS || 20_000);
+
+let lastWarnAt = 0;
+
+function warnRedis(op: string, err: unknown): void {
+  const now = Date.now();
+  if (now - lastWarnAt < 30_000) return;
+  lastWarnAt = now;
+  logger.warn({ op, err: errorMessage(err), msg: 'redis cache failed' });
+}
+
+function allowMemory(): boolean {
+  return !isHostedRuntime();
+}
 
 function pruneMemory(): void {
   if (memory.size <= MAX_MEMORY_KEYS) return;
@@ -36,10 +52,13 @@ export async function cacheGet(key: string): Promise<string | null> {
   if (redis) {
     try {
       return await redis.get(full);
-    } catch {
-      /* fall through to memory */
+    } catch (err) {
+      warnRedis('get', err);
+      if (!allowMemory()) return null;
     }
   }
+
+  if (!allowMemory() && !redis) return null;
 
   const entry = memory.get(full);
   if (!entry) return null;
@@ -58,10 +77,13 @@ export async function cacheSet(key: string, value: string, ttlSeconds: number): 
     try {
       await redis.set(full, value, 'EX', ttl);
       return;
-    } catch {
-      /* fall through to memory */
+    } catch (err) {
+      warnRedis('set', err);
+      if (!allowMemory()) return;
     }
   }
+
+  if (!allowMemory() && !redis) return;
 
   memory.set(full, { value, expiresAt: Date.now() + ttl * 1000 });
   pruneMemory();
@@ -74,8 +96,8 @@ export async function cacheDel(key: string): Promise<void> {
   if (redis) {
     try {
       await redis.del(full);
-    } catch {
-      /* ignore */
+    } catch (err) {
+      warnRedis('del', err);
     }
   }
 }
@@ -92,4 +114,9 @@ export async function cacheGetJson<T>(key: string): Promise<T | null> {
 
 export async function cacheSetJson(key: string, value: unknown, ttlSeconds: number): Promise<void> {
   await cacheSet(key, JSON.stringify(value), ttlSeconds);
+}
+
+/** Test helper — not used in production paths. */
+export function resetMemoryCache(): void {
+  memory.clear();
 }

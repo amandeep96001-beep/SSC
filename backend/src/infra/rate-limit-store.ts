@@ -1,10 +1,29 @@
 import type { Store, Options, ClientRateLimitInfo } from 'express-rate-limit';
 import { getRedis } from './redis.js';
+import { isHostedRuntime } from '../config/env.config.js';
+import { logger } from '../lib/logger.js';
+import { errorMessage } from '../types/domain.js';
+
+const INCR_EXPIRE = `
+local n = redis.call('INCR', KEYS[1])
+if n == 1 or redis.call('PTTL', KEYS[1]) < 0 then
+  redis.call('PEXPIRE', KEYS[1], tonumber(ARGV[1]))
+end
+return {n, redis.call('PTTL', KEYS[1])}
+`;
+
+let lastWarnAt = 0;
+
+function warnRedis(err: unknown): void {
+  const now = Date.now();
+  if (now - lastWarnAt < 30_000) return;
+  lastWarnAt = now;
+  logger.warn({ err: errorMessage(err), msg: 'redis rate-limit failed' });
+}
 
 /**
  * Redis-backed store for express-rate-limit so limits stay correct across
- * multiple API instances. Falls back to the default memory store when Redis
- * is unavailable.
+ * API instances. Memory is local-only; hosted Redis errors fail open (allow).
  */
 export class RedisRateLimitStore implements Store {
   prefix: string;
@@ -26,15 +45,17 @@ export class RedisRateLimitStore implements Store {
 
     if (redis) {
       try {
-        const hits = await redis.incr(full);
-        if (hits === 1) {
-          await redis.pexpire(full, this.windowMs);
-        }
-        const pttl = await redis.pttl(full);
+        const raw = await redis.eval(INCR_EXPIRE, 1, full, String(this.windowMs));
+        const pair = Array.isArray(raw) ? raw : [1, this.windowMs];
+        const hits = Number(pair[0]) || 1;
+        const pttl = Number(pair[1]);
         const resetTime = new Date(now + (pttl > 0 ? pttl : this.windowMs));
         return { totalHits: hits, resetTime };
-      } catch {
-        /* fall through */
+      } catch (err) {
+        warnRedis(err);
+        if (isHostedRuntime()) {
+          return { totalHits: 1, resetTime: new Date(now + this.windowMs) };
+        }
       }
     }
 
@@ -54,8 +75,9 @@ export class RedisRateLimitStore implements Store {
       try {
         await redis.decr(full);
         return;
-      } catch {
-        /* fall through */
+      } catch (err) {
+        warnRedis(err);
+        if (isHostedRuntime()) return;
       }
     }
     const entry = this.#local.get(full);
@@ -69,14 +91,13 @@ export class RedisRateLimitStore implements Store {
     if (redis) {
       try {
         await redis.del(full);
-      } catch {
-        /* ignore */
+      } catch (err) {
+        warnRedis(err);
       }
     }
   }
 }
 
 export function createRateLimitStore(prefix: string): Store | undefined {
-  // Always return our store — it uses Redis when available, memory otherwise.
   return new RedisRateLimitStore(prefix);
 }

@@ -8,22 +8,17 @@ import {
   setCachedAuthUser,
   type CachedAuthUser,
 } from '../infra/auth-cache.js';
+import { forbidden, serviceUnavailable, unauthorized } from '../utils/app-errors.js';
 
-export const requireAuth: RequestHandler = async (req, res, next) => {
+export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
     if (!getDBStatus()) {
-      return res.status(503).json({
-        status: 'error',
-        message: 'Database unavailable. Please try again shortly.',
-      });
+      return next(serviceUnavailable('Database unavailable. Please try again shortly.'));
     }
 
     const header = req.headers.authorization;
     if (!header?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required. Please sign in again.',
-      });
+      return next(unauthorized('Authentication required. Please sign in again.'));
     }
 
     const token = header.slice(7);
@@ -36,10 +31,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
         .lean();
 
       if (!user) {
-        return res.status(401).json({
-          status: 'error',
-          message: 'Session expired. Please sign in again.',
-        });
+        return next(unauthorized('Session expired. Please sign in again.'));
       }
 
       let role: string = user.role || 'user';
@@ -62,11 +54,9 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
     const claimed = typeof payload.tv === 'number' ? payload.tv : 0;
     if (claimed !== cached.tokenVersion) {
-      return res.status(401).json({
-        status: 'error',
-        code: 'SESSION_SUPERSEDED',
-        message: 'Signed in on another device. This session was signed out.',
-      });
+      return next(
+        unauthorized('Signed in on another device. This session was signed out.', 'SESSION_SUPERSEDED'),
+      );
     }
 
     req.user = {
@@ -78,19 +68,13 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
     next();
   } catch {
-    return res.status(401).json({
-      status: 'error',
-      message: 'Invalid or expired session. Please sign in again.',
-    });
+    next(unauthorized('Invalid or expired session. Please sign in again.'));
   }
 };
 
-export const requireAdmin: RequestHandler = (req, res, next) => {
+export const requireAdmin: RequestHandler = (req, _res, next) => {
   if (req.user?.role !== 'admin') {
-    return res.status(403).json({
-      status: 'error',
-      message: 'Admin access required.',
-    });
+    return next(forbidden('Admin access required.'));
   }
   next();
 };
@@ -138,8 +122,7 @@ export const optionalAuth: RequestHandler = async (req, _res, next) => {
       };
     }
   } catch {
-    // Non-fatal for optional auth
+    // Optional auth never fails the request.
   }
   next();
 };
-

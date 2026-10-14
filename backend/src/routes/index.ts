@@ -26,6 +26,7 @@ import { validate } from '../lib/validate.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.middleware.js';
 import { requireDb } from '../middleware/db.middleware.js';
 import { getDBStatus } from '../config/db.config.js';
+import { isRedisReady } from '../infra/redis.js';
 
 const router = express.Router();
 
@@ -44,9 +45,11 @@ function mountProtected(path: string, feature: express.Router) {
 
 router.get('/health', (_req, res) => {
   const dbOk = getDBStatus();
+  const redisConfigured = Boolean(process.env.REDIS_URL?.trim());
   res.status(dbOk ? 200 : 503).json({
     status: dbOk ? 'ok' : 'degraded',
     db: dbOk ? 'connected' : 'disconnected',
+    redis: redisConfigured ? (isRedisReady() ? 'connected' : 'connecting') : 'disabled',
   });
 });
 

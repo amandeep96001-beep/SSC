@@ -2,6 +2,7 @@
 import crypto from 'crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { isHostedRuntime } from '../config/env.config.js';
+import { logger } from '../lib/logger.js';
 import type { AuthTokenPayload, PasswordResetTokenPayload } from '../modules/auth/auth.interface.js';
 
 const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '24h') as SignOptions['expiresIn'];
@@ -19,7 +20,7 @@ function getSecret(): string {
 
   if (!ephemeralDevSecret) {
     ephemeralDevSecret = crypto.randomBytes(48).toString('hex');
-    console.warn('[auth] JWT_SECRET is unset — using an ephemeral secret. Sessions reset on restart.');
+    logger.warn('JWT_SECRET is unset — using an ephemeral secret. Sessions reset on restart.');
   }
   return ephemeralDevSecret;
 }

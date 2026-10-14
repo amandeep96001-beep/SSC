@@ -24,7 +24,6 @@ import { Sidebar } from './Sidebar';
 import { FullMockPortal } from '@/features/mock-tests/components/FullMockPortal';
 import { useMockTests } from '@/features/mock-tests/hooks/useMockTests';
 import { NotesFloatingDock } from '@/features/study/components/NotesFloatingDock';
-import { ExamPicker } from '@/features/home/components/ExamPicker';
 import { setBackHandler, trapHistory } from '@/shared/utils/backTrap';
 import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
 import { parseBulkQuestions, toCompactMcqs, BULK_MCQ_EXAMPLE_SHORT } from '@/shared/utils/parseBulkQuestions';
@@ -1178,7 +1177,6 @@ export function Dashboard() {
       </main>
 
       <NotesFloatingDock openSignal={notesDockSignal} />
-      <ExamPicker />
 
       {authModal}
 

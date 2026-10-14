@@ -98,7 +98,7 @@ export function createApp() {
     if (!origin) return next();
     if (isOriginAllowed(origin, allowedOrigins)) return next();
 
-    logger.warn({ origin, allowedOrigins, msg: 'CORS origin blocked' });
+    logger.warn({ origin, msg: 'CORS origin blocked' });
 
     if (req.method === 'OPTIONS') {
       return res.status(403).json({

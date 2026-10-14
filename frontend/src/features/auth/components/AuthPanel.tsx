@@ -20,11 +20,26 @@ function prefersReducedMotion() {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function tokenFromHash(): string {
+  const raw = window.location.hash.replace(/^#/, '');
+  if (raw.startsWith('reset=')) {
+    try {
+      return decodeURIComponent(raw.slice('reset='.length)).trim();
+    } catch {
+      return raw.slice('reset='.length).trim();
+    }
+  }
+  return '';
+}
+
 function readResetTokenFromUrl(): string {
   if (typeof window === 'undefined') return '';
   try {
-    const params = new URLSearchParams(window.location.search);
-    const token = (params.get('reset') || params.get('resetToken') || '').trim();
+    let token = tokenFromHash();
+    if (!token) {
+      const params = new URLSearchParams(window.location.search);
+      token = (params.get('reset') || params.get('resetToken') || '').trim();
+    }
     return token.length >= 20 ? token : '';
   } catch {
     return '';
@@ -35,10 +50,10 @@ function clearResetParamsFromUrl() {
   if (typeof window === 'undefined') return;
   try {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has('reset') && !params.has('resetToken')) return;
     params.delete('reset');
     params.delete('resetToken');
-    const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}`;
+    const q = params.toString();
+    const next = `${window.location.pathname}${q ? `?${q}` : ''}`;
     window.history.replaceState({}, '', next);
   } catch {
     /* ignore */
@@ -241,7 +256,7 @@ export function AuthPanel({
   const [resetUrl, setResetUrl] = useState(() => {
     const token = readResetTokenFromUrl();
     return token && typeof window !== 'undefined'
-      ? `${window.location.origin}/?reset=${encodeURIComponent(token)}`
+      ? `${window.location.origin}/#reset=${encodeURIComponent(token)}`
       : '';
   });
   const [googleClientId, setGoogleClientId] = useState(
@@ -410,7 +425,7 @@ export function AuthPanel({
     resetAuthFields();
   };
 
-  // Deep-link: /?reset=<token> — state seeded above; only clean the URL here.
+  // Deep-link: /#reset=<token> (legacy /?reset= still accepted). Clean the URL after seed.
   useEffect(() => {
     if (!resetToken) return;
     clearResetParamsFromUrl();

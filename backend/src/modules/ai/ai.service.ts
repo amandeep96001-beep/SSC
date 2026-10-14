@@ -1,6 +1,7 @@
 import { errorMessage, isRecord } from '../../types/domain.js';
 import { badRequest } from '../../utils/app-errors.js';
 import { cacheGetJson, cacheHash, cacheSetJson } from '../../infra/cache.js';
+import { logger } from '../../lib/logger.js';
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash';
 
@@ -65,7 +66,7 @@ async function tryPollinations(prompt: string, retries = 2): Promise<string> {
     });
 
     if (res.status === 429) {
-      console.warn(`[AI] Pollinations 429, retrying... (${i + 1}/${retries})`);
+      logger.warn({ attempt: i + 1, retries, msg: 'Pollinations 429, retrying' });
       await new Promise((resolve) => setTimeout(resolve, 2000));
       continue;
     }
@@ -192,12 +193,12 @@ export class AiService {
         provider = name;
         break;
       } catch (err) {
-        console.warn(`[AI] ${name} failed:`, errorMessage(err));
+        logger.warn({ provider: name, err: errorMessage(err), msg: 'AI provider failed' });
       }
     }
 
     if (!aiText) {
-      console.warn('[AI] All AI services failed. Using local static fallback.');
+      logger.warn('All AI services failed — using static fallback');
       aiText = staticFallback(correctAnswer, explanation);
       provider = 'static';
     }

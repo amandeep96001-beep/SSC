@@ -33,7 +33,7 @@ function frontendOrigin(): string {
 }
 
 function buildPasswordResetUrl(token: string): string {
-  return `${frontendOrigin()}/?reset=${encodeURIComponent(token)}`;
+  return `${frontendOrigin()}/#reset=${encodeURIComponent(token)}`;
 }
 
 export class PasswordService {
