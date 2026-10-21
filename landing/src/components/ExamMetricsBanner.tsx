@@ -1,15 +1,26 @@
-import { STATS_HIGHLIGHTS } from '../data/landingData';
+const TICKER = [
+  'CGL',
+  'CHSL',
+  'GD',
+  'CPO',
+  'MTS',
+  'Notes',
+  'Drills',
+  'Mocks',
+  'Topic tests',
+  'Wrong-question list',
+];
 
 export function ExamMetricsBanner() {
+  const loop = [...TICKER, ...TICKER];
   return (
-    <div className="lp-metrics-strip" aria-label="Platform Highlights">
-      <div className="lp-metrics-container">
-        {STATS_HIGHLIGHTS.map((stat, i) => (
-          <div key={i} className="lp-metric-item">
-            <span className="lp-metric-val">{stat.value}</span>
-            <span className="lp-metric-lbl">{stat.label}</span>
-            <span className="lp-metric-cap">{stat.caption}</span>
-          </div>
+    <div className="lp-ticker" aria-label="What you can practise">
+      <div className="lp-ticker-track">
+        {loop.map((item, i) => (
+          <span className="lp-ticker-item" key={`${item}-${i}`}>
+            <span aria-hidden="true">▸</span>
+            {item}
+          </span>
         ))}
       </div>
     </div>

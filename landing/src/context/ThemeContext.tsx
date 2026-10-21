@@ -17,16 +17,15 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('crackuex_theme');
+      const stored = localStorage.getItem('crackuex_landing_theme');
       if (stored === 'light' || stored === 'dark') return stored;
-      if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
     }
     return 'dark';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('crackuex_theme', theme);
+    localStorage.setItem('crackuex_landing_theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

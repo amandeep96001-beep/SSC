@@ -9,9 +9,9 @@ import {
   ChevronRight,
   TrendingUp,
   RotateCcw,
-  Sparkles,
   Award,
 } from 'lucide-react';
+import { BrandWordmark } from './BrandWordmark';
 
 export function AppPreviewFrame() {
   const [activeTab, setActiveTab] = useState<'mock' | 'drill' | 'diagnostic'>('mock');
@@ -36,7 +36,7 @@ export function AppPreviewFrame() {
             onClick={() => setActiveTab('mock')}
           >
             <span className="lp-tab-indicator" />
-            Full Mock Simulation
+            Mock test
           </button>
           <button
             type="button"
@@ -44,7 +44,7 @@ export function AppPreviewFrame() {
             onClick={() => setActiveTab('drill')}
           >
             <span className="lp-tab-indicator" />
-            Speed Drill Engine
+            Drill
           </button>
           <button
             type="button"
@@ -52,14 +52,14 @@ export function AppPreviewFrame() {
             onClick={() => setActiveTab('diagnostic')}
           >
             <span className="lp-tab-indicator" />
-            Error Diagnostics
+            Wrong answers
           </button>
         </div>
 
         <div className="lp-window-status">
           <img src="/logo.svg" alt="" className="lp-window-mini-logo" aria-hidden="true" />
           <span className="lp-pulse-dot" />
-          <span>CrackuEx Live Engine</span>
+          <BrandWordmark className="lp-brand-wordmark--sm" />
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export function AppPreviewFrame() {
                         <span className="lp-opt-text">{opt.text}</span>
                         {isSelected && isCorrect && (
                           <span className="lp-opt-feedback lp-opt-correct">
-                            <CheckCircle2 size={15} /> Correct (Topper Speed: 22s)
+                            <CheckCircle2 size={15} /> Correct
                           </span>
                         )}
                       </button>
@@ -266,10 +266,8 @@ export function AppPreviewFrame() {
               </div>
 
               <div className="lp-diag-action-hook">
-                <Sparkles size={16} className="lp-hook-icon" />
                 <div className="lp-hook-text">
-                  <strong>Auto-Action:</strong> Added 4 similar Alligation relative speed MCQs to your Daily Revision
-                  Queue for tomorrow.
+                  Wrong answers can be sent to the revision list for the next session.
                 </div>
               </div>
             </div>

@@ -121,10 +121,10 @@ export const BENTO_FEATURES: BentoFeature[] = [
 ];
 
 export const STATS_HIGHLIGHTS = [
-  { value: '48,900+', label: 'Active Aspirants', caption: 'Practicing daily across India' },
-  { value: '100% Free', label: 'Zero Paywall', caption: 'Full mocks, drills & notes' },
-  { value: 'TCS Pattern', label: 'Latest Syllabus', caption: '2025-2026 verified blueprint' },
-  { value: '35+ Marks', label: 'Average Score Boost', caption: 'Via speed math & revision decks' },
+  { value: 'SSC', label: 'CGL, CHSL, GD, CPO, MTS', caption: 'Pick the exam, then practise that syllabus' },
+  { value: 'Drills', label: 'Short practice', caption: 'Graded on the server, not in the browser' },
+  { value: 'Notes', label: 'Yours to keep', caption: 'Quick pad plus topic remarks' },
+  { value: 'Progress', label: 'Three labels', caption: 'Mastered, Reviewing, Needs work' },
 ];
 
 export const STUDY_LOOP_STEPS = [

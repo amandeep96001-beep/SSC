@@ -41,13 +41,11 @@ export const paths = {
   analytics: '/analytics',
   competition: '/competition',
   reminders: '/reminders',
-  landing: '/landing',
 };
 
 const TOP_LEVEL: Record<string, string> = {
   '/': 'home',
   '/home': 'home',
-  '/landing': 'landing',
   '/drill': 'drill',
   '/study': 'subjects',
   '/results': 'results',
@@ -154,8 +152,6 @@ export function pathForView(view: string, ctx: PathContext = {}): string {
       return paths.competition;
     case 'reminders':
       return paths.reminders;
-    case 'landing':
-      return paths.landing;
     default:
       return paths.home;
   }

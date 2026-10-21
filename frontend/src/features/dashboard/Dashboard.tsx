@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useRef, lazy, Suspense, type FormEvent, type MouseEvent } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense, type FormEvent, type MouseEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { APP_NAME, pageTitle } from '@/shared/brand';
 import gsap from 'gsap';
@@ -34,6 +35,7 @@ import '@/features/home/home.css';
 import '@/features/admin/admin.css';
 import '@/features/reminders/reminders.css';
 import { FeatureErrorBoundary } from '@/shared/components/layout/FeatureErrorBoundary';
+import { lazyWithRetry } from '@/shared/utils/lazyWithRetry';
 import '@/shared/components/layout/feature-error.css';
 import { GuestLockedPanel } from '@/shared/components/GuestLockedPanel';
 import '@/shared/components/guest-locked.css';
@@ -45,37 +47,37 @@ import {
   markGuestMockPreviewUsed,
 } from '@/shared/utils/guestQuota';
 
-const DrillWorkspace = lazy(() =>
+const DrillWorkspace = lazyWithRetry(() =>
   import('@/features/drills/components/DrillWorkspace').then((m) => ({ default: m.DrillWorkspace }))
 );
-const SyllabusWorkspace = lazy(() =>
+const SyllabusWorkspace = lazyWithRetry(() =>
   import('@/features/study/components/SyllabusWorkspace').then((m) => ({ default: m.SyllabusWorkspace }))
 );
-const RevisionWorkspace = lazy(() =>
+const RevisionWorkspace = lazyWithRetry(() =>
   import('@/features/study/components/RevisionWorkspace').then((m) => ({ default: m.RevisionWorkspace }))
 );
-const PerformanceWorkspace = lazy(() =>
+const PerformanceWorkspace = lazyWithRetry(() =>
   import('@/features/analytics/components/PerformanceWorkspace').then((m) => ({ default: m.PerformanceWorkspace }))
 );
-const AnalyticsWorkspace = lazy(() =>
-  import('@/features/analytics/components/AnalyticsWorkspace').then((m) => ({ default: m.AnalyticsWorkspace }))
+const AnalyticsWorkspace = lazyWithRetry(() =>
+  import('@/features/analytics/components/AnalyticsWorkspace')
 );
-const MockWorkspace = lazy(() =>
+const MockWorkspace = lazyWithRetry(() =>
   import('@/features/mock-tests/components/MockWorkspace').then((m) => ({ default: m.MockWorkspace }))
 );
-const CompetitionWorkspace = lazy(() =>
+const CompetitionWorkspace = lazyWithRetry(() =>
   import('@/features/competition/components/CompetitionWorkspace').then((m) => ({ default: m.CompetitionWorkspace }))
 );
-const TodayFocusWorkspace = lazy(() =>
+const TodayFocusWorkspace = lazyWithRetry(() =>
   import('@/features/home/components/TodayFocusWorkspace').then((m) => ({ default: m.TodayFocusWorkspace }))
 );
-const AdminWorkspace = lazy(() =>
+const AdminWorkspace = lazyWithRetry(() =>
   import('@/features/admin/components/AdminWorkspace').then((m) => ({ default: m.AdminWorkspace }))
 );
-const RemindersWorkspace = lazy(() =>
+const RemindersWorkspace = lazyWithRetry(() =>
   import('@/features/reminders/components/RemindersWorkspace').then((m) => ({ default: m.RemindersWorkspace }))
 );
-const SyllabusRoadmapWorkspace = lazy(() =>
+const SyllabusRoadmapWorkspace = lazyWithRetry(() =>
   import('@/features/roadmap/components/SyllabusRoadmapWorkspace').then((m) => ({
     default: m.SyllabusRoadmapWorkspace,
   }))
@@ -168,9 +170,18 @@ export function Dashboard() {
   } = useStudy();
 
   const [authOpen, setAuthOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const isLoggedIn = Boolean(user && typeof localStorage !== 'undefined' && localStorage.getItem('ssc_token'));
   const openSignIn = useCallback(() => setAuthOpen(true), []);
   const closeSignIn = useCallback(() => setAuthOpen(false), []);
+
+  useEffect(() => {
+    if (searchParams.get('signin') !== '1') return;
+    if (!isLoggedIn) setAuthOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('signin');
+    setSearchParams(next, { replace: true });
+  }, [isLoggedIn, searchParams, setSearchParams]);
   const askLogin = useCallback((message?: string) => {
     showLoginPromptToast({
       message: message || 'Please login to use this feature.',

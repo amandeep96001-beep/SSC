@@ -4,6 +4,10 @@ import { APP_NAME } from '@/shared/brand';
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : String(error);
+  const isStaleChunk =
+    /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed/i.test(
+      message,
+    );
 
   return (
     <div className="feature-error-fallback" role="alert">
@@ -12,7 +16,17 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         This section crashed. You can retry without leaving {APP_NAME}.
       </p>
       <pre className="feature-error-fallback__detail">{message}</pre>
-      <button type="button" className="feature-error-fallback__btn" onClick={resetErrorBoundary}>
+      <button
+        type="button"
+        className="feature-error-fallback__btn"
+        onClick={() => {
+          if (isStaleChunk) {
+            window.location.reload();
+            return;
+          }
+          resetErrorBoundary();
+        }}
+      >
         Try again
       </button>
     </div>

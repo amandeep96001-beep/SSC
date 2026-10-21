@@ -11,9 +11,16 @@
    opaque values scoped to .lp-root for both dark and light modes.
    ------------------------------------------------------------------------- */
 
-/* Dark mode landing overrides */
+/*
+  Same indigo / violet tokens as the main app
+  (frontend/src/styles/index.css). Pill button shapes live in skin.css.
+*/
 :root .lp-root,
 :root[data-theme="dark"] .lp-root {
+  --color-primary: #7b7cf5 !important;
+  --color-primary-hover: #a8a9ff !important;
+  --color-brand-ex: #a8a9ff !important;
+  --color-primary-glow: rgba(105, 106, 242, 0.32) !important;
   --bg-card: #1e2233 !important;
   --bg-surface: #1c2030 !important;
   --bg-surface-hover: #242938 !important;
@@ -33,11 +40,19 @@
   --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.28) !important;
   --shadow-md: 0 12px 36px rgba(0, 0, 0, 0.32) !important;
   --shadow-float: 0 18px 48px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
-  --glass-blur: none !important;
+  --glass-blur: saturate(160%) blur(28px) !important;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --transition-fast: 150ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  --font-brand: "Syne", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Light mode landing overrides */
 :root[data-theme="light"] .lp-root {
+  --color-primary: #696af2 !important;
+  --color-primary-hover: #5d5ee0 !important;
+  --color-brand-ex: #696af2 !important;
+  --color-primary-glow: rgba(105, 106, 242, 0.28) !important;
   --bg-card: #ffffff !important;
   --bg-surface: #ffffff !important;
   --bg-surface-hover: #eef2fb !important;
@@ -45,7 +60,7 @@
   --bg-input: #ffffff !important;
   --bg-main: #e8eef8 !important;
   --bg-body: #dce5f3 !important;
-  --bg-sidebar: rgba(255, 255, 255, 0.95) !important;
+  --bg-sidebar: rgba(255, 255, 255, 0.78) !important;
   --text-heading: #14182a !important;
   --text-primary: #252b42 !important;
   --text-secondary: #4a5168 !important;
@@ -53,11 +68,14 @@
   --border-color: rgba(99, 120, 200, 0.12) !important;
   --border-subtle: rgba(99, 120, 200, 0.07) !important;
   --border-focus: rgba(139, 147, 248, 0.45) !important;
-  --shadow-sm: 0 2px 10px rgba(30, 50, 100, 0.05) !important;
-  --shadow-card: 0 8px 28px rgba(30, 50, 100, 0.06), 0 2px 8px rgba(30, 50, 100, 0.02) !important;
-  --shadow-md: 0 12px 36px rgba(30, 50, 100, 0.08), 0 4px 12px rgba(30, 50, 100, 0.03) !important;
-  --shadow-float: 0 20px 50px rgba(30, 50, 100, 0.08), 0 2px 10px rgba(30, 50, 100, 0.03) !important;
-  --glass-blur: none !important;
+  --shadow-sm: 0 2px 10px rgba(36, 48, 90, 0.06) !important;
+  --shadow-card: 0 8px 28px rgba(36, 48, 90, 0.08) !important;
+  --shadow-md: 0 12px 36px rgba(36, 48, 90, 0.1) !important;
+  --shadow-float: 0 18px 48px rgba(36, 48, 90, 0.12) !important;
+}
+
+.lp-root {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 .lp-root * {
@@ -136,13 +154,17 @@
 }
 
 .lp-brand-wordmark {
-  font-family: var(--font-brand);
+  font-family: var(--font-brand), "Syne", sans-serif;
   font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -0.04em;
+  font-size: 1.28rem;
+  letter-spacing: -0.05em;
   display: inline-flex;
   align-items: baseline;
-  line-height: 1.1;
+  line-height: 1.05;
+}
+
+.lp-hero-desc .lp-brand-wordmark {
+  font-size: 1em;
 }
 
 .lp-brand-cracku {
@@ -282,11 +304,11 @@
 }
 
 .lp-hero-h1 {
-  font-family: var(--font-display);
-  font-size: clamp(38px, 6vw, 64px);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  font-family: inherit;
+  font-size: clamp(28px, 4.5vw, 42px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   color: var(--text-heading);
   margin: 0 0 18px;
   max-width: 860px;
@@ -299,10 +321,9 @@
 }
 
 .lp-root .lp-brand-gradient {
-  background: linear-gradient(135deg, var(--text-heading) 30%, var(--color-brand-ex) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-heading);
+  background: none;
+  -webkit-text-fill-color: unset;
 }
 
 :root[data-theme="light"] .lp-root .lp-brand-gradient {
@@ -337,17 +358,15 @@
   background: var(--color-primary);
   color: #fff;
   font-size: 15px;
-  font-weight: 700;
-  padding: 13px 26px;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 24px var(--color-primary-glow);
-  transition: all var(--transition-fast);
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 6px;
+  box-shadow: none;
+  transition: background 0.15s ease;
 }
 
 .lp-btn-hero-primary:hover {
   background: var(--color-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px var(--color-primary-glow);
 }
 
 .lp-btn-hero-secondary {
@@ -469,9 +488,12 @@
   align-items: center;
   gap: 7px;
   font-size: 12px;
-  color: var(--color-success);
-  font-family: var(--font-mono);
+  color: var(--text-secondary);
   font-weight: 600;
+}
+
+.lp-window-status .lp-brand-wordmark {
+  font-size: 13px;
 }
 
 .lp-window-mini-logo {
@@ -1129,7 +1151,7 @@
 }
 
 .lp-metric-val {
-  font-family: var(--font-display);
+  font-family: inherit;
   font-size: clamp(26px, 3.5vw, 36px);
   font-weight: 800;
   color: var(--text-heading);
@@ -1166,7 +1188,7 @@
 }
 
 .lp-section-title {
-  font-family: var(--font-display);
+  font-family: inherit;
   font-size: clamp(26px, 3.5vw, 38px);
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -1810,7 +1832,7 @@
 }
 
 .lp-cta-h2 {
-  font-family: var(--font-display);
+  font-family: inherit;
   font-size: clamp(28px, 4vw, 44px);
   font-weight: 800;
   letter-spacing: -0.025em;
@@ -3337,9 +3359,16 @@
 }
 
 .lp-sticky-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-heading);
+}
+
+.lp-sticky-title .lp-brand-wordmark {
+  font-size: 15px;
 }
 
 .lp-sticky-btn {
