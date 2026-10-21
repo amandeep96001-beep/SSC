@@ -105,9 +105,9 @@ function GoogleSignInButton({
     preloadGsi();
   }, []);
 
-  // Official GIS ID-token button. Code popup triggers Google origin_mismatch on Vercel.
+  // No client secret → official GIS ID-token button (reliable). Code popup only when server allows it.
   useEffect(() => {
-    if (!clientId) return undefined;
+    if (allowCodeFlow || !clientId) return undefined;
     let cleanup = () => {};
     let cancelled = false;
 
@@ -140,7 +140,7 @@ function GoogleSignInButton({
       cancelled = true;
       cleanup?.();
     };
-  }, [clientId]);
+  }, [allowCodeFlow, clientId]);
 
   const handleClick = async () => {
     if (disabled || busy) return;
@@ -159,7 +159,8 @@ function GoogleSignInButton({
     }
   };
 
-  if (clientId) {
+  // ID-token path: render official GIS button (no double frame; host is transparent)
+  if (!allowCodeFlow && clientId) {
     return (
       <div className={`auth-google-host${busy || disabled ? ' is-busy' : ''}`}>
         {busy && (
@@ -1464,13 +1465,6 @@ export function AuthPanel({
               onAuth={handleGoogleAuth}
               onError={handleGoogleError}
             />
-            <p className="auth-google-origin">
-              Google Cloud → Credentials → this Client ID → Authorized JavaScript origins:
-              {' '}
-              <code>{typeof window !== 'undefined' ? window.location.origin : ''}</code>
-              {' '}
-              (no trailing slash)
-            </p>
           </div>
         )}
           </div>

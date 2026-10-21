@@ -45,9 +45,6 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    optimizeDeps: {
-      include: ['recharts'],
-    },
     define: {
       'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(googleClientId),
     },

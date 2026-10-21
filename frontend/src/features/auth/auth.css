@@ -837,19 +837,6 @@
   pointer-events: none;
 }
 
-.auth-google-origin {
-  margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-muted);
-}
-
-.auth-google-origin code {
-  font-size: 12px;
-  word-break: break-all;
-  color: var(--text-secondary);
-}
-
 .auth-google-host__busy {
   position: absolute;
   inset: 0;

@@ -271,5 +271,3 @@ export function AnalyticsWorkspace({
     </div>
   );
 }
-
-export default AnalyticsWorkspace;

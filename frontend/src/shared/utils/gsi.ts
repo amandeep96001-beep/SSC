@@ -110,7 +110,8 @@ function wireIdCallback(clientId: string): GoogleIdClient {
     },
     auto_select: false,
     cancel_on_tap_outside: true,
-    use_fedcm_for_prompt: false,
+    // FedCM is the modern path; if the browser blocks it, prompt() reports skipped.
+    use_fedcm_for_prompt: true,
   });
   return gsi;
 }
@@ -186,7 +187,7 @@ export async function mountGoogleButton(
     },
     auto_select: false,
     cancel_on_tap_outside: true,
-    use_fedcm_for_prompt: false,
+    use_fedcm_for_prompt: true,
   });
 
   el.innerHTML = '';
