@@ -68,7 +68,7 @@ function withHardTimeout<T>(promise: Promise<T>, ms: number, label: string): Pro
 }
 
 function publicLogoUrl() {
-  const origin = String(process.env.FRONTEND_URL || 'https://crackuex-green.vercel.app')
+  const origin = String(process.env.FRONTEND_URL || 'https://ssc-3wex.vercel.app')
     .trim()
     .replace(/\/+$/, '');
   return `${origin}/logo.png`;

@@ -1,5 +1,6 @@
 import { ArrowUpRight } from 'lucide-react';
-import { APP_NAME } from '@/shared/brand';
+import { APP_NAME } from '../config';
+import { BrandWordmark } from './BrandWordmark';
 
 interface LandingFooterProps {
   onGoToDashboard: () => void;
@@ -18,18 +19,12 @@ export function LandingFooter({ onGoToDashboard }: LandingFooterProps) {
               <div className="lp-brand-logo-wrap" aria-hidden="true">
                 <img src="/logo.svg" alt="CrackuEx" className="lp-brand-logo-img" />
               </div>
-              <span className="lp-brand-wordmark">
-                <span className="lp-brand-cracku">Cracku</span>
-                <span className="lp-brand-ex">Ex</span>
-              </span>
+              <BrandWordmark />
             </div>
             <p className="lp-footer-tagline">
               SSC pattern, syllabus and practice in one place. Railway is a separate recruitment; some subjects overlap.
             </p>
-            <div className="lp-footer-status">
-              <span className="lp-status-live-dot" />
-              <span>All Question Banks & Mocks Operational</span>
-            </div>
+            <p className="lp-footer-status">Practice, notes, mocks and progress in one app.</p>
           </div>
 
           {/* Col 2: Exams */}
@@ -59,7 +54,7 @@ export function LandingFooter({ onGoToDashboard }: LandingFooterProps) {
 
           {/* Col 4: Platform */}
           <div className="lp-footer-col">
-            <div className="lp-fc-title">Studio</div>
+            <div className="lp-fc-title">App</div>
             <ul className="lp-fc-list">
               <li><a href="#hero">Back to Top</a></li>
               <li><a href="#exams">SSC exams</a></li>
@@ -67,7 +62,7 @@ export function LandingFooter({ onGoToDashboard }: LandingFooterProps) {
               <li><a href="#faq">FAQ</a></li>
               <li>
                 <button type="button" className="lp-fc-link-app" onClick={onGoToDashboard}>
-                  <span>Open Studio</span>
+                  <span>Open app</span>
                   <ArrowUpRight size={13} />
                 </button>
               </li>

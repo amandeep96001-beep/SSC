@@ -1,4 +1,5 @@
-import { ArrowRight, Zap } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { BrandWordmark } from './BrandWordmark';
 
 interface StickyMobileCtaProps {
   onGoToDashboard: () => void;
@@ -6,23 +7,20 @@ interface StickyMobileCtaProps {
 
 export function StickyMobileCta({ onGoToDashboard }: StickyMobileCtaProps) {
   return (
-    <div className="lp-sticky-mobile-bar" role="region" aria-label="Quick Action">
+    <div className="lp-sticky-mobile-bar" role="region" aria-label="Open app">
       <div className="lp-sticky-content">
         <div className="lp-sticky-text">
-          <div className="lp-sticky-live">
-            <span className="lp-live-dot" />
-            <span>100% Free Mock</span>
-          </div>
-          <span className="lp-sticky-title">SSC CGL & CHSL TCS Engine</span>
+          <span className="lp-sticky-title">
+            <BrandWordmark className="lp-brand-wordmark--sm" />
+            <span> practice app</span>
+          </span>
         </div>
         <button
           type="button"
           className="lp-sticky-btn"
           onClick={onGoToDashboard}
-          aria-label="Start Free Mock Test"
         >
-          <Zap size={14} />
-          <span>Attempt Now</span>
+          <span>Open app</span>
           <ArrowRight size={14} />
         </button>
       </div>

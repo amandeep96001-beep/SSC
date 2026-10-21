@@ -1,54 +1,63 @@
-import { ArrowRight, Sun, Moon, Zap, Target } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Sun, Moon, Menu, X } from 'lucide-react';
 import { useTheme } from '@/shared/context/useTheme';
+import { BrandWordmark } from './BrandWordmark';
 
 interface LandingNavbarProps {
   onGoToDashboard: () => void;
 }
 
+const LINKS = [
+  { href: '#exams', label: 'Exams' },
+  { href: '#how-it-works', label: 'How it works' },
+  { href: '#syllabus', label: 'Syllabus' },
+  { href: '#faq', label: 'FAQ' },
+];
+
 export function LandingNavbar({ onGoToDashboard }: LandingNavbarProps) {
   const { theme, toggleTheme } = useTheme();
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <header className="lp-nav-wrapper">
-      <nav className="lp-nav" aria-label="Main Navigation">
-        {/* Official Brand Logo */}
-        <a href="#hero" className="lp-nav-brand">
+    <header className={`lp-nav-wrapper${scrolled ? ' is-scrolled' : ''}${open ? ' is-open' : ''}`}>
+      <nav className="lp-nav" aria-label="Main">
+        <a href="#hero" className="lp-nav-brand" onClick={() => setOpen(false)}>
           <div className="lp-brand-logo-wrap" aria-hidden="true">
-            <img src="/logo.svg" alt="CrackuEx" className="lp-brand-logo-img" />
+            <img src="/logo.svg" alt="" className="lp-brand-logo-img" />
           </div>
           <div className="lp-brand-meta">
-            <span className="lp-brand-wordmark">
-              <span className="lp-brand-cracku">Cracku</span>
-              <span className="lp-brand-ex">Ex</span>
-            </span>
-            <span className="lp-brand-sub">SSC Exam Prep Studio</span>
+            <BrandWordmark />
+            <span className="lp-brand-sub">SSC practice desk</span>
           </div>
         </a>
 
-        {/* Links */}
         <div className="lp-nav-center">
-          <a href="#speed-drill-tool" className="lp-nav-link highlight">
-            <Zap size={14} className="lp-nav-icon-zap" />
-            <span>Speed Math</span>
-          </a>
-          <a href="#rank-predictor" className="lp-nav-link highlight">
-            <Target size={14} className="lp-nav-icon-target" />
-            <span>Rank Predictor</span>
-          </a>
-          <a href="#tcs-weightage" className="lp-nav-link">TCS Weightage</a>
-          <a href="#exams" className="lp-nav-link">Exams</a>
-          <a href="#syllabus" className="lp-nav-link">Syllabus</a>
-          <a href="#faq" className="lp-nav-link">FAQ</a>
+          {LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="lp-nav-link"
+              onClick={() => setOpen(false)}
+            >
+              {link.label}
+            </a>
+          ))}
         </div>
 
-        {/* Action Buttons & Theme Toggle */}
         <div className="lp-nav-actions">
           <button
             type="button"
             className="lp-btn-theme-toggle"
             onClick={toggleTheme}
-            aria-label="Toggle Theme"
-            title={theme === 'dark' ? 'Switch to Light mode' : 'Switch to Dark mode'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
           </button>
@@ -57,19 +66,27 @@ export function LandingNavbar({ onGoToDashboard }: LandingNavbarProps) {
             type="button"
             className="lp-btn-nav-login"
             onClick={onGoToDashboard}
-            aria-label="Log in to your account"
           >
-            Sign In
+            Sign in
           </button>
 
           <button
             type="button"
             className="lp-btn-nav-cta"
             onClick={onGoToDashboard}
-            aria-label="Start Free Mock Test"
           >
-            <span>Free Mock</span>
+            <span>Start practice</span>
             <ArrowRight size={14} className="lp-btn-arrow" />
+          </button>
+
+          <button
+            type="button"
+            className="lp-nav-burger"
+            aria-expanded={open}
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </nav>

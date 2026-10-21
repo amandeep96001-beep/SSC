@@ -28,7 +28,7 @@ function getAllowedOrigins(): string[] {
     .filter(Boolean);
 
   const productionFrontends = [
-    'https://crackuex-green.vercel.app',
+    'https://ssc-3wex.vercel.app',
     'https://myexamprep-theta.vercel.app',
     'http://localhost:5173',
   ];

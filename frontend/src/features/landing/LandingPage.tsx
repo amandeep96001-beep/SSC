@@ -26,6 +26,7 @@ import { LandingFooter } from './components/LandingFooter';
 import { StickyMobileCta } from './components/StickyMobileCta';
 import type { LandingProps } from './types/landing.types';
 import './landing.css';
+import './skin.css';
 
 export function LandingPage({ onGoToDashboard }: LandingProps) {
   return (
