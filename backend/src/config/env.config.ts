@@ -1,4 +1,4 @@
-const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL', 'REDIS_URL'] as const;
+const REQUIRED_IN_PRODUCTION = ['MONGODB_URI', 'JWT_SECRET', 'FRONTEND_URL'] as const;
 
 export function isHostedRuntime(): boolean {
   return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER);
@@ -23,6 +23,12 @@ export function validateEnv(): void {
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(frontend)) {
     console.warn(
       '[env] FRONTEND_URL points at localhost on a hosted runtime — CORS/email links will break for real users.',
+    );
+  }
+
+  if (!process.env.REDIS_URL?.trim()) {
+    console.warn(
+      '[env] REDIS_URL unset — using in-process memory for cache and rate limits. Add Redis later for multiple instances.',
     );
   }
 

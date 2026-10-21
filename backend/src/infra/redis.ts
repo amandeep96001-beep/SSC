@@ -15,11 +15,11 @@ export function getRedis(): Redis | null {
 
   const url = redisUrl();
   if (!url) {
-    if (isHostedRuntime()) {
-      logger.error('REDIS_URL is required in production');
-    } else {
-      logger.info('REDIS_URL unset — using in-process memory cache/rate-limits');
-    }
+    logger.warn(
+      isHostedRuntime()
+        ? 'REDIS_URL unset — using in-process memory cache/rate-limits (ok for a single instance)'
+        : 'REDIS_URL unset — using in-process memory cache/rate-limits',
+    );
     return null;
   }
 
