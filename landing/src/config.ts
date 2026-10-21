@@ -7,7 +7,7 @@ export const APP_NAME = 'CrackuEx';
 export const APP_TAGLINE = 'SSC practice';
 
 const LOCAL_APP = 'http://localhost:5173';
-const PROD_APP = 'https://ssc-3wex.vercel.app';
+const PROD_APP = 'https://crackuex-green.vercel.app';
 
 export const APP_URL = String(
   import.meta.env.VITE_APP_URL || (import.meta.env.PROD ? PROD_APP : LOCAL_APP),
