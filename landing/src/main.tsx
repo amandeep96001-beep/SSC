@@ -1,5 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './styles/landing.css';
+import './styles/skin.css';
 import { ThemeProvider } from './context/ThemeContext';
 import App from './App';
 

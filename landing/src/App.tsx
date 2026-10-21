@@ -25,8 +25,6 @@ import { LandingCta } from './components/LandingCta';
 import { LandingFooter } from './components/LandingFooter';
 import { StickyMobileCta } from './components/StickyMobileCta';
 import { navigateToApp } from './config';
-import './styles/landing.css';
-import './styles/skin.css';
 
 export function App() {
   const handleGoToDashboard = () => {

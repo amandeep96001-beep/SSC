@@ -47,6 +47,22 @@
         localStorage.getItem('crackuex_landing_theme') === 'light' ? 'light' : 'dark'
       );
     </script>
+    <style>
+      html, body, #root { margin: 0; min-height: 100%; background: #0a0c12; color: #e4e6f2; }
+      html[data-theme="light"], html[data-theme="light"] body, html[data-theme="light"] #root { background: #dce5f3; color: #252b42; }
+      .lp-boot {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: Syne, sans-serif;
+        font-weight: 800;
+        font-size: 1.5rem;
+        letter-spacing: -0.05em;
+        user-select: none;
+      }
+      .lp-boot span:last-child { color: #7b7cf5; }
+      html[data-theme="light"] .lp-boot span:last-child { color: #696af2; }
+    </style>
 
     <!-- Comprehensive Structured Data for Google (Rich Snippets, Star Ratings, FAQ Accordions) -->
     <script type="application/ld+json">
@@ -132,24 +148,13 @@
 
   </head>
   <body>
-    <!-- Fallback Semantic Content for Googlebot / Web Crawlers before JS Hydration -->
     <div id="root">
-      <header>
-        <h1>Practice for SSC CGL, CHSL, GD, CPO and MTS</h1>
-        <p>Drills, syllabus notes, topic tests and full mocks. Progress is Mastered, Reviewing or Needs work.</p>
-      </header>
-      <section>
-        <h2>SSC Exams Covered: SSC CGL, CHSL, CPO, MTS &amp; GD 2025-2026</h2>
-        <p>Complete official syllabus, exam pattern, subject-wise weightage for Quantitative Aptitude, Reasoning, English Comprehension, and General Awareness.</p>
-      </section>
-      <section>
-        <h2>Frequently Asked Questions on SSC Preparation</h2>
-        <h3>Is CrackuEx mock test really 100% free?</h3>
-        <p>Yes, all mocks, drills, and notes are 100% free without paywalls or subscriptions.</p>
-        <h3>How to increase calculation speed in SSC Maths?</h3>
-        <p>Use daily 1-50 tables, squares, cubes, and fraction-to-percentage conversion drills to solve questions under 30 seconds.</p>
-      </section>
+      <div class="lp-boot" aria-hidden="true"><span>Cracku</span><span>Ex</span></div>
     </div>
+    <noscript>
+      <h1>Practice for SSC CGL, CHSL, GD, CPO and MTS</h1>
+      <p>Drills, syllabus notes, topic tests and full mocks. Progress is Mastered, Reviewing or Needs work.</p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

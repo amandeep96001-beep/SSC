@@ -10,7 +10,7 @@ function wait(ms: number) {
  * Vite can abort the first dynamic import after a lockfile re-optimize.
  * Retry a couple of times before surfacing the error boundary.
  */
-export function lazyWithRetry<T extends ComponentType<unknown>>(
+export function lazyWithRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
 ): LazyExoticComponent<T> {
   return lazy(async () => {
