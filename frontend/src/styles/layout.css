@@ -96,8 +96,16 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  padding-bottom: 12px;
+  padding: 0 0 12px;
   flex-shrink: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .brand-mark {

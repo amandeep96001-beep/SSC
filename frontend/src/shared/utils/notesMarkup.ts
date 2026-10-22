@@ -51,7 +51,31 @@ export function isLikelyHtml(content: unknown): boolean {
   return /<(?:p|h[1-6]|ul|ol|li|div|mark|br|strong|em|b|i|code|table|tr|td|th|span|blockquote|hr|pre|figure|section|article)\b/i.test(String(content));
 }
 
-const CALLOUT_RE = /^(definition|tip|note|remember|example|formula|trick|shortcut|important|key|pyq|exam)\s*:/i;
+const CALLOUT_RE = /^(definition|tip|note|remember|example|formula|trick|shortcut|important|key|pyq|exam|mistake|warning|revision)\s*:/i;
+
+/** Visual tone for a callout label. Unknown labels stay a plain note. */
+const CALLOUT_TONE: Record<string, string> = {
+  definition: 'note',
+  tip: 'tip',
+  note: 'note',
+  remember: 'note',
+  revision: 'note',
+  example: 'example',
+  formula: 'formula',
+  trick: 'trick',
+  shortcut: 'trick',
+  important: 'important',
+  key: 'important',
+  pyq: 'important',
+  exam: 'important',
+  mistake: 'caution',
+  warning: 'warning',
+};
+
+function calloutHtml(label: string, body: string): string {
+  const tone = CALLOUT_TONE[label.toLowerCase()] || 'note';
+  return `<div class="notes-callout notes-callout--${tone}"><strong>${escapeHtml(label)}</strong> ${inlineMarkdown(body)}</div>`;
+}
 
 const BOX_CHARS = /[┌┐└┘├┤┬┴┼═║│─━┃┏┓┗┛┣┫┳┻╋╔╗╚╝╠╣╦╩╬]/;
 const ARROW_CHARS = /[▼▲►◀→←↓↑⟶⇢➥➜⇒⇓⇑]/;
@@ -533,9 +557,7 @@ export function markdownToHtml(markdown: unknown): string {
       closeList();
       const label = calloutMatch[1].replace(/^\w/, (c: string) => c.toUpperCase());
       const body = trimmed.replace(CALLOUT_RE, '').trim();
-      parts.push(
-        `<div class="notes-callout"><strong>${escapeHtml(label)}</strong> ${inlineMarkdown(body)}</div>`
-      );
+      parts.push(calloutHtml(label, body));
       continue;
     }
 
@@ -740,7 +762,7 @@ function promoteBoldHeadings(html: string): string {
     if (text.length < 3 || text.length > 90) return full;
     if (/[.!?]$/.test(text) && text.length > 40) return full;
     if (/^(tip|note|remember|definition|important|example)\b/i.test(text)) {
-      return `<div class="notes-callout"><strong>${escapeHtml(text.split(':')[0])}</strong>${text.includes(':') ? ` ${inlineMarkdown(text.slice(text.indexOf(':') + 1).trim())}` : ''}</div>`;
+      return calloutHtml(text.split(':')[0], text.includes(':') ? text.slice(text.indexOf(':') + 1).trim() : '');
     }
     return `<h3>${escapeHtml(text)}</h3>`;
   });

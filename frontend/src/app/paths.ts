@@ -22,7 +22,7 @@ function withSource(path: string, source?: string | null): string {
 }
 
 export const paths = {
-  home: '/',
+  home: '/home',
   drill: '/drill',
   study: (source?: string | null) => withSource('/study', source),
   studySubject: (subject: string, source?: string | null) =>

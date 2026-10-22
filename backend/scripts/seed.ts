@@ -14,20 +14,47 @@ const studyData = [
         id: 'quant-percentage',
         name: 'Percentage & Fractions',
         syllabus: 'Percentage calculations, fractional conversions, successive changes, and exam-oriented shortcut tricks.',
-        notes: `### Core Concept of Percentages
-Percentages are fractions with a denominator of 100.
-* Conversion: Multiply by 100 to convert a fraction to percentage (e.g. 1/8 * 100 = 12.5%).
-* Key Fractions: 
-  * 1/6 = 16.67%
-  * 3/8 = 37.5%
-  * 5/8 = 62.5%
-  * 7/8 = 87.5%
+        notes: `### What a percentage is
+A percentage is a fraction with denominator 100. 20% means 20/100, which is 1/5. SSC arithmetic (profit, discount, interest, data interpretation) keeps using this same idea.
 
-### Successive Percentage Change Formula
-If a value changes by A% and then by B%, the net percentage change is:
-Net Change = A + B + (AB / 100)
+Formula: x% of a number N = (x/100) × N
 
-Use positive value for increase/profit and negative value for decrease/loss/discount.`,
+| Fraction | Percent |
+| --- | --- |
+| 1/2 | 50% |
+| 1/3 | 33⅓% |
+| 1/4 | 25% |
+| 1/5 | 20% |
+| 1/6 | 16⅔% |
+| 1/8 | 12.5% |
+| 1/9 | 11.11% (11⅑%, not 11⅓%) |
+| 3/8 | 37.5% |
+| 5/8 | 62.5% |
+| 7/8 | 87.5% |
+
+### Successive change
+Two changes in a row are not added. If a value moves by A% and then by B%, the net change is A + B + (A×B)/100. Use a minus sign for a fall, a loss, or a discount.
+
+Example: A number rises 25% and then falls 20%. Net = 25 + (−20) + (25×−20)/100 = 5 − 5 = 0. There is no net change.
+
+Example: Discounts of 10% and then 20%. Net = −10 + (−20) + (200/100) = −28. The single discount is 28%, not 30%.
+
+### Comparing two quantities
+If A is r% more than B, B is not r% less than A. The reverse gap is r/(100+r) × 100%.
+
+Example: A is 25% more than B. B is 25/125 × 100 = 20% less than A.
+
+Formula: Price up r% and consumption down r% changes expenditure by −r²/100 %. A 20% price rise with a 20% consumption cut cuts expenditure by 4%.
+
+Mistake: Treating 1/9 as 11⅓%. One-third is 33⅓%. One-ninth is 11.11%.
+
+Remember: The topic test on this page is original practice. It is not a previous-year paper.
+
+### Quick revision
+- x% of N = Nx/100
+- Successive change = A + B + AB/100
+- Reverse of "r% more" is r/(100+r) × 100%, not r%
+- Same successive formula is reused for discount and for compound growth`,
         questions: [
           {
             q: "If the radius of a circle is increased by 20%, what is the net percentage increase in its area?",

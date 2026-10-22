@@ -1,7 +1,9 @@
 import type { TopicNotesPayload, StudyTopic, SubjectListItem, AppUser, McqQuestion, ContentSource } from '@/types/app';
 import type { UseStudyReturn } from '../hooks/useStudy';
 import type { Dispatch, SetStateAction, MouseEvent as ReactMouseEvent, FormEvent, ClipboardEvent } from 'react';
-import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { pageTitle } from '@/shared/brand';
 import { prepareNotesHtml, prepareNotesFromClipboard } from '@/shared/utils/notesMarkup';
 import { getSubjectVisual } from '@/shared/utils/subjectVisuals';
 import { progressForTopic } from '@/shared/utils/examProgress';
@@ -137,6 +139,16 @@ export function SyllabusWorkspace({
   const [testQuestionCount, setTestQuestionCount] = useState<number | ''>(25);
 
   // Real questions in DB for this topic (excluding the seeded placeholder)
+  const topicCursor = useMemo(() => {
+    if (!activeNotes?.id) return { previous: null as StudyTopic | null, next: null as StudyTopic | null };
+    const index = topicsList.findIndex((topic) => topic.id === activeNotes.id);
+    if (index < 0) return { previous: null, next: null };
+    return {
+      previous: index > 0 ? topicsList[index - 1] : null,
+      next: index < topicsList.length - 1 ? topicsList[index + 1] : null,
+    };
+  }, [activeNotes?.id, topicsList]);
+
   const availableQCount = (activeNotes?.questions || []).filter(
     (q) => !q.q?.startsWith('Syllabus Check:')
   ).length;
@@ -882,6 +894,7 @@ export function SyllabusWorkspace({
       {/* --- VIEW: TOPIC REVISION NOTES & TEST STARTER --- */}
       {activeView === 'notes' && activeNotes && !notesLoading && (
         <div className={`study-workspace syllabus-flow notes-flow${notesFocus ? ' notes-flow--focus' : ''}`}>
+          <Helmet><title>{pageTitle(activeNotes.name)}</title></Helmet>
           {testStarting && (
             <div className="app-loader-overlay" aria-busy="true" aria-label="Starting topic test">
               <ExamLoader
@@ -1232,6 +1245,20 @@ export function SyllabusWorkspace({
 
                 {!isEditingNotes && !notesFocus && (
                 <footer className="notes-sheet-footer">
+                  {(topicCursor.previous || topicCursor.next) && (
+                    <nav className="notes-topic-nav" aria-label="More topics in this subject">
+                      {topicCursor.previous && (
+                        <button type="button" onClick={() => selectTopic(topicCursor.previous!.id)}>
+                          Previous: {topicCursor.previous.name}
+                        </button>
+                      )}
+                      {topicCursor.next && (
+                        <button type="button" onClick={() => selectTopic(topicCursor.next!.id)}>
+                          Next: {topicCursor.next.name}
+                        </button>
+                      )}
+                    </nav>
+                  )}
                   {noQuestionsFlash ? (
                     <div className="notes-no-questions-msg">
                       <span>No practice questions for this topic yet.</span>

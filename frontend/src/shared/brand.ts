@@ -7,19 +7,19 @@ export const APP_VERSION = '2.3';
 export const SITE_URL = String(import.meta.env.VITE_SITE_URL || '').replace(/\/$/, '');
 
 export const SEO_DEFAULT_TITLE =
-  'CrackuEx — Competitive Exam Prep';
+  'CrackuEx — SSC CGL, CHSL, GD, CPO and MTS practice';
 
 export const SEO_DEFAULT_DESCRIPTION =
-  'Free competitive exam preparation — drills, mocks, notes, vocabulary and revision decks. ' +
-  'Study calm, practice daily, and sit for the exam ready.';
+  'Free SSC CGL, CHSL, GD, CPO and MTS practice: topic notes, speed drills, mocks and revision. ' +
+  'Each exam follows its own official notice — patterns are not the same.';
 
 export const SEO_KEYWORDS = [
-  'competitive exam preparation',
-  'exam mock test',
-  'exam practice app',
-  'multiplication tables drill',
-  'vocabulary practice',
-  'fraction percentage conversion',
+  'SSC CGL notes',
+  'SSC CHSL practice',
+  'SSC GD syllabus',
+  'SSC CPO preparation',
+  'SSC MTS practice',
+  'percentage tricks for SSC',
   'CrackuEx',
 ].join(', ');
 

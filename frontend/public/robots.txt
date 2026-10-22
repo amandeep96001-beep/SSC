@@ -1,10 +1,18 @@
-# CrackuEx — crawlers
-# After domain is live, confirm Sitemap URL matches your production host.
+# Public page is /. App routes are the signed-in study shell.
+# Add an absolute Sitemap URL only after the production domain is set.
 
 User-agent: *
 Allow: /
-
-# App shells / auth flows — soft discourage thin duplicate URLs if you add routes later
+Disallow: /home
+Disallow: /study
+Disallow: /drill
+Disallow: /mock
+Disallow: /results
+Disallow: /admin
+Disallow: /roadmap
+Disallow: /revision
+Disallow: /performance
+Disallow: /analytics
+Disallow: /competition
+Disallow: /reminders
 Disallow: /api/
-
-Sitemap: https://REPLACE_WITH_YOUR_DOMAIN/sitemap.xml

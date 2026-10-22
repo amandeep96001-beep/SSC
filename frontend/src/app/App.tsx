@@ -1,49 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { SeoHead } from '@/shared/components/SeoHead';
 import { LandingPage } from '@/features/landing';
+import { paths } from '@/app/paths';
 
-const SESSION_KEY = 'crackuex_entered_app';
+function isLandingPath(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '') || '/';
+  return path === '/' || path === '/landing';
+}
 
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [entered, setEntered] = useState<boolean>(
-    () => sessionStorage.getItem(SESSION_KEY) === '1',
-  );
-
   const enterApp = useCallback(() => {
-    sessionStorage.setItem(SESSION_KEY, '1');
-    setEntered(true);
-    if (location.pathname === '/landing') {
-      navigate('/');
-    }
-  }, [location.pathname, navigate]);
+    navigate(paths.home);
+  }, [navigate]);
 
-  if (location.pathname === '/landing') {
-    return (
-      <>
-        <SeoHead />
-        <LandingPage onGoToDashboard={enterApp} />
-      </>
-    );
-  }
-
-  if (!entered && location.pathname === '/') {
-    return (
-      <>
-        <SeoHead />
-        <LandingPage onGoToDashboard={enterApp} />
-      </>
-    );
-  }
+  const landing = isLandingPath(location.pathname);
 
   return (
     <>
-      <SeoHead />
-      <Dashboard />
+      <SeoHead path={landing ? '/' : location.pathname} noIndex={!landing} />
+      {landing ? <LandingPage onGoToDashboard={enterApp} /> : <Dashboard />}
     </>
   );
 }

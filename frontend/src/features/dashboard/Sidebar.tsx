@@ -17,6 +17,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { useRef, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { useTheme } from '@/shared/context/useTheme';
@@ -112,7 +113,12 @@ export function Sidebar({
         ></div>
       )}
       <aside ref={sidebarRef} className={`lms-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
-      <div className="sidebar-brand">
+      <Link
+        to="/"
+        className="sidebar-brand"
+        aria-label="Back to landing page"
+        onClick={() => setIsMobileOpen(false)}
+      >
         <div className="brand-mark" aria-hidden="true">
           <img src="/logo.svg" alt="" />
         </div>
@@ -123,7 +129,7 @@ export function Sidebar({
           </h2>
           <span>{APP_TAGLINE}</span>
         </div>
-      </div>
+      </Link>
 
       <div className="user-profile-card">
         {isGuest ? (
