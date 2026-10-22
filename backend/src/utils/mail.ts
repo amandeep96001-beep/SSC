@@ -5,6 +5,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import type { Attachment } from 'nodemailer/lib/mailer/index.js';
 import { isHostedRuntime } from '../config/env.config.js';
 import { errorMessage } from '../types/domain.js';
+import { isHttpError, serviceUnavailable } from './app-errors.js';
 import { logger } from '../lib/logger.js';
 import type { OtpPurpose } from '../types/domain.js';
 
@@ -20,6 +21,100 @@ function smtpConfigured() {
     && process.env.SMTP_USER
     && smtpPass()
   );
+}
+
+function gmailApiConfigured() {
+  return Boolean(
+    process.env.GMAIL_REFRESH_TOKEN?.trim()
+    && process.env.GOOGLE_CLIENT_ID?.trim()
+    && process.env.GOOGLE_CLIENT_SECRET?.trim()
+  );
+}
+
+function failMail(message = 'Unable to send email. Please try again shortly.'): never {
+  throw serviceUnavailable(message);
+}
+
+let cachedGmailToken: { token: string; exp: number } | null = null;
+
+async function gmailAccessToken(): Promise<string | null> {
+  if (!gmailApiConfigured()) return null;
+  if (cachedGmailToken && cachedGmailToken.exp > Date.now() + 30_000) {
+    return cachedGmailToken.token;
+  }
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID!.trim(),
+      client_secret: process.env.GOOGLE_CLIENT_SECRET!.trim(),
+      refresh_token: process.env.GMAIL_REFRESH_TOKEN!.trim(),
+      grant_type: 'refresh_token',
+    }),
+  });
+  const body = await res.json() as { access_token?: string; expires_in?: number; error?: string };
+  if (!res.ok || !body.access_token) {
+    logger.error({ err: body.error || res.status, msg: 'Gmail OAuth token refresh failed' });
+    cachedGmailToken = null;
+    return null;
+  }
+  cachedGmailToken = {
+    token: body.access_token,
+    exp: Date.now() + Math.max(60, Number(body.expires_in) || 3600) * 1000,
+  };
+  return body.access_token;
+}
+
+function toBase64Url(value: string): string {
+  return Buffer.from(value, 'utf8').toString('base64url');
+}
+
+async function sendViaGmailApi({
+  from,
+  to,
+  subject,
+  text,
+  html,
+}: {
+  from: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<boolean> {
+  const token = await gmailAccessToken();
+  if (!token) return false;
+
+  const htmlBody = html.replaceAll(`cid:${LOGO_CID}`, publicLogoUrl());
+  const raw = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset="UTF-8"',
+    '',
+    htmlBody || text,
+  ].join('\r\n');
+
+  const res = await withHardTimeout(
+    fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: toBase64Url(raw) }),
+    }),
+    SMTP_SEND_HARD_MS,
+    'Gmail API send',
+  );
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    logger.error({ status: res.status, detail: detail.slice(0, 300), msg: 'Gmail API send failed' });
+    return false;
+  }
+  return true;
 }
 
 function smtpPass() {
@@ -112,9 +207,18 @@ export async function sendMail({
   if (!to) return { sent: false, reason: 'no_recipient' };
   const recipient = String(to);
 
+  // HTTPS Gmail API first — Render free blocks SMTP ports 25/465/587.
+  try {
+    if (await sendViaGmailApi({ from, to: recipient, subject, text, html })) {
+      return { sent: true };
+    }
+  } catch (err) {
+    logger.error({ err: errorMessage(err), msg: 'Gmail API send threw' });
+  }
+
   if (!smtpConfigured()) {
     if (isHostedRuntime()) {
-      throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
+      failMail('Email is not configured. Try again later.');
     }
     logger.info({ recipient, subject, msg: 'SMTP not configured — mail skipped' });
     logger.debug({ recipient, text, msg: 'skipped mail body' });
@@ -139,9 +243,7 @@ export async function sendMail({
     cachedTransporter = null;
     const reason = errorMessage(err);
     logger.error({ err: reason, msg: 'SMTP send failed' });
-    if (isHostedRuntime()) {
-      throw new Error('Unable to send email. Please try again shortly.');
-    }
+    if (isHostedRuntime()) failMail();
     return { sent: false, reason };
   }
 }
@@ -247,32 +349,14 @@ export async function sendOtpEmail(
     };
   const html = buildOtpEmailHtml(code, copy);
 
-  if (!smtpConfigured()) {
-    if (isHostedRuntime()) {
-      throw new Error('SMTP is not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASS.');
-    }
-    // Local only — never expose this code over HTTP
-    logger.info({ email, msg: 'SMTP not configured — OTP issued locally' });
-    logger.debug({ email, code, msg: 'local OTP code' });
-    return { sent: false };
-  }
-
   try {
     const result = await sendMail({ to: email, subject, text: copy.text, html });
-    if (result.sent) return { sent: true };
-    logger.error({ email, msg: 'OTP mail not sent' });
-    if (!isHostedRuntime()) {
-      logger.debug({ email, code, msg: 'local OTP fallback' });
-      return { sent: false };
-    }
-    throw new Error('Unable to send verification email. Please try again shortly.');
+    return { sent: Boolean(result.sent) };
   } catch (err) {
-    logger.error({ err: errorMessage(err), email, msg: 'OTP SMTP send failed' });
-    if (!isHostedRuntime()) {
-      logger.debug({ email, code, msg: 'local OTP fallback' });
-      return { sent: false };
-    }
-    throw new Error('Unable to send verification email. Please try again shortly.');
+    if (isHttpError(err)) throw err;
+    logger.error({ err: errorMessage(err), email, msg: 'OTP email send failed' });
+    if (!isHostedRuntime()) return { sent: false };
+    failMail('Unable to send verification email. Please try again shortly.');
   }
 }
 

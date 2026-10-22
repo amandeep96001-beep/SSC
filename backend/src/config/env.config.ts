@@ -39,7 +39,12 @@ export function validateEnv(): void {
   const smtpReady = Boolean(
     process.env.SMTP_HOST?.trim() && process.env.SMTP_USER?.trim() && process.env.SMTP_PASS?.trim(),
   );
-  if (!smtpReady) {
-    console.warn('[env] SMTP is unset — OTP and password-reset email will fail.');
+  const gmailApiReady = Boolean(
+    process.env.GMAIL_REFRESH_TOKEN?.trim()
+    && process.env.GOOGLE_CLIENT_ID?.trim()
+    && process.env.GOOGLE_CLIENT_SECRET?.trim(),
+  );
+  if (!smtpReady && !gmailApiReady) {
+    console.warn('[env] SMTP/Gmail API unset — OTP and password-reset email will fail.');
   }
 }

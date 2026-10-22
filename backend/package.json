@@ -17,6 +17,7 @@
     "migrate:userid": "tsx scripts/migrate-userid-fks.ts",
     "clean-db": "tsx scripts/clean_duplicates.ts",
     "clean-topic-dupes": "tsx scripts/clean_topic_duplicates.ts",
+    "gmail:token": "tsx scripts/gmail-refresh-token.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
